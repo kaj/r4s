@@ -1,9 +1,9 @@
-//use deadpool_diesel::postgres::{Manager, Pool};
+use anyhow::Result;
+pub use deadpool_diesel::postgres::Pool;
+use deadpool_diesel::{postgres::Manager, Runtime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use structopt::StructOpt;
-
-//pub type PgPool = Pool;
 
 #[derive(StructOpt)]
 pub struct DbOpt {
@@ -18,8 +18,9 @@ impl DbOpt {
         PgConnection::establish(&self.db_url)
     }
 
-    /*    /// Get a database connection pool from the configured url.
-    pub fn get_pool(&self) -> PgPool {
-        Pool::new(Manager::new(&self.db_url), 8)
-    } */
+    /// Get a database connection pool from the configured url.
+    pub fn build_pool(&self) -> Result<Pool> {
+        Ok(Pool::builder(Manager::new(&self.db_url, Runtime::Tokio1))
+            .build()?)
+    }
 }

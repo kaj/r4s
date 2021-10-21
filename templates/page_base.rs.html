@@ -1,0 +1,23 @@
+@use super::footer;
+
+@(title: &str, content: Content)
+
+<!doctype html>
+<html>
+  <head>
+    <title>@title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <!--link rel="stylesheet" href="/static/style_css.name" type="text/css"/-->
+  </head>
+  <body>
+    <header>
+      <a href="/">Rasmus.krats.se</a>
+    </header>
+
+    <main>
+      <h1>@title</h1>
+      @:content()
+    </main>
+    @:footer()
+  </body>
+</html>

@@ -1,0 +1,31 @@
+@use super::footer;
+@use chrono::{DateTime, Utc};
+
+@(title: &str, posted_at: DateTime<Utc>, updated_at: DateTime<Utc>, content: &str)
+
+<!doctype html>
+<html>
+  <head>
+    <title>@title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <!--link rel="stylesheet" href="/static/style_css.name" type="text/css"/-->
+  </head>
+  <body>
+    <header>
+      <a href="/">Rasmus.krats.se</a>
+    </header>
+
+    <main>
+      <h1>@Html(title)</h1>
+      <p class="publine"><!-- TODO: lang! -->
+        Posted @posted_at.
+        @if updated_at > posted_at {
+        Last updated @updated_at.
+        }
+        <!-- TODO: tags. -->
+      </p>
+      @Html(content)
+    </main>
+    @:footer()
+  </body>
+</html>
