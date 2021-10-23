@@ -21,19 +21,26 @@ pub struct Args {
     /// The paths to read content from.
     #[structopt(parse(from_os_str))]
     files: Vec<PathBuf>,
+
+    /// Update content even if it has not changed.
+    ///
+    /// Mainly usefull while developing r4s itself.
+    #[structopt(long)]
+    force: bool,
 }
 
 impl Args {
     pub fn run(self) -> Result<()> {
         let db = self.db.get_db()?;
         for path in self.files {
-            read_file(&path, &db).context(format!("Reading {:?}", path))?;
+            read_file(&path, self.force, &db)
+                .context(format!("Reading {:?}", path))?;
         }
         Ok(())
     }
 }
 
-fn read_file(path: &Path, db: &PgConnection) -> Result<()> {
+fn read_file(path: &Path, force: bool, db: &PgConnection) -> Result<()> {
     let (slug, lang) = path
         .file_stem()
         .and_then(|name| name.to_str())
@@ -55,7 +62,7 @@ fn read_file(path: &Path, db: &PgConnection) -> Result<()> {
         .first::<(i32, String)>(db)
         .optional()?
     {
-        if old_md == contents {
+        if old_md == contents && !force {
             println!("Post #{} exists", id);
         } else {
             println!("Post #{} exists, but should be updated", id);
