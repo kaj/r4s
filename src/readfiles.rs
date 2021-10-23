@@ -44,7 +44,7 @@ impl Args {
 fn read_file(path: &Path, force: bool, db: &PgConnection) -> Result<()> {
     let (slug, lang) = path
         .file_stem()
-        .and_then(|name| name.to_str())
+        .and_then(std::ffi::OsStr::to_str)
         .ok_or_else(|| anyhow!("Bad name"))?
         .split_once('.')
         .ok_or_else(|| anyhow!("No language in file name"))?;
@@ -141,15 +141,11 @@ fn items_until<'a>(
     all: &mut Vec<Event<'a>>,
     delimiter: &Event,
 ) -> Option<Vec<Event<'a>>> {
-    let pos = all.iter().position(|e| e == delimiter);
-    if let Some(pos) = pos {
-        let mut prefix = all.split_off(pos + 1);
-        std::mem::swap(all, &mut prefix);
-        prefix.pop(); // get rid of the delimiter itself
-        Some(prefix)
-    } else {
-        None
-    }
+    let pos = all.iter().position(|e| e == delimiter)?;
+    let mut prefix = all.split_off(pos + 1);
+    std::mem::swap(all, &mut prefix);
+    prefix.pop(); // get rid of the delimiter itself
+    Some(prefix)
 }
 
 /// Check if `s` is a phantom issue reference.
@@ -398,7 +394,7 @@ fn extract_metadata(src: &str) -> (BTreeMap<&str, &str>, &str) {
         })
     {
         meta.insert(k.trim(), v.trim());
-        src = reminder
+        src = reminder;
     }
     (meta, src)
 }

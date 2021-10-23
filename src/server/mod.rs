@@ -30,10 +30,10 @@ pub struct Args {
 
 impl Args {
     pub async fn run(self) -> Result<(), anyhow::Error> {
+        use warp::path::{end, param, path, tail};
         let pool = self.db.build_pool()?;
         let s = warp::any().map(move || pool.clone()).boxed();
         let s = move || s.clone();
-        use warp::path::{end, param, path, tail};
         let routes = warp::any()
             .and(path("s").and(tail()).and(goh()).and_then(static_file))
             .or(end()
