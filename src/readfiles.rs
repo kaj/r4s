@@ -5,8 +5,9 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
 use lazy_regex::regex_captures;
-use pulldown_cmark::{html, BrokenLink, Event, Options, Parser, Tag};
+use pulldown_cmark::{BrokenLink, Event, Options, Parser, Tag};
 use std::collections::BTreeMap;
+use std::fmt::Write;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -103,8 +104,10 @@ fn md_to_html(markdown: &str) -> Result<(String, String)> {
         // dbg!(&broken_link.link_type);
         if let Some(url) = fa_link(broken_link.reference) {
             Some((url.into(), String::new().into()))
-        } else if let Some(url) = cargo_link(&broken_link, markdown) {
-            Some((url.into(), String::new().into()))
+        } else if let Some((url, title)) =
+            dbg!(link_ext(&broken_link, markdown))
+        {
+            Some((url.into(), title.into()))
         } else {
             Some((
                 dbg!(broken_link.reference).to_owned().into(),
@@ -129,7 +132,7 @@ fn md_to_html(markdown: &str) -> Result<(String, String)> {
         .ok_or_else(|| anyhow!("No end of h1"))?;
     let title = collect_html(title);
 
-    let body = collect_html(Sectioned::new(items.into_iter()));
+    let body = collect_html(items.into_iter());
 
     Ok((dbg!(title), body))
 }
@@ -147,59 +150,6 @@ fn items_until<'a>(
     } else {
         None
     }
-}
-
-struct Sectioned<Iter> {
-    inner: Iter,
-    state: SectionedState,
-}
-
-impl<Iter> Sectioned<Iter> {
-    fn new(inner: Iter) -> Self {
-        let state = SectionedState::In(1);
-        Sectioned { inner, state }
-    }
-}
-
-impl<'a, Iter: Iterator<Item = Event<'a>>> Iterator for Sectioned<Iter> {
-    type Item = Event<'a>;
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.state {
-            SectionedState::In(level) => match self.inner.next() {
-                Some(Event::Start(Tag::Heading(i))) => {
-                    self.state = SectionedState::Start(i);
-                    let mut sep = String::new();
-                    for _ in i..=level {
-                        sep.push_str("</section>");
-                    }
-                    sep.push_str("<section>");
-                    Some(Event::Html(sep.into()))
-                }
-                Some(x) => Some(x),
-                None => {
-                    if level > 1 {
-                        let mut sep = String::new();
-                        for _ in 2..=level {
-                            sep.push_str("</section>");
-                        }
-                        self.state = SectionedState::In(1);
-                        Some(Event::Html(sep.into()))
-                    } else {
-                        None
-                    }
-                }
-            },
-            SectionedState::Start(i) => {
-                self.state = SectionedState::In(i);
-                Some(Event::Start(Tag::Heading(i)))
-            }
-        }
-    }
-}
-
-enum SectionedState {
-    In(u32), // Normal state.  The number is the containing header level, defalt 1.
-    Start(u32), // At the start of heading of specified level
 }
 
 /// Check if `s` is a phantom issue reference.
@@ -231,24 +181,212 @@ fn fa_link_c() {
     )
 }
 
-/// Check if link is a `[somepkg][cargo]` link.
-///
-/// If it is, make a link to `lib.rs`.
-fn cargo_link(link: &BrokenLink, contents_md: &str) -> Option<String> {
-    if link.reference == "cargo" {
-        let pkg = &contents_md[link.span.clone()]
-            .strip_prefix('[')?
-            .strip_suffix("][cargo]")?;
-        Some(format!("https://lib.rs/crates/{}", pkg))
-    } else {
-        None
+fn link_ext(link: &BrokenLink, source: &str) -> Option<(String, String)> {
+    let (_all, text, kind, _, _attrs) = regex_captures!(
+        r"^\[(.*)\]\[(\w+)([,\s]+(.*))?\]$",
+        &source[link.span.clone()],
+    )?;
+    //dbg!(text, kind, attrs);
+    match kind {
+        "personname" => {
+            let lang = "sv"; // FIXME
+            Some((
+                format!(
+                    "https://{}.wikipedia.org/wiki/{}",
+                    lang,
+                    text.replace(' ', "_")
+                ),
+                format!("Se {} på wikipedia", text),
+            ))
+        }
+        "cargo" => {
+            Some((format!("https://lib.rs/crates/{}", text), String::new()))
+        }
+        _ => None,
     }
 }
 
 fn collect_html<'a>(data: impl IntoIterator<Item = Event<'a>>) -> String {
     let mut result = String::new();
-    html::push_html(&mut result, data.into_iter());
+    let mut data = data.into_iter();
+    let mut section_level = 1;
+    while let Some(event) = data.next() {
+        match event {
+            Event::Text(text) => result.push_str(text.as_ref()),
+            Event::Start(Tag::Heading(level)) => {
+                while section_level >= level {
+                    result.push_str("</section>");
+                    section_level -= 1;
+                }
+                result.push('\n');
+                while section_level < level {
+                    result.push_str("<section>");
+                    section_level += 1;
+                }
+                result.push_str(&format!("<h{}>", level));
+            }
+            Event::End(Tag::Heading(level)) => {
+                result.push_str(&format!("</h{}>\n", level));
+            }
+            Event::Start(Tag::CodeBlock(blocktype)) => {
+                result.push_str("<pre><code");
+                result.push_str(&format!(" data-type='{:?}'", blocktype));
+                result.push('>');
+            }
+            Event::End(Tag::CodeBlock(_blocktype)) => {
+                result.push_str("</code></pre>\n");
+            }
+            Event::Start(Tag::Image(imgtype, imgref, title)) => {
+                if result.ends_with("<p>") {
+                    result.truncate(result.len() - 3);
+                }
+                let mut inner = String::new();
+                for tag in &mut data {
+                    match tag {
+                        Event::End(Tag::Image(..)) => break,
+                        Event::Text(text) => inner.push_str(&text),
+                        Event::SoftBreak => inner.push(' '),
+                        _ => inner.push_str(&format!("\n{:?}", tag)),
+                    }
+                }
+                let (_all, imgref, _, classes, caption) = regex_captures!(
+                    r"^([a-z0-9/_-]*)\s*(\{([^}]*)\})?\s*(.*)$",
+                    &imgref,
+                )
+                .unwrap_or_else(|| {
+                    panic!("Bad image ref: {:?}", imgref.as_ref())
+                });
+
+                let (large, small, width, height) = if imgref == "kitten" {
+                    (
+                        "http://placekitten.com/1100/720",
+                        "http://placekitten.com/300/172",
+                        300,
+                        172,
+                    )
+                } else {
+                    (
+                        "https://img.krats.se/img/68722-m.jpg",
+                        "https://img.krats.se/img/68722-s.jpg",
+                        288,
+                        151,
+                    )
+                };
+                write!(
+                    &mut result,
+                    "<figure class='{}' data-type='{:?}'>\
+                     <a href='{}'><img src='{}' alt='{}' width='{}' height='{}'></a>\
+                     <figcaption>{} {}</figcaption></figure>\n<p><!--no-p-->",
+                    classes,
+                    imgtype,
+                    large,
+                    small,
+                    inner.trim(),
+                    width,
+                    height,
+                    caption,
+                    title,
+                ).unwrap();
+            }
+            Event::End(Tag::Paragraph)
+                if result.ends_with("<p><!--no-p-->") =>
+            {
+                result.truncate(result.len() - 14);
+            }
+            Event::Start(Tag::TableHead) => {
+                result.push_str("<thead><tr>");
+            }
+            Event::End(Tag::TableHead) => {
+                result.push_str("</tr></thead>\n");
+            }
+            Event::TaskListMarker(done) => {
+                result.push_str("<input disabled type='checkbox'");
+                if done {
+                    result.push_str(" checked=''");
+                }
+                result.push_str("/>\n");
+            }
+            Event::Start(tag) => {
+                result.push('<');
+                result.push_str(tag_name(&tag));
+                match tag {
+                    Tag::Paragraph | Tag::Emphasis => (),
+                    Tag::TableCell | Tag::TableRow => (),
+                    Tag::List(None) => (),
+                    Tag::List(Some(start)) => {
+                        result.push_str(&format!(" start='{}'", start));
+                    }
+                    Tag::Item => (),
+                    Tag::Link(linktype, a, b) => {
+                        if !a.is_empty() {
+                            result.push_str(" href='");
+                            result.push_str(a.as_ref());
+                            result.push('\'');
+                        }
+                        if !b.is_empty() {
+                            result.push_str(" title='");
+                            result.push_str(b.as_ref());
+                            result.push('\'');
+                        }
+                        result.push_str(&format!(
+                            " data-type='{:?}'",
+                            linktype
+                        ));
+                    }
+                    t => result.push_str(&format!("><!-- {:?} --", t)),
+                }
+                // TODO: Link attributes!
+                result.push('>');
+            }
+            Event::End(tag) => {
+                result.push_str("</");
+                result.push_str(tag_name(&tag));
+                result.push('>');
+                if matches!(
+                    tag,
+                    Tag::Paragraph
+                        | Tag::Table(..)
+                        | Tag::Item
+                        | Tag::List(_)
+                ) {
+                    // Maybe more?
+                    result.push('\n');
+                }
+            }
+            Event::SoftBreak => result.push('\n'),
+            Event::Html(code) => result.push_str(&code),
+            Event::Code(code) => {
+                result.push_str("<code>");
+                pulldown_cmark::escape::escape_html(&mut result, &code)
+                    .unwrap();
+                result.push_str("</code>");
+            }
+            Event::HardBreak => {
+                result.push_str("<br/>\n");
+            }
+            e => panic!("Unhandled: {:?}", e),
+        }
+    }
+    for _ in 2..=section_level {
+        result.push_str("</section>");
+    }
     result
+}
+
+fn tag_name(tag: &Tag) -> &'static str {
+    match tag {
+        Tag::Paragraph => "p",
+        Tag::Emphasis => "em",
+        //Tag::Image(..) => "a", // no, not really!
+        Tag::Link(..) => "a",
+        Tag::Table(..) => "table",
+        Tag::TableRow => "tr",
+        Tag::TableCell => "td",
+        Tag::List(Some(_)) => "ol",
+        Tag::List(None) => "ul",
+        Tag::Item => "li",
+        tag => panic!("Not a simple tag: {:?}", tag),
+    }
 }
 
 fn extract_metadata(src: &str) -> (BTreeMap<&str, &str>, &str) {
