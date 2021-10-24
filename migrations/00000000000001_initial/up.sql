@@ -16,5 +16,5 @@ create table posts (
   orig_md text not null
 );
 
-create unique index idx_post_year_slug on posts (slug, year_of_date(posted_at));
+create unique index idx_post_year_slug on posts (slug, year_of_date(posted_at), lang);
 select diesel_manage_updated_at('posts');
