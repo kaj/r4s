@@ -1,4 +1,5 @@
 use crate::dbopt::DbOpt;
+use crate::imgcli::ImageInfo;
 use crate::models::year_of_date;
 use crate::schema::posts::dsl as p;
 use anyhow::{anyhow, Context, Result};
@@ -31,17 +32,22 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn run(self) -> Result<()> {
+    pub async fn run(self) -> Result<()> {
         let db = self.db.get_db()?;
         for path in self.files {
             read_file(&path, self.force, &db)
+                .await
                 .context(format!("Reading {:?}", path))?;
         }
         Ok(())
     }
 }
 
-fn read_file(path: &Path, force: bool, db: &PgConnection) -> Result<()> {
+async fn read_file(
+    path: &Path,
+    force: bool,
+    db: &PgConnection,
+) -> Result<()> {
     let (slug, lang) = path
         .file_stem()
         .and_then(std::ffi::OsStr::to_str)
@@ -67,7 +73,7 @@ fn read_file(path: &Path, force: bool, db: &PgConnection) -> Result<()> {
             println!("Post #{} exists", id);
         } else {
             println!("Post #{} exists, but should be updated", id);
-            let (title, body) = md_to_html(contents_md)?;
+            let (title, body) = md_to_html(contents_md).await?;
             diesel::update(p::posts)
                 .filter(p::id.eq(id))
                 .set((
@@ -80,7 +86,7 @@ fn read_file(path: &Path, force: bool, db: &PgConnection) -> Result<()> {
         }
     } else {
         println!("new post {} at {:?}", slug, pubdate);
-        let (title, body) = md_to_html(contents_md)?;
+        let (title, body) = md_to_html(contents_md).await?;
         diesel::insert_into(p::posts)
             .values((
                 pubdate.map(|date| p::posted_at.eq(date)),
@@ -99,21 +105,18 @@ fn read_file(path: &Path, force: bool, db: &PgConnection) -> Result<()> {
 /// Convert my flavour of markdown to my preferred html.
 ///
 /// Returns the title and body html markup separately.
-fn md_to_html(markdown: &str) -> Result<(String, String)> {
+async fn md_to_html(markdown: &str) -> Result<(String, String)> {
     let mut fixlink = |broken_link: BrokenLink| {
-        // dbg!(&broken_link.link_type);
-        if let Some(url) = fa_link(broken_link.reference) {
-            Some((url.into(), String::new().into()))
-        } else if let Some((url, title)) =
-            dbg!(link_ext(&broken_link, markdown))
-        {
-            Some((url.into(), title.into()))
+        Some(if let Some(url) = fa_link(broken_link.reference) {
+            (url.into(), String::new().into())
         } else {
-            Some((
-                dbg!(broken_link.reference).to_owned().into(),
-                String::new().into(),
-            ))
-        }
+            link_ext(&broken_link, markdown)
+                .map(|(url, title)| (url.into(), title.into()))
+                .unwrap_or((
+                    broken_link.reference.to_owned().into(),
+                    String::new().into(),
+                ))
+        })
     };
     let mut items = Parser::new_with_broken_link_callback(
         markdown,
@@ -130,9 +133,9 @@ fn md_to_html(markdown: &str) -> Result<(String, String)> {
 
     let title = items_until(&mut items, &Event::End(Tag::Heading(1)))
         .ok_or_else(|| anyhow!("No end of h1"))?;
-    let title = collect_html(title);
+    let title = collect_html(title).await;
 
-    let body = collect_html(items.into_iter());
+    let body = collect_html(items.into_iter()).await;
 
     Ok((dbg!(title), body))
 }
@@ -182,7 +185,6 @@ fn link_ext(link: &BrokenLink, source: &str) -> Option<(String, String)> {
         r"^\[(.*)\]\[(\w+)([,\s]+(.*))?\]$",
         &source[link.span.clone()],
     )?;
-    //dbg!(text, kind, attrs);
     match kind {
         "personname" => {
             let lang = "sv"; // FIXME
@@ -202,7 +204,9 @@ fn link_ext(link: &BrokenLink, source: &str) -> Option<(String, String)> {
     }
 }
 
-fn collect_html<'a>(data: impl IntoIterator<Item = Event<'a>>) -> String {
+async fn collect_html<'a>(
+    data: impl IntoIterator<Item = Event<'a>>,
+) -> String {
     let mut result = String::new();
     let mut data = data.into_iter();
     let mut section_level = 1;
@@ -246,43 +250,27 @@ fn collect_html<'a>(data: impl IntoIterator<Item = Event<'a>>) -> String {
                     }
                 }
                 let (_all, imgref, _, classes, caption) = regex_captures!(
-                    r"^([a-z0-9/_-]*)\s*(\{([^}]*)\})?\s*(.*)$",
+                    r"^([A-Za-z0-9/._-]*)\s*(\{([^}]*)\})?\s*(.*)$",
                     &imgref,
                 )
                 .unwrap_or_else(|| {
                     panic!("Bad image ref: {:?}", imgref.as_ref())
                 });
-
-                let (large, small, width, height) = if imgref == "kitten" {
-                    (
-                        "http://placekitten.com/1100/720",
-                        "http://placekitten.com/300/172",
-                        300,
-                        172,
-                    )
+                let imgdata =
+                    ImageInfo::fetch(imgref).await.expect("Image api");
+                let alt = inner.trim();
+                let imgtag = if classes == "scaled" {
+                    imgdata.markup_large(alt)
                 } else {
-                    (
-                        "https://img.krats.se/img/68722-m.jpg",
-                        "https://img.krats.se/img/68722-s.jpg",
-                        288,
-                        151,
-                    )
+                    imgdata.markup(alt)
                 };
                 write!(
                     &mut result,
-                    "<figure class='{}' data-type='{:?}'>\
-                     <a href='{}'><img src='{}' alt='{}' width='{}' height='{}'></a>\
+                    "<figure class='{}' data-type='{:?}'>{}\
                      <figcaption>{} {}</figcaption></figure>\n<p><!--no-p-->",
-                    classes,
-                    imgtype,
-                    large,
-                    small,
-                    inner.trim(),
-                    width,
-                    height,
-                    caption,
-                    title,
-                ).unwrap();
+                    classes, imgtype, imgtag, caption, title,
+                )
+                .unwrap();
             }
             Event::End(Tag::Paragraph)
                 if result.ends_with("<p><!--no-p-->") =>

@@ -4,6 +4,7 @@
 extern crate diesel;
 
 mod dbopt;
+mod imgcli;
 mod listposts;
 mod models;
 mod readfiles;
@@ -42,7 +43,7 @@ impl R4s {
     async fn run(self) -> Result<()> {
         match self {
             R4s::List(args) => args.run(),
-            R4s::ReadFiles(args) => args.run(),
+            R4s::ReadFiles(args) => args.run().await,
             R4s::RunServer(args) => args.run().await,
         }
     }
