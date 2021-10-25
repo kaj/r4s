@@ -57,7 +57,7 @@ async fn read_file(
     let contents = read_to_string(path)?;
     let (metadata, contents_md) = extract_metadata(&contents);
 
-    let pubdate = dbg!(metadata)
+    let pubdate = metadata
         .get("pubdate")
         .map(|v| v.parse::<DateTime>().unwrap());
     let year = pubdate.unwrap_or_else(|| Local::now().into()).year() as i16;
@@ -70,9 +70,12 @@ async fn read_file(
         .optional()?
     {
         if old_md == contents && !force {
-            println!("Post #{} exists", id);
+            println!("Post #{} /{}/{}.{} exists", id, year, slug, lang);
         } else {
-            println!("Post #{} exists, but should be updated", id);
+            println!(
+                "Post #{} /{}/{}.{} exists, but should be updated.\n   {:?}",
+                id, year, slug, lang, metadata
+            );
             let (title, body) = md_to_html(contents_md).await?;
             diesel::update(p::posts)
                 .filter(p::id.eq(id))
@@ -85,7 +88,7 @@ async fn read_file(
                 .context(format!("Update #{}", id))?;
         }
     } else {
-        println!("new post {} at {:?}", slug, pubdate);
+        println!("New post /{}/{}.{}\n   {:?}", year, slug, lang, metadata);
         let (title, body) = md_to_html(contents_md).await?;
         diesel::insert_into(p::posts)
             .values((
