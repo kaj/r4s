@@ -1,10 +1,10 @@
 @use super::footer;
 @use chrono::{DateTime, Utc};
 
-@(title: &str, posted_at: DateTime<Utc>, updated_at: DateTime<Utc>, content: &str)
+@(title: &str, posted_at: DateTime<Utc>, updated_at: DateTime<Utc>, content: &str, lang: &str, other_langs: &[String])
 
 <!doctype html>
-<html>
+<html lang="@lang">
   <head>
     <title>@title</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -12,16 +12,15 @@
   </head>
   <body>
     <header>
-      <a href="/">Rasmus.krats.se</a>
+      <a href="/@lang">Rasmus.krats.se</a>
+      @for other in other_langs {@Html(other)}
     </header>
 
     <main>
       <h1>@Html(title)</h1>
-      <p class="publine"><!-- TODO: lang! -->
+      <p class="publine" lang="en"><!-- TODO: correct lang! -->
         Posted @posted_at.
-        @if updated_at > posted_at {
-        Last updated @updated_at.
-        }
+        @if updated_at > posted_at {Last updated @updated_at.}
         <!-- TODO: tags. -->
       </p>
       @Html(content)

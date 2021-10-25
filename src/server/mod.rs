@@ -5,12 +5,14 @@ use self::templates::RenderRucte;
 use crate::dbopt::{DbOpt, Pool};
 use crate::models::{year_of_date, PostLink};
 use crate::schema::posts::dsl as p;
+use accept_language::intersection;
 use diesel::prelude::*;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use structopt::StructOpt;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
+use warp::http::Uri;
 use warp::path::Tail;
 use warp::reply::Response;
 use warp::{self, Filter, Rejection, Reply};
@@ -37,9 +39,24 @@ impl Args {
         let routes = warp::any()
             .and(path("s").and(tail()).and(goh()).and_then(static_file))
             .or(end()
+                .and(warp::header::optional("accept-language"))
+                .map(|lang: Option<MyLang>| {
+                    warp::redirect::see_other(
+                        lang
+                            .and_then(|lang| {
+                                Uri::builder()
+                                    .path_and_query(&format!("/{}", lang.0))
+                                    .build()
+                                    .ok()
+                            })
+                            .unwrap_or_else(|| Uri::from_static("/en")),
+                    )
+                }))
+            .or(param()
+                .and(end())
                 .and(goh())
                 .and(s())
-                .and_then(|a| async { wrap(frontpage(a).await) }))
+                .and_then(|l, a| async { wrap(frontpage(l, a).await) }))
             .or(param()
                 .and(param())
                 .and(end())
@@ -51,6 +68,21 @@ impl Args {
 
         warp::serve(routes).run(self.bind).await;
         Ok(())
+    }
+}
+
+/// Either "sv" or "en".
+struct MyLang(String);
+
+impl FromStr for MyLang {
+    type Err = ();
+    fn from_str(value: &str) -> Result<Self, ()> {
+        Ok(MyLang(
+            intersection(value, vec!["en", "sv"])
+                .drain(..)
+                .next()
+                .ok_or(())?
+        ))
     }
 }
 
@@ -87,10 +119,13 @@ async fn static_file(_name: Tail) -> Result<impl Reply, Rejection> {
     */
 }
 
-async fn frontpage(pool: Pool) -> Result<Response> {
+async fn frontpage(lang: String, pool: Pool) -> Result<Response> {
     let db = pool.get().await?;
+    let limit = 5;
     let posts = db
-        .interact(|db| {
+        .interact(move |db| {
+            use diesel::dsl::sql;
+            use diesel::sql_types::Bool;
             p::posts
                 .select((
                     (
@@ -102,17 +137,30 @@ async fn frontpage(pool: Pool) -> Result<Response> {
                     ),
                     p::posted_at,
                     p::updated_at,
+                    sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
                 ))
                 .order(p::updated_at.desc())
-                .limit(5)
-                .load::<(PostLink, DateTime, DateTime)>(db)
+                .limit(2 * limit as i64)
+                .load::<(PostLink, DateTime, DateTime, bool)>(db)
+                .map(|data| data.into_iter()
+                .filter_map(|(pl, pa, ua, langq)| {
+                    if pl.lang == lang || !langq {
+                        Some((pl, pa, ua))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>())
         })
-        .await??;
+        .await??
+    ;
+
     Ok(Builder::new()
-        .html(|o| templates::frontpage(o, &posts))
+        .html(|o| templates::frontpage(o, &posts[..limit]))
         .unwrap())
 }
 
+#[derive(Debug, Clone)]
 struct SlugAndLang {
     slug: String,
     lang: String,
@@ -132,6 +180,25 @@ impl FromStr for SlugAndLang {
 
 async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
     let db = pool.get().await?;
+    let s1 = slug.clone();
+    let other_langs = db
+        .interact(move |db| {
+            p::posts
+                .select(p::lang)
+                .filter(year_of_date(p::posted_at).eq(&year))
+                .filter(p::slug.eq(s1.slug))
+                .filter(p::lang.ne(s1.lang))
+                .load::<String>(db)
+        })
+        .await??
+        .into_iter()
+        .map(|lang| format!(
+            "<a href='/{}/{}.{lang}' hreflang='{lang}' lang='{lang}'>{lang}</a>",
+            year, slug.slug, lang=lang,
+        ))
+        .collect::<Vec<_>>();
+
+    let s2 = slug.clone();
     let (title, posted_at, updated_at, content) = db
         .interact(move |db| {
             p::posts
@@ -145,7 +212,17 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
         .await??
         .ok_or(ViewError::NotFound)?;
     Ok(Builder::new()
-        .html(|o| templates::page(o, &title, posted_at, updated_at, &content))
+        .html(|o| {
+            templates::page(
+                o,
+                &title,
+                posted_at,
+                updated_at,
+                &content,
+                &s2.lang,
+                &other_langs,
+            )
+        })
         .unwrap())
 }
 

@@ -1,7 +1,7 @@
 use crate::schema::posts::dsl as p;
 use diesel::helper_types::Select;
 use diesel::prelude::*;
-use diesel::sql_types::Timestamptz;
+use diesel::sql_types::{Smallint, Timestamptz};
 
 sql_function!(fn year_of_date(arg: Timestamptz) -> Smallint);
 

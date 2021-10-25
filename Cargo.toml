@@ -11,6 +11,7 @@ build = "src/build.rs"
 ructe = { version = "0.13.4", features = ["sass", "warp02"] }
 
 [dependencies]
+accept-language = "2.0"
 anyhow = "1.0.44"
 chrono = "0.4.19"
 # requires https://github.com/bikeshedder/deadpool/pull/159

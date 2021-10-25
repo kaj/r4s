@@ -9,7 +9,7 @@
   <p>This is a my new blog.</p>
 
   @for (post, posted_at, updated_at) in posts {
-  <article id="post_@(post.year)_@post.slug">
+  <article id="post_@(post.year)_@post.slug" lang="@post.lang">
     <h2><a href="@post.url()">@Html(&post.title)</a></h2>
     <p class="publine"><!-- TODO: lang! -->
         Posted @posted_at.
