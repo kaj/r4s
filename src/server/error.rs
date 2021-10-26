@@ -1,3 +1,4 @@
+use super::language;
 use super::templates::{self, RenderRucte};
 use warp::http::response::Builder;
 use warp::http::status::StatusCode;
@@ -7,6 +8,7 @@ use warp::{self, Reply};
 #[derive(Debug)]
 pub enum ViewError {
     NotFound,
+    BadRequest(String),
     Err(String),
 }
 
@@ -16,6 +18,9 @@ impl Reply for ViewError {
             ViewError::NotFound => {
                 error_response(StatusCode::NOT_FOUND, "Not found")
             }
+            ViewError::BadRequest(msg) => {
+                error_response(StatusCode::BAD_REQUEST, &msg)
+            }
             ViewError::Err(e) => {
                 error_response(StatusCode::INTERNAL_SERVER_ERROR, &e)
             }
@@ -23,9 +28,10 @@ impl Reply for ViewError {
     }
 }
 fn error_response(code: StatusCode, message: &str) -> Response {
+    let fluent = language::load("en").unwrap();
     Builder::new()
         .status(code)
-        .html(|o| templates::error(o, code, message))
+        .html(|o| templates::error(o, fluent, code, message))
         .unwrap()
 }
 

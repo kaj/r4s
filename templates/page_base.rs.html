@@ -1,6 +1,7 @@
 @use super::footer;
+@use i18n_embed::fluent::FluentLanguageLoader;
 
-@(title: &str, content: Content)
+@(fluent: &FluentLanguageLoader, title: &str, content: Content)
 
 <!doctype html>
 <html>
@@ -18,6 +19,6 @@
       <h1>@title</h1>
       @:content()
     </main>
-    @:footer()
+    @:footer(fluent)
   </body>
 </html>

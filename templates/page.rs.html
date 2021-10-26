@@ -1,30 +1,27 @@
 @use super::footer;
-@use chrono::{DateTime, Utc};
+@use crate::models::Post;
+@use i18n_embed::fluent::FluentLanguageLoader;
 
-@(title: &str, posted_at: DateTime<Utc>, updated_at: DateTime<Utc>, content: &str, lang: &str, other_langs: &[String])
+@(fluent: FluentLanguageLoader, post: &Post, other_langs: &[String])
 
 <!doctype html>
-<html lang="@lang">
+<html lang="@post.lang">
   <head>
-    <title>@title</title>
+    <title>@post.title &#x2013; Rasmus.krats.se</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <!--link rel="stylesheet" href="/static/style_css.name" type="text/css"/-->
   </head>
   <body>
     <header>
-      <a href="/@lang">Rasmus.krats.se</a>
+      <a href="/@post.lang">Rasmus.krats.se</a>
       @for other in other_langs {@Html(other)}
     </header>
 
     <main>
-      <h1>@Html(title)</h1>
-      <p class="publine" lang="en"><!-- TODO: correct lang! -->
-        Posted @posted_at.
-        @if updated_at > posted_at {Last updated @updated_at.}
-        <!-- TODO: tags. -->
-      </p>
-      @Html(content)
+      <h1>@Html(&post.title)</h1>
+      <p class="publine">@post.publine()</p>
+      @Html(&post.content)
     </main>
-    @:footer()
+    @:footer(&fluent)
   </body>
 </html>

@@ -1,7 +1,10 @@
-@()
+@use i18n_embed::fluent::FluentLanguageLoader;
+@use i18n_embed_fl::fl;
+
+@(fluent: &FluentLanguageLoader)
 
 <footer>
   <hr/>
-  <p>This is my new blog.</p>
+  <p class="license cc-by">@Html(fl!(fluent, "cc-by-kaj"))</p>
   <p>@env!("CARGO_PKG_NAME") @env!("CARGO_PKG_VERSION").</p>
 </footer>

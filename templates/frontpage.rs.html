@@ -1,23 +1,18 @@
 @use super::page_base;
-@use super::super::DateTime;
-@use crate::models::PostLink;
+@use crate::models::Post;
+@use i18n_embed::fluent::FluentLanguageLoader;
+@use i18n_embed_fl::fl;
 
-@(posts: &[(PostLink, DateTime, DateTime)])
+@(fluent: &FluentLanguageLoader, posts: &[Post])
 
-@:page_base("Rasmus.krats.se", {
+@:page_base(fluent, "Rasmus.krats.se", {
 
-  <p>This is a my new blog.</p>
+  <p class="tagline">@fl!(fluent, "tagline")</p>
 
-  @for (post, posted_at, updated_at) in posts {
+  @for post in posts {
   <article id="post_@(post.year)_@post.slug" lang="@post.lang">
     <h2><a href="@post.url()">@Html(&post.title)</a></h2>
-    <p class="publine"><!-- TODO: lang! -->
-        Posted @posted_at.
-        @if updated_at > posted_at {
-        Last updated @updated_at.
-        }
-        <!-- TODO: tags. -->
-    </p>
+    <p class="publine">@Html(post.publine())</p>
   </article>
   }
 })

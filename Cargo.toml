@@ -20,11 +20,14 @@ deadpool-diesel = { path = "../rust/deadpool/diesel", features = ["postgres"] }
 diesel = { version = "1.4.0", features = ["chrono", "postgres"] }
 dotenv = "0.15.0"
 env_logger = "0.9.0"
+i18n-embed = { version = "*", features = ["fluent-system"] }
+i18n-embed-fl = "0.6.0"
 lazy-regex = "2.2.2"
 log = "0.4.6"
 mime = "0.3.0"
 pulldown-cmark = "0.8.0"
 reqwest = { version = "0.11.0", features = ["json"] }
+rust-embed = "*"
 serde = { version = "1.0", features = ["derive"] }
 structopt = "0.3.23"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
