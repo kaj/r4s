@@ -1,5 +1,8 @@
+use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
+use crate::schema::tags::dsl as t;
 use diesel::helper_types::Select;
+use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_types::{Smallint, Timestamptz};
 use i18n_embed_fl::fl;
@@ -66,19 +69,66 @@ impl Post {
     pub fn url(&self) -> String {
         format!("/{}/{}.{}", self.year, self.slug, self.lang)
     }
-    pub fn publine(&self) -> String {
+    pub fn publine(&self, tags: &[Tag]) -> String {
         let lang = crate::server::language::load(&self.lang).unwrap();
-        let line = fl!(lang, "posted-at", date = self.posted_at.to_string());
+        let mut line =
+            fl!(lang, "posted-at", date = self.posted_at.to_string());
 
+        use std::fmt::Write;
         if self.updated_at > self.posted_at {
-            line + &fl!(
-                lang,
-                "updated-at",
-                date = self.updated_at.to_string()
+            write!(
+                &mut line,
+                " {}",
+                fl!(lang, "updated-at", date = self.updated_at.to_string())
             )
-        } else {
-            line
+            .unwrap();
         }
-        // TODO: tags.
+        if let Some((first, rest)) = tags.split_first() {
+            write!(
+                line,
+                " {} <a href='/tag/{slug}.{lang}'>{name}</a>",
+                fl!(lang, "tagged"),
+                slug = first.slug,
+                name = first.name,
+                lang = self.lang,
+            )
+            .unwrap();
+            for tag in rest {
+                write!(
+                    line,
+                    ", <a href='/tag/{slug}.{lang}'>{name}</a>",
+                    slug = tag.slug,
+                    name = tag.name,
+                    lang = self.lang,
+                )
+                .unwrap();
+            }
+            line.push('.');
+        }
+        line
+    }
+}
+
+#[derive(Debug, Queryable)]
+pub struct Tag {
+    pub id: i32,
+    pub slug: String,
+    pub name: String,
+}
+
+impl Tag {
+    pub fn for_post(
+        post_id: i32,
+        db: &PgConnection,
+    ) -> Result<Vec<Tag>, diesel::result::Error> {
+        t::tags
+            .filter(
+                t::id.eq_any(
+                    pt::post_tags
+                        .select(pt::tag_id)
+                        .filter(pt::post_id.eq(post_id)),
+                ),
+            )
+            .load(db)
     }
 }

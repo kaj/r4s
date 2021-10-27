@@ -1,8 +1,8 @@
 @use super::footer;
-@use crate::models::Post;
+@use crate::models::{Post, Tag};
 @use i18n_embed::fluent::FluentLanguageLoader;
 
-@(fluent: FluentLanguageLoader, post: &Post, other_langs: &[String])
+@(fluent: FluentLanguageLoader, post: &Post, tags: &[Tag], other_langs: &[String])
 
 <!doctype html>
 <html lang="@post.lang">
@@ -19,7 +19,7 @@
 
     <main>
       <h1>@Html(&post.title)</h1>
-      <p class="publine">@post.publine()</p>
+      <p class="publine">@Html(post.publine(tags))</p>
       @Html(&post.content)
     </main>
     @:footer(&fluent)

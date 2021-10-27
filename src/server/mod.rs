@@ -1,10 +1,11 @@
 mod error;
 pub mod language;
+mod tag;
 
 use self::error::ViewError;
 use self::templates::RenderRucte;
 use crate::dbopt::{DbOpt, Pool};
-use crate::models::{year_of_date, Post};
+use crate::models::{year_of_date, Post, Tag};
 use crate::schema::posts::dsl as p;
 use accept_language::intersection;
 use diesel::prelude::*;
@@ -49,6 +50,7 @@ impl Args {
                         .unwrap(),
                 )
             }))
+            .or(path("tag").and(tag::routes(s())))
             .or(param().and(end()).and(goh()).and(lang_filt).map(
                 |year: i16, lang: MyLang| {
                     redirect::see_other(
@@ -164,8 +166,8 @@ async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
                 ))
                 .order(p::updated_at.desc())
                 .limit(2 * limit as i64)
-                .load::<(Post, bool)>(db)
-                .map(|data| data.into_iter()
+                .load::<(Post, bool)>(db)?
+                .into_iter()
                 .filter_map(|(post, langq)| {
                     if post.lang == lang.0 || !langq {
                         Some(post)
@@ -173,7 +175,11 @@ async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
                         None
                     }
                 })
-                .collect::<Vec<_>>())
+                .take(limit)
+                .map(|post| {
+                    Tag::for_post(post.id, db).map(|tags| (post, tags))
+                })
+                .collect::<Result<Vec<_>, _>>()
         })
         .await??;
 
@@ -185,7 +191,7 @@ async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
         .await??;
 
     Ok(Builder::new()
-        .html(|o| templates::frontpage(o, &fluent, &posts[..limit], &years))
+        .html(|o| templates::frontpage(o, &fluent, &posts, &years))
         .unwrap())
 }
 
@@ -231,7 +237,7 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
                 .filter(year_of_date(p::posted_at).eq(year))
                 .order(p::updated_at.desc())
                 .load::<(Post, bool)>(db)
-                .map(|data| data.into_iter()
+                .and_then(|data| data.into_iter()
                 .filter_map(|(post, langq)| {
                     if post.lang == lang.0 || !langq {
                         Some(post)
@@ -239,7 +245,10 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
                         None
                     }
                 })
-                .collect::<Vec<_>>())
+                .map(|post| {
+                    Tag::for_post(post.id, db).map(|tags| (post, tags))
+                })
+                .collect::<Result<Vec<_>, _>>())
         })
         .await??;
 
@@ -298,8 +307,11 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
         .await??
         .ok_or(ViewError::NotFound)?;
 
+    let post_id = post.id;
+    let tags = db.interact(move |db| Tag::for_post(post_id, db)).await??;
+
     Ok(Builder::new()
-        .html(|o| templates::page(o, fluent, &post, &other_langs))
+        .html(|o| templates::page(o, fluent, &post, &tags, &other_langs))
         .unwrap())
 }
 

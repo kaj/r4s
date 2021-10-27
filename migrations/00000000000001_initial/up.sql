@@ -32,3 +32,17 @@ create function recent_posts(langarg varchar, limitarg smallint)
   order by updated_at desc
   limit limitarg;
   $func$;
+
+create table tags (
+  id serial primary key,
+  slug varchar not null,
+  name varchar not null
+);
+create unique index idx_tags_tag on tags (name);
+create unique index idx_tags_slug ON tags (slug);
+
+create table post_tags (
+  id serial primary key,
+  post_id integer not null references posts (id),
+  tag_id integer not null references tags (id)
+);

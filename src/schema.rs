@@ -1,4 +1,12 @@
 table! {
+    post_tags (id) {
+        id -> Int4,
+        post_id -> Int4,
+        tag_id -> Int4,
+    }
+}
+
+table! {
     posts (id) {
         id -> Int4,
         posted_at -> Timestamptz,
@@ -10,3 +18,16 @@ table! {
         orig_md -> Text,
     }
 }
+
+table! {
+    tags (id) {
+        id -> Int4,
+        slug -> Varchar,
+        name -> Varchar,
+    }
+}
+
+joinable!(post_tags -> posts (post_id));
+joinable!(post_tags -> tags (tag_id));
+
+allow_tables_to_appear_in_same_query!(post_tags, posts, tags,);

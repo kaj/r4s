@@ -1,0 +1,17 @@
+@use super::page_base;
+@use crate::models::Tag;
+@use i18n_embed::fluent::FluentLanguageLoader;
+@use i18n_embed::LanguageLoader;
+@use i18n_embed_fl::fl;
+
+@(fluent: &FluentLanguageLoader, tags: &[(Tag, i32, usize)])
+
+@:page_base(fluent, &fl!(fluent, "tagshead"), {
+
+  <p>
+    @for (tag, n, w) in tags {
+    <a href="/tag/@tag.slug.@fluent.current_language()"
+       data-n="@n" class="w@w">@tag.name</a>
+    }
+  </p>
+})

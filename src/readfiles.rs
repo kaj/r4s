@@ -1,12 +1,15 @@
 use crate::dbopt::DbOpt;
 use crate::imgcli::ImageInfo;
 use crate::models::year_of_date;
+use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
+use crate::schema::tags::dsl as t;
 use anyhow::{anyhow, Context, Result};
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
 use lazy_regex::regex_captures;
 use pulldown_cmark::{BrokenLink, Event, Options, Parser, Tag};
+use slug::slugify;
 use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::fs::read_to_string;
@@ -86,11 +89,14 @@ async fn read_file(
                 ))
                 .execute(db)
                 .context(format!("Update #{}", id))?;
+            if let Some(tags) = metadata.get("tags") {
+                tag_post(id, tags, db)?;
+            }
         }
     } else {
         println!("New post /{}/{}.{}\n   {:?}", year, slug, lang, metadata);
         let (title, body) = md_to_html(contents_md).await?;
-        diesel::insert_into(p::posts)
+        let post_id = diesel::insert_into(p::posts)
             .values((
                 pubdate.map(|date| p::posted_at.eq(date)),
                 pubdate.map(|date| p::updated_at.eq(date)),
@@ -100,7 +106,33 @@ async fn read_file(
                 p::content.eq(&body),
                 p::orig_md.eq(&contents),
             ))
-            .execute(db)?;
+            .returning(p::id)
+            .get_result::<i32>(db)
+            .context("Insert post")?;
+        if let Some(tags) = metadata.get("tags") {
+            tag_post(post_id, tags, db)?;
+        }
+    }
+    Ok(())
+}
+
+fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
+    use crate::models::Tag;
+    for tag in tags.split(',') {
+        let tag = tag.trim();
+        let tag = t::tags
+            .filter(t::name.ilike(&tag))
+            .first::<Tag>(db)
+            .or_else(|_| {
+                diesel::insert_into(t::tags)
+                    .values((t::name.eq(&tag), t::slug.eq(&slugify(&tag))))
+                    .get_result::<Tag>(db)
+            })
+            .context("Find or create tag")?;
+        diesel::insert_into(pt::post_tags)
+            .values((pt::post_id.eq(post_id), pt::tag_id.eq(tag.id)))
+            .execute(db)
+            .context("tag post")?;
     }
     Ok(())
 }
