@@ -17,6 +17,7 @@ use warp::http::Uri;
 use warp::path::Tail;
 use warp::reply::Response;
 use warp::{self, Filter, Rejection, Reply};
+use warp::{header, redirect};
 
 type Result<T, E = ViewError> = std::result::Result<T, E>;
 
@@ -36,21 +37,36 @@ impl Args {
         let pool = self.db.build_pool()?;
         let s = warp::any().map(move || pool.clone()).boxed();
         let s = move || s.clone();
+        let lang_filt = header::optional("accept-language")
+            .map(|lang: Option<MyLang>| lang.unwrap_or_default());
         let routes = warp::any()
             .and(path("s").and(tail()).and(goh()).and_then(static_file))
-            .or(end().and(warp::header::optional("accept-language")).map(
-                |lang: Option<MyLang>| {
-                    warp::redirect::see_other(
-                        lang.and_then(|lang| {
-                            Uri::builder()
-                                .path_and_query(&format!("/{}", lang.0))
-                                .build()
-                                .ok()
-                        })
-                        .unwrap_or_else(|| Uri::from_static("/en")),
+            .or(end().and(goh()).and(lang_filt).map(|lang: MyLang| {
+                redirect::see_other(
+                    Uri::builder()
+                        .path_and_query(&format!("/{}", lang.0))
+                        .build()
+                        .unwrap(),
+                )
+            }))
+            .or(param().and(end()).and(goh()).and(lang_filt).map(
+                |year: i16, lang: MyLang| {
+                    redirect::see_other(
+                        Uri::builder()
+                            .path_and_query(&format!("/{}/{}", year, lang.0))
+                            .build()
+                            .unwrap(),
                     )
                 },
             ))
+            .or(param()
+                .and(param())
+                .and(end())
+                .and(goh())
+                .and(s())
+                .and_then(
+                    |y, l, a| async move { wrap(yearpage(y, l, a).await) },
+                ))
             .or(param()
                 .and(end())
                 .and(goh())
@@ -71,6 +87,7 @@ impl Args {
 }
 
 /// Either "sv" or "en".
+#[derive(Debug)]
 struct MyLang(String);
 
 impl FromStr for MyLang {
@@ -82,6 +99,11 @@ impl FromStr for MyLang {
                 .next()
                 .ok_or(())?,
         ))
+    }
+}
+impl Default for MyLang {
+    fn default() -> Self {
+        MyLang("en".into())
     }
 }
 
@@ -118,9 +140,9 @@ async fn static_file(_name: Tail) -> Result<impl Reply, Rejection> {
     */
 }
 
-async fn frontpage(lang: String, pool: Pool) -> Result<Response> {
+async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
     let db = pool.get().await?;
-    let fluent = language::load(&lang)?;
+    let fluent = language::load(&lang.0)?;
     let limit = 5;
     let posts = db
         .interact(move |db| {
@@ -138,14 +160,14 @@ async fn frontpage(lang: String, pool: Pool) -> Result<Response> {
                         p::updated_at,
                         p::content,
                     ),
-                    sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
+                    sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
                 ))
                 .order(p::updated_at.desc())
                 .limit(2 * limit as i64)
                 .load::<(Post, bool)>(db)
                 .map(|data| data.into_iter()
                 .filter_map(|(post, langq)| {
-                    if post.lang == lang || !langq {
+                    if post.lang == lang.0 || !langq {
                         Some(post)
                     } else {
                         None
@@ -153,11 +175,17 @@ async fn frontpage(lang: String, pool: Pool) -> Result<Response> {
                 })
                 .collect::<Vec<_>>())
         })
-        .await??
-    ;
+        .await??;
+
+    let years = db
+        .interact(move |db| {
+            let year = year_of_date(p::posted_at);
+            p::posts.select(year).distinct().order(year).load(db)
+        })
+        .await??;
 
     Ok(Builder::new()
-        .html(|o| templates::frontpage(o, &fluent, &posts[..limit]))
+        .html(|o| templates::frontpage(o, &fluent, &posts[..limit], &years))
         .unwrap())
 }
 
@@ -177,6 +205,54 @@ impl FromStr for SlugAndLang {
             lang: lang.into(),
         })
     }
+}
+
+async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
+    let db = pool.get().await?;
+    let fluent = language::load(&lang.0)?;
+    let posts = db
+        .interact(move |db| {
+            use diesel::dsl::sql;
+            use diesel::sql_types::Bool;
+            p::posts
+                .select((
+                    (
+                        p::id,
+                        year_of_date(p::posted_at),
+                        p::slug,
+                        p::lang,
+                        p::title,
+                        p::posted_at,
+                        p::updated_at,
+                        p::content,
+                    ),
+                    sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
+                ))
+                .filter(year_of_date(p::posted_at).eq(year))
+                .order(p::updated_at.desc())
+                .load::<(Post, bool)>(db)
+                .map(|data| data.into_iter()
+                .filter_map(|(post, langq)| {
+                    if post.lang == lang.0 || !langq {
+                        Some(post)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>())
+        })
+        .await??;
+
+    let years = db
+        .interact(move |db| {
+            let year = year_of_date(p::posted_at);
+            p::posts.select(year).distinct().order(year).load(db)
+        })
+        .await??;
+
+    Ok(Builder::new()
+        .html(|o| templates::frontpage(o, &fluent, &posts, &years))
+        .unwrap())
 }
 
 async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {

@@ -1,10 +1,11 @@
 @use super::footer;
 @use i18n_embed::fluent::FluentLanguageLoader;
+@use i18n_embed::LanguageLoader;
 
 @(fluent: &FluentLanguageLoader, title: &str, content: Content)
 
 <!doctype html>
-<html>
+<html lang="@fluent.current_language()">
   <head>
     <title>@title</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
