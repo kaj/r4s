@@ -70,11 +70,11 @@ impl Post {
         format!("/{}/{}.{}", self.year, self.slug, self.lang)
     }
     pub fn publine(&self, tags: &[Tag]) -> String {
+        use std::fmt::Write;
         let lang = crate::server::language::load(&self.lang).unwrap();
         let mut line =
             fl!(lang, "posted-at", date = self.posted_at.to_string());
 
-        use std::fmt::Write;
         if self.updated_at > self.posted_at {
             write!(
                 &mut line,

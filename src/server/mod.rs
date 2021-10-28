@@ -39,7 +39,7 @@ impl Args {
         let s = warp::any().map(move || pool.clone()).boxed();
         let s = move || s.clone();
         let lang_filt = header::optional("accept-language")
-            .map(|lang: Option<MyLang>| lang.unwrap_or_default());
+            .map(Option::unwrap_or_default);
         let routes = warp::any()
             .and(path("s").and(tail()).and(goh()).and_then(static_file))
             .or(end().and(goh()).and(lang_filt).map(|lang: MyLang| {
