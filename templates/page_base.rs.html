@@ -1,4 +1,4 @@
-@use super::footer;
+@use super::{footer, head_canon};
 @use i18n_embed::fluent::FluentLanguageLoader;
 @use i18n_embed::LanguageLoader;
 
@@ -8,8 +8,7 @@
 <html lang="@fluent.current_language()">
   <head>
     <title>@title</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <!--link rel="stylesheet" href="/static/style_css.name" type="text/css"/-->
+    @:head_canon()
   </head>
   <body>
     <header>

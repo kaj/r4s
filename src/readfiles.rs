@@ -185,15 +185,46 @@ fn items_until<'a>(
     Some(prefix)
 }
 
+struct FaRef {
+    issue: i8,
+    year: i16,
+}
+
+use std::str::FromStr;
+impl FromStr for FaRef {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        regex_captures!(
+            r"\b[Ff]a (?P<ii>(?P<i>[1-9]\d?)(-[1-9]\d?)?)[ /](?P<y>(19|20)\d{2})\b",
+            s,
+        )
+            .map(|(_, _, i, _, y, _)| FaRef {
+                issue: i.parse().unwrap(),
+                year: y.parse().unwrap()
+            })
+            .ok_or(())
+    }
+}
+impl FaRef {
+    fn url(&self) -> String {
+        format!(
+            "https://fantomenindex.krats.se/{}/{}",
+            self.year, self.issue,
+        )
+    }
+    fn cover(&self) -> String {
+        format!(
+            "https://fantomenindex.krats.se/c/f{}-{}.jpg",
+            self.year, self.issue,
+        )
+    }
+}
+
 /// Check if `s` is a phantom issue reference.
 ///
 /// Strings like `"Fa 1/1950"` or `"Fa 2-3 2019"` gets an index url.
 fn fa_link(s: &str) -> Option<String> {
-    let (_, _, i, _, y, _) = regex_captures!(
-        r"\b[Ff]a (?P<ii>(?P<i>[1-9]\d?)(-[1-9]\d?)?)[ /](?P<y>(19|20)\d{2})\b",
-        s,
-    )?;
-    Some(format!("https://fantomenindex.krats.se/{}/{}", y, i))
+    FaRef::from_str(s).ok().map(|fa| fa.url())
 }
 #[test]
 fn fa_link_a() {
@@ -273,6 +304,10 @@ async fn collect_html<'a>(
             Event::Start(Tag::Image(imgtype, imgref, title)) => {
                 if result.ends_with("<p>") {
                     result.truncate(result.len() - 3);
+                } else if result.ends_with("<p><!--no-p-->") {
+                    result.truncate(result.len() - 14)
+                } else if result.ends_with("<p><!--no-p-->\n") {
+                    result.truncate(result.len() - 15)
                 }
                 let mut inner = String::new();
                 for tag in &mut data {
@@ -290,21 +325,35 @@ async fn collect_html<'a>(
                 .with_context(|| {
                     format!("Bad image ref: {:?}", imgref.as_ref())
                 })?;
-                let imgdata =
-                    ImageInfo::fetch(imgref).await.context("Image api")?;
-                let alt = inner.trim();
-                let imgtag = if classes == "scaled" {
-                    imgdata.markup_large(alt)
+                if imgref == "cover" {
+                    let url = inner.parse::<FaRef>().unwrap().cover();
+                    write!(
+                        &mut result,
+                        "<figure class='fa-cover {}'>\
+                         <a href='{url}'><img alt='Omslagsbild {}' src='{url}' width='150'/></a>\
+                         <figcaption>{} {} {}</figcaption></figure>\n<p><!--no-p-->",
+                        classes, inner, inner, caption, title,
+                        url = url,
+                    )
+                        .unwrap();
                 } else {
-                    imgdata.markup(alt)
-                };
-                write!(
-                    &mut result,
-                    "<figure class='{}' data-type='{:?}'>{}\
+                    let imgdata = ImageInfo::fetch(imgref)
+                        .await
+                        .context("Image api")?;
+                    let alt = inner.trim();
+                    let imgtag = if classes == "scaled" {
+                        imgdata.markup_large(alt)
+                    } else {
+                        imgdata.markup(alt)
+                    };
+                    write!(
+                        &mut result,
+                        "<figure class='{}' data-type='{:?}'>{}\
                      <figcaption>{} {}</figcaption></figure>\n<p><!--no-p-->",
-                    classes, imgtype, imgtag, caption, title,
-                )
-                .unwrap();
+                        classes, imgtype, imgtag, caption, title,
+                    )
+                    .unwrap();
+                }
             }
             Event::End(Tag::Paragraph)
                 if result.ends_with("<p><!--no-p-->") =>

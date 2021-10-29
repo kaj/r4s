@@ -46,3 +46,4 @@ create table post_tags (
   post_id integer not null references posts (id),
   tag_id integer not null references tags (id)
 );
+create unique index idx_post_tags_rel on post_tags (post_id, tag_id);
