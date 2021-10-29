@@ -40,7 +40,7 @@ impl Args {
         for path in self.files {
             read_file(&path, self.force, &db)
                 .await
-                .context(format!("Reading {:?}", path))?;
+                .with_context(|| format!("Reading {:?}", path))?;
         }
         Ok(())
     }
@@ -62,7 +62,8 @@ async fn read_file(
 
     let pubdate = metadata
         .get("pubdate")
-        .map(|v| v.parse::<DateTime>().unwrap());
+        .map(|v| v.parse::<DateTime>().context("pubdate"))
+        .transpose()?;
     let year = pubdate.unwrap_or_else(|| Local::now().into()).year() as i16;
     if let Some((id, old_md)) = p::posts
         .select((p::id, p::orig_md))
@@ -88,7 +89,7 @@ async fn read_file(
                     p::orig_md.eq(&contents),
                 ))
                 .execute(db)
-                .context(format!("Update #{}", id))?;
+                .with_context(|| format!("Update #{}", id))?;
             if let Some(tags) = metadata.get("tags") {
                 tag_post(id, tags, db)?;
             }
@@ -162,15 +163,13 @@ async fn md_to_html(markdown: &str) -> Result<(String, String)> {
 
     let prefix = items_until(&mut items, &Event::Start(Tag::Heading(1)))
         .ok_or_else(|| anyhow!("No start of h1"))?;
-    if !prefix.is_empty() {
-        return Err(anyhow!("Expected empty prefix, got {:?}", prefix));
-    }
+    anyhow::ensure!(prefix.is_empty(), "Unexpected prefix: {:?}", prefix);
 
     let title = items_until(&mut items, &Event::End(Tag::Heading(1)))
         .ok_or_else(|| anyhow!("No end of h1"))?;
-    let title = collect_html(title).await;
+    let title = collect_html(title).await?;
 
-    let body = collect_html(items.into_iter()).await;
+    let body = collect_html(items.into_iter()).await?;
 
     Ok((dbg!(title), body))
 }
@@ -241,7 +240,7 @@ fn link_ext(link: &BrokenLink, source: &str) -> Option<(String, String)> {
 
 async fn collect_html<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
-) -> String {
+) -> Result<String> {
     let mut result = String::new();
     let mut data = data.into_iter();
     let mut section_level = 1;
@@ -288,11 +287,11 @@ async fn collect_html<'a>(
                     r"^([A-Za-z0-9/._-]*)\s*(\{([^}]*)\})?\s*(.*)$",
                     &imgref,
                 )
-                .unwrap_or_else(|| {
-                    panic!("Bad image ref: {:?}", imgref.as_ref())
-                });
+                .with_context(|| {
+                    format!("Bad image ref: {:?}", imgref.as_ref())
+                })?;
                 let imgdata =
-                    ImageInfo::fetch(imgref).await.expect("Image api");
+                    ImageInfo::fetch(imgref).await.context("Image api")?;
                 let alt = inner.trim();
                 let imgtag = if classes == "scaled" {
                     imgdata.markup_large(alt)
@@ -383,19 +382,20 @@ async fn collect_html<'a>(
             Event::HardBreak => {
                 result.push_str("<br/>\n");
             }
-            e => panic!("Unhandled: {:?}", e),
+            e => anyhow::bail!("Unhandled: {:?}", e),
         }
     }
     for _ in 2..=section_level {
         result.push_str("</section>");
     }
-    result
+    Ok(result)
 }
 
 fn tag_name(tag: &Tag) -> &'static str {
     match tag {
         Tag::Paragraph => "p",
         Tag::Emphasis => "em",
+        Tag::Strong => "strong",
         //Tag::Image(..) => "a", // no, not really!
         Tag::Link(..) => "a",
         Tag::Table(..) => "table",
