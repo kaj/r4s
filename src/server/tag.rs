@@ -19,12 +19,14 @@ pub fn routes(s: BoxedFilter<(Pool,)>) -> BoxedFilter<(impl Reply,)> {
         .and(end())
         .and(goh())
         .and(s.clone())
-        .and_then(|lang, a| async move { wrap(tagcloud(lang, a).await) });
+        .then(tagcloud)
+        .map(wrap);
     let page = param()
         .and(end())
         .and(goh())
         .and(s)
-        .and_then(|tag, a| async move { wrap(tagpage(tag, a).await) });
+        .then(tagpage)
+        .map(wrap);
     cloud.or(page).unify().boxed()
 }
 

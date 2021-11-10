@@ -66,22 +66,21 @@ impl Args {
                 .and(end())
                 .and(goh())
                 .and(s())
-                .and_then(
-                    |y, l, a| async move { wrap(yearpage(y, l, a).await) },
-                ))
+                .then(yearpage)
+                .map(wrap))
             .or(param()
                 .and(end())
                 .and(goh())
                 .and(s())
-                .and_then(|l, a| async { wrap(frontpage(l, a).await) }))
+                .then(frontpage)
+                .map(wrap))
             .or(param()
                 .and(param())
                 .and(end())
                 .and(goh())
                 .and(s())
-                .and_then(move |a, y, s| async move {
-                    wrap(page(a, y, s).await)
-                }));
+                .then(page)
+                .map(wrap));
 
         warp::serve(routes).run(self.bind).await;
         Ok(())
@@ -109,10 +108,10 @@ impl Default for MyLang {
     }
 }
 
-fn wrap(result: Result<impl Reply>) -> Result<Response, Rejection> {
+fn wrap(result: Result<impl Reply>) -> Response {
     match result {
-        Ok(reply) => Ok(reply.into_response()),
-        Err(err) => Ok(err.into_response()),
+        Ok(reply) => reply.into_response(),
+        Err(err) => err.into_response(),
     }
 }
 

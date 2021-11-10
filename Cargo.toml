@@ -30,4 +30,4 @@ serde = { version = "1.0", features = ["derive"] }
 slug = "0.1"
 structopt = "0.3.23"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-warp = "0.3.1"
+warp = "0.3.2"
