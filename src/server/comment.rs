@@ -1,11 +1,10 @@
 use super::error::{ViewError, ViewResult};
 use super::{wrap, App, Result};
-use crate::models::PostLink;
+use crate::models::{safe_md2html, PostLink};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use diesel::dsl::sql;
 use diesel::prelude::*;
-use pulldown_cmark::{html::push_html, Event, Parser, Tag};
 use serde::Deserialize;
 use warp::filters::{cookie, BoxedFilter};
 use warp::path::end;
@@ -117,21 +116,7 @@ struct CommentForm {
 
 impl CommentForm {
     fn html(&self) -> String {
-        let mut hdiff = 0;
-        let markdown = Parser::new(&self.comment).map(|e| match e {
-            Event::Html(s) => Event::Text(s),
-            Event::Start(Tag::Heading(h)) => {
-                hdiff = std::cmp::max(hdiff, 4 - h);
-                Event::Start(Tag::Heading(h + hdiff))
-            }
-            Event::End(Tag::Heading(h)) => {
-                Event::End(Tag::Heading(h + hdiff))
-            }
-            e => e,
-        });
-        let mut html = String::new();
-        push_html(&mut html, markdown);
-        html
+        safe_md2html(&self.comment)
     }
 }
 

@@ -384,3 +384,38 @@ impl PostComment {
         }
     }
 }
+
+mod markdown {
+    use pulldown_cmark::{html::push_html, Event, HeadingLevel, Parser, Tag};
+
+    pub fn safe_md2html(raw: &str) -> String {
+        let mut hdiff = 0;
+        let markdown = Parser::new(raw).map(|e| match e {
+            Event::Html(s) => Event::Text(s),
+            Event::Start(Tag::Heading(h, id, cls)) => {
+                hdiff = std::cmp::max(hdiff, 3 - h as i8);
+                Event::Start(Tag::Heading(hl(h as i8 + hdiff), id, cls))
+            }
+            Event::End(Tag::Heading(h, id, cls)) => {
+                Event::End(Tag::Heading(hl(h as i8 + hdiff), id, cls))
+            }
+            e => e,
+        });
+        let mut html = String::new();
+        push_html(&mut html, markdown);
+        html
+    }
+
+    pub fn hl(i: i8) -> HeadingLevel {
+        match i {
+            0 => HeadingLevel::H1,
+            1 => HeadingLevel::H2,
+            2 => HeadingLevel::H3,
+            3 => HeadingLevel::H4,
+            4 => HeadingLevel::H5,
+            5 => HeadingLevel::H6,
+            _ => panic!("Bad heading level: {}", i + 1),
+        }
+    }
+}
+pub use markdown::safe_md2html;
