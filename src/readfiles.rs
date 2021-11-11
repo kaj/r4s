@@ -349,9 +349,9 @@ async fn collect_html<'a>(
                 if result.ends_with("<p>") {
                     result.truncate(result.len() - 3);
                 } else if result.ends_with("<p><!--no-p-->") {
-                    result.truncate(result.len() - 14)
+                    result.truncate(result.len() - 14);
                 } else if result.ends_with("<p><!--no-p-->\n") {
-                    result.truncate(result.len() - 15)
+                    result.truncate(result.len() - 15);
                 }
                 let mut inner = String::new();
                 for tag in &mut data {
