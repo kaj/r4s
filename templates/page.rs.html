@@ -1,4 +1,4 @@
-@use super::{footer, head_canon};
+@use super::{footer, head_canon, me_box};
 @use crate::models::{Post, Tag};
 @use i18n_embed::fluent::FluentLanguageLoader;
 
@@ -21,6 +21,11 @@
       <p class="publine">@Html(post.publine(tags))</p>
       @Html(&post.content)
     </main>
+    <aside>
+      <h1>Relaterat</h1>
+      <p>Todo: lista relaterade sidor.</p>
+    </aside>
+    @:me_box()
     @:footer(&fluent)
   </body>
 </html>

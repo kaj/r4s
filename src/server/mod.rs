@@ -9,6 +9,7 @@ use crate::models::{year_of_date, Post, Tag};
 use crate::schema::posts::dsl as p;
 use accept_language::intersection;
 use diesel::prelude::*;
+use i18n_embed_fl::fl;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -17,8 +18,7 @@ use warp::http::response::Builder;
 use warp::http::Uri;
 use warp::path::Tail;
 use warp::reply::Response;
-use warp::{self, Filter, Rejection, Reply};
-use warp::{header, redirect};
+use warp::{self, header, redirect, Filter, Reply};
 
 type Result<T, E = ViewError> = std::result::Result<T, E>;
 
@@ -41,7 +41,7 @@ impl Args {
         let lang_filt = header::optional("accept-language")
             .map(Option::unwrap_or_default);
         let routes = warp::any()
-            .and(path("s").and(tail()).and(goh()).and_then(static_file))
+            .and(path("s").and(tail()).and(goh()).then(static_file).map(wrap))
             .or(end().and(goh()).and(lang_filt).map(|lang: MyLang| {
                 redirect::see_other(
                     Uri::builder()
@@ -124,21 +124,17 @@ fn goh() -> BoxedFilter<()> {
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
-async fn static_file(_name: Tail) -> Result<impl Reply, Rejection> {
-    Ok("todo")
-    /*
-    use crate::templates::statics::StaticFile;
-    if let Some(data) = StaticFile::get(name.as_str()) {
-        let far_expires = Utc::now() + Duration::days(180);
-        Ok(Builder::new()
-            .header(CONTENT_TYPE, data.mime.as_ref())
-            .header(EXPIRES, far_expires.to_rfc2822())
-            .body(data.content))
-    } else {
-        log::info!("Static file {:?} not found", name);
-        Err(not_found())
-    }
-    */
+async fn static_file(name: Tail) -> Result<impl Reply> {
+    use chrono::{Duration, Utc};
+    use templates::statics::StaticFile;
+    use warp::http::header::{CONTENT_TYPE, EXPIRES};
+    let data = StaticFile::get(name.as_str()).ok_or(ViewError::NotFound)?;
+    let far_expires = Utc::now() + Duration::days(180);
+    Ok(Builder::new()
+        .header(CONTENT_TYPE, data.mime.as_ref())
+        .header(EXPIRES, far_expires.to_rfc2822())
+        .body(data.content)
+        .unwrap())
 }
 
 async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
@@ -234,7 +230,7 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
                     sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
                 ))
                 .filter(year_of_date(p::posted_at).eq(year))
-                .order(p::updated_at.desc())
+                .order(p::updated_at.asc())
                 .load::<(Post, bool)>(db)
                 .and_then(|data| data.into_iter()
                 .filter_map(|(post, langq)| {
@@ -258,8 +254,9 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
         })
         .await??;
 
+    let h1 = fl!(fluent, "posts-year", year = year);
     Ok(Builder::new()
-        .html(|o| templates::frontpage(o, &fluent, &posts, &years))
+        .html(|o| templates::posts(o, &fluent, &h1, &posts, &years))
         .unwrap())
 }
 

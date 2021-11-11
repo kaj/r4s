@@ -1,4 +1,4 @@
-@use super::{footer, head_canon};
+@use super::{footer, head_canon, me_box};
 @use i18n_embed::fluent::FluentLanguageLoader;
 @use i18n_embed::LanguageLoader;
 
@@ -19,6 +19,7 @@
       <h1>@title</h1>
       @:content()
     </main>
+    @:me_box()
     @:footer(fluent)
   </body>
 </html>

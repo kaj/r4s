@@ -8,10 +8,10 @@
 
 @:page_base(fluent, &fl!(fluent, "tagshead"), {
 
-  <p>
+  <ul class="tagcloud">
     @for (tag, n, w) in tags {
-    <a href="/tag/@tag.slug.@fluent.current_language()"
-       data-n="@n" class="w@w">@tag.name</a>
+    <li data-n="@n" class="w@w"><a href="/tag/@tag.slug.@fluent.current_language()"
+                                   >@tag.name</a></li>
     }
-  </p>
+  </ul>
 })

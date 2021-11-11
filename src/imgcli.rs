@@ -21,6 +21,10 @@ impl ImageInfo {
             .await?)
     }
 
+    pub fn is_portrait(&self) -> bool {
+        self.medium.width < self.medium.height
+    }
+
     pub fn markup(&self, alt: &str) -> String {
         format!(
             "<a href='https://img.krats.se{}'><img src='https://img.krats.se{}' \

@@ -1,4 +1,4 @@
-@use super::page_base;
+@use super::{footer, head_canon, me_box};
 @use crate::models::{Post, Tag};
 @use i18n_embed::fluent::FluentLanguageLoader;
 @use i18n_embed::LanguageLoader;
@@ -6,20 +6,32 @@
 
 @(fluent: &FluentLanguageLoader, posts: &[(Post, Vec<Tag>)], years: &[i16])
 
-@:page_base(fluent, "Rasmus.krats.se", {
+<!doctype html>
+<html lang="@fluent.current_language()">
+  <head>
+    <title>Rasmus.krats.se</title>
+    @:head_canon()
+  </head>
+  <body>
+    <header>
+      <h1>Rasmus​.krats​.se</h1>
+      <p class="tagline">@fl!(fluent, "tagline")</p>
+    </header>
+    <main>
+      @for (post, tags) in posts {
+      <article id="post_@(post.year)_@post.slug" lang="@post.lang">
+        <h2><a href="@post.url()">@Html(&post.title)</a></h2>
+        <p class="publine">@Html(post.publine(tags))</p>
+      </article>
+      }
 
-  <p class="tagline">@fl!(fluent, "tagline")</p>
-
-  @for (post, tags) in posts {
-  <article id="post_@(post.year)_@post.slug" lang="@post.lang">
-    <h2><a href="@post.url()">@Html(&post.title)</a></h2>
-    <p class="publine">@Html(post.publine(tags))</p>
-  </article>
-  }
-
-  @if let Some((first, rest)) = years.split_first() {
-  <p>@fl!(fluent, "from-year")
-    <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
-    <a href="/@year/@fluent.current_language()">@year</a>}.</p>
-  }
-})
+      @if let Some((first, rest)) = years.split_first() {
+      <p>@fl!(fluent, "from-year")
+        <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
+        <a href="/@year/@fluent.current_language()">@year</a>}.</p>
+      }
+    </main>
+    @:me_box()
+    @:footer(fluent)
+  </body>
+</html>

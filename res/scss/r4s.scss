@@ -1,4 +1,246 @@
+@use "sass:color";
+
+$paper: #f9f6f3;
+$purple: purple;
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
 body {
-    background: #f7f3f6;
-    color: #a09;
+    background: $paper;
+    color: black;
+    min-height: 100vh;
+    line-height: 1.4;
+
+    @media screen and (min-width: 42em) {
+        display: grid;
+    }
+
+    > header, > footer {
+        grid-column: 1 / 3;
+        padding: 1ex 1em;
+        position: relative;
+    }
+    > header {
+        border-bottom: .1em solid black;
+        min-height: 42px;
+        &::after {
+            content: url(static_name("bike-1.svg"));
+            display: block;
+            height: 50px;
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            right: 10%;
+            bottom: 0;
+            width: calc(50px * 1.33);
+        }
+    }
+    > main {
+        grid-row: 2 / 8;
+        padding: 1em;
+        max-width: 54em;
+        margin: 0;
+    }
+    > aside {
+        grid-column: 2;
+        margin: 2em auto 0;
+        &:last-of-type {
+            margin-bottom: 6em;
+        }
+    }
+    > footer {
+        background: black;
+        color: $paper;
+        margin: 22px 0 0;
+        display: flex;
+        flex-flow: row wrap;
+        justify-content: space-between;
+        gap: 1em;
+        p { margin: 0; }
+        :link {
+            color: color.mix($paper, $purple, 65%);
+        }
+        :visited {
+            color: color.mix($paper, $purple, 80%);
+        }
+        hr {
+            border: 0;
+            content: url(static_name("tree.svg"));
+            display: block;
+            height: 128px;
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            right: 3%;
+            top: -127px;
+            width: 114px;
+        }
+    }
+}
+
+@font-face {
+    font-family: Cocanut;
+    font-style: regular;
+    font-weight: regular;
+    src: local("Cocanut.otf"),
+         url(static_name("cocanut.otf"));
+}
+@font-face {
+    font-family: Cocanut;
+    font-style: regular;
+    font-weight: bold;
+    src: local("Cocanut Bold.otf"),
+         url(static_name("cocanut_bold.otf"));
+}
+@font-face {
+    font-family: Cocanut;
+    font-style: italic;
+    font-weight: regular;
+    src: local("Cocanut Italic.otf"),
+         url(static_name("cocanut_italic.otf"));
+}
+@font-face {
+    font-family: Cocanut;
+    font-style: italic;
+    font-weight: bold;
+    src: local("Cocanut Bold Italic.otf"),
+         url(static_name("cocanut_bold_italic.otf"));
+}
+h1, h2, h3, h4, header {
+    font-family: "Cocanut";
+    :link, :visited {
+        text-decoration: none;
+    }
+    &:hover {
+        :link, :visited {
+            text-decoration: underline;
+        }
+    }
+}
+h1 {
+    font-size: 320%;
+}
+aside h1 {
+    font-size: 180%;
+    font-weight: bold;
+    font-style: italic;
+}
+h2 {
+    font-size: 200%;
+}
+h3 {
+    font-size: 140%;
+}
+header {
+    font-size: 120%;
+}
+section {
+    margin-top: 1.6em;
+}
+h1, h2, h3 {
+    margin: 0;
+}
+p {
+    margin: 0 0 1em;
+}
+blockquote {
+    font-family: Cocanut;
+    // TODO: Something nice and swirly?
+    border-left: solid purple 1px;
+    border-radius: 1ex;
+    padding: 1ex 1em;
+    margin: 1ex auto 1.5em 1ex;
+}
+
+p.publine {
+    font-family: Cocanut;
+}
+
+main aside {
+    float: right;
+    margin: 0 0 1ex 1ex;
+}
+table {
+    border-collapse: collapse;
+    th, td {
+        text-align: left;
+        border: 0.02em solid #635;
+        padding: .1em .2em;
+    }
+}
+
+ul.tagcloud {
+    font-family: Cocanut;
+    margin: 2em 0;
+    padding: 0;
+    text-align: center;
+
+    li {
+        display: inline-block;
+        vertical-align: middle;
+        margin: .2em .4em;
+    }
+    a {
+        text-decoration: none;
+    }
+    .w0 { font-size: 80%; }
+    .w1 { font-size: 95%; }
+    .w2 { font-size: 111%; }
+    .w3 { font-size: 133%; }
+    .w4 { font-size: 148%; }
+    .w5 { font-size: 159%; }
+    .w6 { font-size: 800%; }
+}
+
+figure {
+    font-family: Cocanut;
+
+    &.scaled {
+        margin: 1em 0;
+    }
+    &.sidebar {
+        clear: right;
+        float: right;
+        margin: 0 0 1ex 1em;
+        max-width: 60%;
+        width: 17em;
+        &.portrait, &.fa-cover {
+            width: 12em;
+        }
+    }
+    &.gallery {
+        display: inline-block;
+        margin: 0 1em 1em 0;
+        max-width: calc(50% - 1.2em);
+        width: 16.7em;
+        vertical-align: top;
+        &.portrait {
+            max-width: calc(0.7 * (50% - 1.1em));
+            width: 0.7 * 16.7em;
+        }
+    }
+    &.fa-cover {
+        width: 8em;
+    }
+    > a, > a > img, > img {
+        width: -moz-available;
+        height: auto;
+    }
+}
+
+.wrapiframe {
+    width: -moz-available;
+    height: 0;
+    padding-bottom: 56.25%; // Default, to override per video?
+    position: relative;
+
+    iframe {
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        top: 0;
+        left: 0;
+    }
 }

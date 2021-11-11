@@ -7,6 +7,7 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
+use i18n_embed_fl::fl;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::reply::Response;
@@ -21,12 +22,7 @@ pub fn routes(s: BoxedFilter<(Pool,)>) -> BoxedFilter<(impl Reply,)> {
         .and(s.clone())
         .then(tagcloud)
         .map(wrap);
-    let page = param()
-        .and(end())
-        .and(goh())
-        .and(s)
-        .then(tagpage)
-        .map(wrap);
+    let page = param().and(end()).and(goh()).and(s).then(tagpage).map(wrap);
     cloud.or(page).unify().boxed()
 }
 
@@ -110,7 +106,8 @@ async fn tagpage(tag: SlugAndLang, pool: Pool) -> Result<Response> {
         })
         .await??;
 
+    let h1 = fl!(fluent, "posts-tagged", tag = tag.name);
     Ok(Builder::new()
-        .html(|o| templates::frontpage(o, &fluent, &posts, &[]))
+        .html(|o| templates::posts(o, &fluent, &h1, &posts, &[]))
         .unwrap())
 }

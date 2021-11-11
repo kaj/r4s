@@ -8,7 +8,10 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
 use lazy_regex::regex_captures;
-use pulldown_cmark::{BrokenLink, Event, Options, Parser, Tag};
+use pulldown_cmark::escape::{escape_href, escape_html};
+use pulldown_cmark::{
+    BrokenLink, CodeBlockKind, Event, Options, Parser, Tag,
+};
 use slug::slugify;
 use std::collections::BTreeMap;
 use std::fmt::Write;
@@ -80,7 +83,7 @@ async fn read_file(
                 "Post #{} /{}/{}.{} exists, but should be updated.\n   {:?}",
                 id, year, slug, lang, metadata
             );
-            let (title, body) = md_to_html(contents_md).await?;
+            let (title, body) = md_to_html(contents_md, lang).await?;
             diesel::update(p::posts)
                 .filter(p::id.eq(id))
                 .set((
@@ -96,7 +99,7 @@ async fn read_file(
         }
     } else {
         println!("New post /{}/{}.{}\n   {:?}", year, slug, lang, metadata);
-        let (title, body) = md_to_html(contents_md).await?;
+        let (title, body) = md_to_html(contents_md, lang).await?;
         let post_id = diesel::insert_into(p::posts)
             .values((
                 pubdate.map(|date| p::posted_at.eq(date)),
@@ -119,6 +122,10 @@ async fn read_file(
 
 fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
     use crate::models::Tag;
+    diesel::delete(pt::post_tags)
+        .filter(pt::post_id.eq(post_id))
+        .execute(db)
+        .context("delete old tags")?;
     for tag in tags.split(',') {
         let tag = tag.trim();
         let tag = t::tags
@@ -141,12 +148,12 @@ fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
 /// Convert my flavour of markdown to my preferred html.
 ///
 /// Returns the title and body html markup separately.
-async fn md_to_html(markdown: &str) -> Result<(String, String)> {
+async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
     let mut fixlink = |broken_link: BrokenLink| {
         Some(if let Some(url) = fa_link(broken_link.reference) {
             (url.into(), String::new().into())
         } else {
-            link_ext(&broken_link, markdown)
+            link_ext(&broken_link, markdown, lang)
                 .map(|(url, title)| (url.into(), title.into()))
                 .unwrap_or((
                     broken_link.reference.to_owned().into(),
@@ -245,28 +252,56 @@ fn fa_link_c() {
     )
 }
 
-fn link_ext(link: &BrokenLink, source: &str) -> Option<(String, String)> {
-    let (_all, text, kind, _, _attrs) = regex_captures!(
-        r"^\[(.*)\]\[(\w+)([,\s]+(.*))?\]$",
+fn link_ext(
+    link: &BrokenLink,
+    source: &str,
+    lang: &str,
+) -> Option<(String, String)> {
+    let (_all, text, kind, _, attr0, _, attrs) = regex_captures!(
+        r"^\[(.*)\]\[(\w+)(:(\w+))?([,\s]+(.*))?\]$",
         &source[link.span.clone()],
     )?;
     match kind {
-        "personname" => {
-            let lang = "sv"; // FIXME
-            Some((
-                format!(
-                    "https://{}.wikipedia.org/wiki/{}",
-                    lang,
-                    text.replace(' ', "_")
-                ),
-                format!("Se {} på wikipedia", text),
-            ))
+        "personname" | "wp" => {
+            let lang = if attr0.is_empty() { lang } else { attr0 };
+            Some(wikilink(text, lang, attrs))
         }
+        "sw" => Some((
+            format!(
+                "https://seriewikin.serieframjandet.se/index.php/{}",
+                text.replace(' ', "_")
+            ),
+            format!("Se {} på seriewikin", text),
+        )),
         "cargo" => {
             Some((format!("https://lib.rs/crates/{}", text), String::new()))
         }
+        "foldoc" => Some((
+            format!("https://foldoc.org/{}", text),
+            format!("Se {} i free online dictionary of computing", text),
+        )),
+        "rfc" => Some((
+            format!("http://www.faqs.org/rfcs/rfc{}.html", attr0),
+            format!("RFC {}", attr0),
+        )),
         _ => None,
     }
+}
+
+fn wikilink(text: &str, lang: &str, xyzzy: &str) -> (String, String) {
+    let t = if xyzzy.is_empty() {
+        text.to_string()
+    } else {
+        format!("{} ({})", text, xyzzy)
+    };
+    (
+        format!(
+            "https://{}.wikipedia.org/wiki/{}",
+            lang,
+            t.replace(' ', "_").replace('\u{ad}', ""),
+        ),
+        format!("Se {} på wikipedia", t),
+    )
 }
 
 async fn collect_html<'a>(
@@ -277,7 +312,9 @@ async fn collect_html<'a>(
     let mut section_level = 1;
     while let Some(event) = data.next() {
         match event {
-            Event::Text(text) => result.push_str(text.as_ref()),
+            Event::Text(text) => {
+                escape_html(&mut result, &text)?;
+            }
             Event::Start(Tag::Heading(level)) => {
                 while section_level >= level {
                     result.push_str("</section>");
@@ -295,7 +332,14 @@ async fn collect_html<'a>(
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
                 result.push_str("<pre><code");
-                result.push_str(&format!(" data-type='{:?}'", blocktype));
+                match blocktype {
+                    CodeBlockKind::Indented => (),
+                    CodeBlockKind::Fenced(lang) => {
+                        result.push_str(" class=\"");
+                        escape_html(&mut result, &lang)?;
+                        result.push('"');
+                    }
+                }
                 result.push('>');
             }
             Event::End(Tag::CodeBlock(_blocktype)) => {
@@ -319,7 +363,7 @@ async fn collect_html<'a>(
                     }
                 }
                 let (_all, imgref, _, classes, caption) = regex_captures!(
-                    r"^([A-Za-z0-9/._-]*)\s*(\{([^}]*)\})?\s*(.*)$",
+                    r"^([A-Za-z0-9/._-]*)\s*(\{([^}]*)\})?\s*(.*)$"m,
                     &imgref,
                 )
                 .with_context(|| {
@@ -341,16 +385,24 @@ async fn collect_html<'a>(
                         .await
                         .context("Image api")?;
                     let alt = inner.trim();
-                    let imgtag = if classes == "scaled" {
+                    let imgtag = if classes
+                        .split_ascii_whitespace()
+                        .any(|w| w == "scaled")
+                    {
                         imgdata.markup_large(alt)
                     } else {
                         imgdata.markup(alt)
                     };
+                    let class2 = if imgdata.is_portrait() {
+                        " portrait"
+                    } else {
+                        ""
+                    };
                     write!(
                         &mut result,
-                        "<figure class='{}' data-type='{:?}'>{}\
+                        "<figure class='{}{}' data-type='{:?}'>{}\
                      <figcaption>{} {}</figcaption></figure>\n<p><!--no-p-->",
-                        classes, imgtype, imgtag, caption, title,
+                        classes, class2, imgtype, imgtag, caption, title,
                     )
                     .unwrap();
                 }
@@ -384,16 +436,16 @@ async fn collect_html<'a>(
                         result.push_str(&format!(" start='{}'", start));
                     }
                     Tag::Item => (),
-                    Tag::Link(linktype, a, b) => {
-                        if !a.is_empty() {
-                            result.push_str(" href='");
-                            result.push_str(a.as_ref());
-                            result.push('\'');
+                    Tag::Link(linktype, href, title) => {
+                        if !href.is_empty() {
+                            result.push_str(" href=\"");
+                            escape_href(&mut result, &href)?;
+                            result.push('"');
                         }
-                        if !b.is_empty() {
-                            result.push_str(" title='");
-                            result.push_str(b.as_ref());
-                            result.push('\'');
+                        if !title.is_empty() {
+                            result.push_str(" title=\"");
+                            escape_html(&mut result, &title)?;
+                            result.push('"');
                         }
                         result.push_str(&format!(
                             " data-type='{:?}'",
@@ -424,8 +476,7 @@ async fn collect_html<'a>(
             Event::Html(code) => result.push_str(&code),
             Event::Code(code) => {
                 result.push_str("<code>");
-                pulldown_cmark::escape::escape_html(&mut result, &code)
-                    .unwrap();
+                escape_html(&mut result, &code)?;
                 result.push_str("</code>");
             }
             Event::HardBreak => {
@@ -453,6 +504,7 @@ fn tag_name(tag: &Tag) -> &'static str {
         Tag::List(Some(_)) => "ol",
         Tag::List(None) => "ul",
         Tag::Item => "li",
+        Tag::BlockQuote => "blockquote",
         tag => panic!("Not a simple tag: {:?}", tag),
     }
 }
