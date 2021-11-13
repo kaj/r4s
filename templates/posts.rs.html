@@ -14,6 +14,7 @@
   <article id="post_@(post.year)_@post.slug" lang="@post.lang">
     <h2><a href="@post.url()">@Html(&post.title)</a></h2>
     <p class="publine">@Html(post.publine(tags))</p>
+    @Html(&post.content)
   </article>
   }
 

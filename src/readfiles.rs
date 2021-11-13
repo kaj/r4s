@@ -83,11 +83,13 @@ async fn read_file(
                 "Post #{} /{}/{}.{} exists, but should be updated.\n   {:?}",
                 id, year, slug, lang, metadata
             );
-            let (title, body) = md_to_html(contents_md, lang).await?;
+            let (title, teaser, body) =
+                extract_parts(contents_md, lang).await?;
             diesel::update(p::posts)
                 .filter(p::id.eq(id))
                 .set((
                     p::title.eq(&title),
+                    p::teaser.eq(&teaser),
                     p::content.eq(&body),
                     p::orig_md.eq(&contents),
                 ))
@@ -99,7 +101,7 @@ async fn read_file(
         }
     } else {
         println!("New post /{}/{}.{}\n   {:?}", year, slug, lang, metadata);
-        let (title, body) = md_to_html(contents_md, lang).await?;
+        let (title, teaser, body) = extract_parts(contents_md, lang).await?;
         let post_id = diesel::insert_into(p::posts)
             .values((
                 pubdate.map(|date| p::posted_at.eq(date)),
@@ -107,6 +109,7 @@ async fn read_file(
                 p::slug.eq(slug),
                 p::lang.eq(lang),
                 p::title.eq(&title),
+                p::teaser.eq(&teaser),
                 p::content.eq(&body),
                 p::orig_md.eq(&contents),
             ))
@@ -145,9 +148,35 @@ fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
     Ok(())
 }
 
+async fn extract_parts(
+    markdown: &str,
+    lang: &str,
+) -> Result<(String, String, String)> {
+    let (title, body) = md_to_html(markdown, lang).await?;
+    let teaser = if markdown.len() < 800 {
+        body.clone()
+    } else {
+        let mut end = 700;
+        while !markdown.is_char_boundary(end) {
+            end -= 1;
+        }
+        let end = markdown[..end].rfind("\n\n").unwrap_or(0);
+        let end = markdown[..end].rfind("\n## ").unwrap_or(end);
+        let end = if end > 50 {
+            end
+        } else {
+            end + 2 + markdown[end + 2..].find("\n\n").unwrap_or(0)
+        };
+        md_to_html(&markdown[..end], lang)
+            .await
+            .map(|(_title, teaser)| teaser)?
+    };
+    Ok((dbg!(title), teaser, body))
+}
+
 /// Convert my flavour of markdown to my preferred html.
 ///
-/// Returns the title and body html markup separately.
+/// Returns the title and full content html markup separately.
 async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
     let mut fixlink = |broken_link: BrokenLink| {
         Some(if let Some(url) = fa_link(broken_link.reference) {
@@ -155,10 +184,12 @@ async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
         } else {
             link_ext(&broken_link, markdown, lang)
                 .map(|(url, title)| (url.into(), title.into()))
-                .unwrap_or((
-                    broken_link.reference.to_owned().into(),
-                    String::new().into(),
-                ))
+                .unwrap_or_else(|| {
+                    (
+                        broken_link.reference.to_string().into(),
+                        String::new().into(),
+                    )
+                })
         })
     };
     let mut items = Parser::new_with_broken_link_callback(
@@ -178,7 +209,7 @@ async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
 
     let body = collect_html(items.into_iter()).await?;
 
-    Ok((dbg!(title), body))
+    Ok((title, body))
 }
 
 fn items_until<'a>(
@@ -520,5 +551,5 @@ fn extract_metadata(src: &str) -> (BTreeMap<&str, &str>, &str) {
         meta.insert(k.trim(), v.trim());
         src = reminder;
     }
-    (meta, src)
+    (meta, src.trim())
 }

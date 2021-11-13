@@ -13,6 +13,7 @@ create table posts (
   title varchar not null,
   lang varchar(2) not null, -- TODO enum?
   content text not null,
+  teaser text not null, -- The same start of content, may be all if short.
   orig_md text not null
 );
 

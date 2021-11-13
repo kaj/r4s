@@ -84,7 +84,7 @@ async fn tagpage(tag: SlugAndLang, pool: Pool) -> Result<Response> {
                         p::title,
                         p::posted_at,
                         p::updated_at,
-                        p::content,
+                        p::teaser,
                     ),
                     sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
                 ))

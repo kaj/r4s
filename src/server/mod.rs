@@ -155,7 +155,7 @@ async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
                         p::title,
                         p::posted_at,
                         p::updated_at,
-                        p::content,
+                        p::teaser,
                     ),
                     sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
                 ))
@@ -225,7 +225,7 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
                         p::title,
                         p::posted_at,
                         p::updated_at,
-                        p::content,
+                        p::teaser,
                     ),
                     sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
                 ))

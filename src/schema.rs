@@ -15,6 +15,7 @@ table! {
         title -> Varchar,
         lang -> Varchar,
         content -> Text,
+        teaser -> Text,
         orig_md -> Text,
     }
 }
