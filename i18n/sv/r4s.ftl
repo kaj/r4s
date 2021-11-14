@@ -15,7 +15,10 @@ updated-at = Senast uppdaterad { $date }.
 tagged = Taggat
 related = Liknande inlägg
 
-tagshead = Taggar på Rasmus.krats.se
+tagshead = Taggar på Rasmus​.krats​.se
 
 posts-year = Inlägg från { $year }
 posts-tagged = Inlägg taggade ”{ $tag }”
+
+meb-h1 = Rasmus & siten
+meb-about = Om Rasmus​.krats​.se

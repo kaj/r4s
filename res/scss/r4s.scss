@@ -15,6 +15,7 @@ body {
 
     @media screen and (min-width: 42em) {
         display: grid;
+        grid-template-columns: 5fr 2fr;
     }
 
     > header, > footer {
@@ -45,15 +46,17 @@ body {
     }
     > aside {
         grid-column: 2;
-        margin: 2em auto 0;
+        margin: 1em 0 0;
+        padding: 1ex 1em;
+        width: -moz-available;
         &:last-of-type {
-            margin-bottom: 6em;
+            margin-bottom: 30vmin;
         }
     }
     > footer {
         background: black;
         color: $paper;
-        margin: 22px 0 0;
+        margin: 0;
         display: flex;
         flex-flow: row wrap;
         justify-content: space-between;
@@ -69,13 +72,13 @@ body {
             border: 0;
             content: url(static_name("tree.svg"));
             display: block;
-            height: 128px;
+            height: 30vmin;
+            width: 27vmin;
             margin: 0;
             padding: 0;
             position: absolute;
-            right: 3%;
-            top: -127px;
-            width: 114px;
+            right: 4%;
+            top: -30vmin;
         }
     }
 }
@@ -127,6 +130,23 @@ aside h1 {
     font-weight: bold;
     font-style: italic;
 }
+
+aside#me_box {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: end;
+    gap: 0 1em;
+    justify-content: space-between;
+
+    h1, ul:first-of-type {
+        width: -moz-available;
+    }
+    ul {
+        padding: 0 0 0 1em;
+        margin: 0;
+    }
+}
+
 h2 {
     font-size: 200%;
 }
@@ -176,21 +196,22 @@ ul.tagcloud {
     margin: 2em 0;
     padding: 0;
     text-align: center;
+    line-height: 1;
 
     li {
         display: inline-block;
         vertical-align: middle;
         margin: .2em .4em;
     }
-    a {
+    li:not(:hover) a {
         text-decoration: none;
     }
-    .w0 { font-size: 80%; }
-    .w1 { font-size: 95%; }
-    .w2 { font-size: 111%; }
-    .w3 { font-size: 133%; }
-    .w4 { font-size: 148%; }
-    .w5 { font-size: 159%; }
+    .w0 { font-size: 75%; }
+    .w1 { font-size: 88%; }
+    .w2 { font-size: 104%; }
+    .w3 { font-size: 123%; }
+    .w4 { font-size: 145%; }
+    .w5 { font-size: 172%; }
     .w6 { font-size: 800%; }
 }
 

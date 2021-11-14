@@ -1,15 +1,20 @@
-@()
+@use i18n_embed::{LanguageLoader, fluent::FluentLanguageLoader};
+@use i18n_embed_fl::fl;
+
+@(fluent: &FluentLanguageLoader)
 <aside id="me_box">
-  <h1>Rasmus Kaj</h1>
+  <h1>@fl!(fluent, "meb-h1")</h1>
   <ul>
-    <li class="icon-user"><a href="/om">Om Rasmus.krats.se</a></li>
-    <li class="icon-leaf"><a href="https://www.kth.se/profile/kaj/">KTH</a></li>
-    <li class="icon-github"><a href="https://github.com/kaj">Github</a></li>
-    <li class="icon-twitter"><a href="https://twitter.com/rasmus_kaj">Twitter</a></li>
-    <li class="icon-book"><a href="https://www.librarything.com/profile/kaj">LibraryThing</a></li>
+    <li><a href="/om">@fl!(fluent, "meb-about")</a></li>
+    <li><a href="/tag/@fluent.current_language()">@fl!(fluent, "tagshead")</a></li>
+  </ul><ul>
+    <li><a href="https://www.kth.se/profile/kaj/">KTH</a></li>
+    <li><a href="https://github.com/kaj">Github</a></li>
+    <li><a href="https://twitter.com/rasmus_kaj">Twitter</a></li>
+    <li><a href="https://www.librarything.com/profile/kaj">LibraryThing</a></li>
   </ul>
-  <ul>
-    <li class="icon-link-ext"><a href="https://krats.se/">krats.se</a></li>
-    <li class="icon-link-ext"><a href="https://fantomenindex.krats.se/">Fantomenindex</a></li>
-    <li class="icon-link-ext"><a href="http://www.albumforlaget.se/">Albumförlaget</a></li></ul>
+  <ul lang="sv">
+    <li><a href="https://krats.se/">krats.se</a></li>
+    <li><a href="https://fantomenindex.krats.se/">Fantomenindex</a></li>
+    <li><a href="http://www.albumforlaget.se/">Albumförlaget</a></li></ul>
 </aside>
