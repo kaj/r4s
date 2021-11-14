@@ -6,6 +6,7 @@ use self::error::ViewError;
 use self::templates::RenderRucte;
 use crate::dbopt::{DbOpt, Pool};
 use crate::models::{year_of_date, Post, Tag};
+use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use accept_language::intersection;
 use diesel::prelude::*;
@@ -306,8 +307,44 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
     let post_id = post.id;
     let tags = db.interact(move |db| Tag::for_post(post_id, db)).await??;
 
+    let tag_ids = tags.iter().map(|t| t.id).collect::<Vec<_>>();
+    let post_id = post.id;
+    let lang = post.lang.clone();
+    use crate::models::{has_lang, PostLink};
+    use diesel::dsl::not;
+    let related = db
+        .interact(move |db| {
+            use diesel::dsl::sql;
+            use diesel::sql_types::Integer;
+            let c = sql::<Integer>("cast(count(*) as integer)");
+            let post_fields = (
+                p::id,
+                year_of_date(p::posted_at),
+                p::slug,
+                p::lang,
+                p::title,
+            );
+            p::posts
+                .select(post_fields)
+                .left_join(pt::post_tags.on(p::id.eq(pt::post_id)))
+                .filter(pt::tag_id.eq_any(tag_ids))
+                .filter(p::lang.eq(&lang).or(not(has_lang(
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    &lang,
+                ))))
+                .filter(p::id.ne(post_id))
+                .group_by(post_fields)
+                .order((c.desc(), p::posted_at.desc()))
+                .limit(8)
+                .load::<PostLink>(db)
+        })
+        .await??;
+
     Ok(Builder::new()
-        .html(|o| templates::page(o, fluent, &post, &tags, &other_langs))
+        .html(|o| {
+            templates::page(o, fluent, &post, &tags, &other_langs, &related)
+        })
         .unwrap())
 }
 

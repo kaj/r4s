@@ -1,8 +1,9 @@
 @use super::{footer, head_canon, me_box};
-@use crate::models::{Post, Tag};
+@use crate::models::{Post, PostLink, Tag};
 @use i18n_embed::fluent::FluentLanguageLoader;
+@use i18n_embed_fl::fl;
 
-@(fluent: FluentLanguageLoader, post: &Post, tags: &[Tag], other_langs: &[String])
+@(fluent: FluentLanguageLoader, post: &Post, tags: &[Tag], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang">
@@ -21,10 +22,14 @@
       <p class="publine">@Html(post.publine(tags))</p>
       @Html(&post.content)
     </main>
+    @if !similar.is_empty() {
     <aside>
-      <h1>Relaterat</h1>
-      <p>Todo: lista relaterade sidor.</p>
+      <h1>@fl!(fluent, "related")</h1>
+      <ul>@for link in similar {
+        <li><a href="@link.url()">@link.title</a> (@link.year)</li>
+        }</ul>
     </aside>
+    }
     @:me_box()
     @:footer(&fluent)
   </body>

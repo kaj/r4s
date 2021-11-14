@@ -4,11 +4,15 @@ use crate::schema::tags::dsl as t;
 use diesel::helper_types::Select;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::sql_types::{Smallint, Timestamptz};
+use diesel::sql_types::{Smallint, Timestamptz, Varchar};
 use i18n_embed_fl::fl;
 
 sql_function! {
     fn year_of_date(arg: Timestamptz) -> Smallint;
+}
+
+sql_function! {
+    fn has_lang(yearp: Smallint, slugp: Varchar, langp: Varchar) -> Bool;
 }
 
 pub type DateTime = chrono::DateTime<chrono::Utc>;

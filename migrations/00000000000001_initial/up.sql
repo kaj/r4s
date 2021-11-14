@@ -48,3 +48,10 @@ create table post_tags (
   tag_id integer not null references tags (id)
 );
 create unique index idx_post_tags_rel on post_tags (post_id, tag_id);
+
+create function has_lang(yearp smallint, slugp varchar, langp varchar(2))
+  returns bool
+  language sql immutable strict parallel safe
+  as $func$
+  select count(*) > 0 from posts p where year_of_date(posted_at) = yearp and p.slug = slugp and p.lang = langp
+  $func$;

@@ -13,6 +13,7 @@ use-cookies = This site <a href='/about#cookie'>uses cookies</a>.
 posted-at = Posted { $date }.
 updated-at = Last updated { $date }.
 tagged = Tagged
+related = Related posts
 
 tagshead = Tags on Rasmus.krats.se
 
