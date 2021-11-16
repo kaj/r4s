@@ -230,7 +230,7 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
                     ),
                     sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
                 ))
-                .filter(year_of_date(p::posted_at).eq(year))
+                .filter(year_of_date(p::posted_at).eq(year).or(year_of_date(p::updated_at).eq(year)))
                 .order(p::updated_at.asc())
                 .load::<(Post, bool)>(db)
                 .and_then(|data| data.into_iter()
