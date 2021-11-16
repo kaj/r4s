@@ -8,7 +8,9 @@ edition = "2021"
 build = "src/build.rs"
 
 [build-dependencies]
+lazy_static = "1.4.0"
 ructe = { version = "0.13.4", features = ["sass", "warp02"] }
+syntect = { version = "4.2", default-features = false, features = ["default-fancy"]}
 
 [dependencies]
 accept-language = "2.0"
@@ -21,6 +23,7 @@ env_logger = "0.9.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
 i18n-embed-fl = "0.6.0"
 lazy-regex = "2.2.2"
+lazy_static = "1.4.0"
 log = "0.4.6"
 mime = "0.3.0"
 pulldown-cmark = "0.8.0"
@@ -29,5 +32,6 @@ rust-embed = "*"
 serde = { version = "1.0", features = ["derive"] }
 slug = "0.1"
 structopt = "0.3.23"
+syntect = { version = "4.2", default-features = false, features = ["default-fancy"]}
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 warp = "0.3.2"

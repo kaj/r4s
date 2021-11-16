@@ -362,16 +362,35 @@ async fn collect_html<'a>(
                 result.push_str(&format!("</h{}>\n", level));
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
-                result.push_str("<pre><code");
-                match blocktype {
-                    CodeBlockKind::Indented => (),
-                    CodeBlockKind::Fenced(lang) => {
-                        result.push_str(" class=\"");
+                result.push_str("<pre");
+                let lang = match blocktype {
+                    CodeBlockKind::Fenced(lang) if !lang.is_empty() => {
+                        result.push_str(" data-lang=\"");
                         escape_html(&mut result, &lang)?;
                         result.push('"');
+                        Some(lang.to_string())
+                    }
+                    _ => None,
+                };
+                result.push('>');
+                for event in &mut data {
+                    match event {
+                        Event::End(Tag::CodeBlock(_blocktype)) => break,
+                        Event::Text(code) => {
+                            use crate::syntax_hl::highlight;
+                            if let Some(code) = lang
+                                .as_ref()
+                                .and_then(|lang| highlight(lang, &code))
+                            {
+                                result.push_str(&code);
+                            } else {
+                                escape_html(&mut result, &code)?;
+                            }
+                        }
+                        x => panic!("Unexpeted in code: {:?}", x),
                     }
                 }
-                result.push('>');
+                result.push_str("</pre>\n");
             }
             Event::End(Tag::CodeBlock(_blocktype)) => {
                 result.push_str("</code></pre>\n");

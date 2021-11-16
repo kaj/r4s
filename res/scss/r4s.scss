@@ -1,6 +1,6 @@
 @use "sass:color";
 
-$paper: #f9f6f3;
+$paper: #fdfbf9;
 $purple: purple;
 
 html, body {
@@ -125,25 +125,27 @@ h1, h2, h3, h4, header {
 h1 {
     font-size: 320%;
 }
-aside h1 {
-    font-size: 180%;
-    font-weight: bold;
-    font-style: italic;
-}
-
-aside#me_box {
-    display: flex;
-    flex-flow: row wrap;
-    align-items: end;
-    gap: 0 1em;
-    justify-content: space-between;
-
-    h1, ul:first-of-type {
-        width: -moz-available;
+aside {
+    h1 {
+        font-size: 180%;
+        font-weight: bold;
+        font-style: italic;
     }
     ul {
         padding: 0 0 0 1em;
         margin: 0;
+    }
+
+    &#me_box {
+        display: flex;
+        flex-flow: row wrap;
+        align-items: end;
+        gap: 0 1em;
+        justify-content: space-between;
+
+        h1, ul:first-of-type {
+            width: -moz-available;
+        }
     }
 }
 
@@ -281,5 +283,29 @@ article {
     }
     &:nth-child(3n):after {
         content: url(static_name("deco3.svg"));
+    }
+}
+
+pre {
+    margin: 1em 1ex;
+    padding: 1ex;
+
+    &[data-lang] {
+        $bcol: burlywood;
+        background: color.mix($paper, white);
+        border: solid 1px $bcol;
+        position: relative;
+
+        &::before {
+            background: linear-gradient(60deg, rgba($bcol, 0) 20%, $bcol 40%);
+            content: attr(data-lang);
+            display: block;
+            font-family: cocanut;
+            font-style: italic;
+            padding: 0 1ex 0 2em;
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
     }
 }
