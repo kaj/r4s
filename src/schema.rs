@@ -1,4 +1,15 @@
 table! {
+    assets (id) {
+        id -> Int4,
+        updated_at -> Timestamptz,
+        year -> Int2,
+        name -> Varchar,
+        mime -> Varchar,
+        content -> Bytea,
+    }
+}
+
+table! {
     post_tags (id) {
         id -> Int4,
         post_id -> Int4,
@@ -31,4 +42,4 @@ table! {
 joinable!(post_tags -> posts (post_id));
 joinable!(post_tags -> tags (tag_id));
 
-allow_tables_to_appear_in_same_query!(post_tags, posts, tags,);
+allow_tables_to_appear_in_same_query!(assets, post_tags, posts, tags,);

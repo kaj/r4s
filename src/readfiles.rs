@@ -1,6 +1,7 @@
 use crate::dbopt::DbOpt;
 use crate::imgcli::ImageInfo;
 use crate::models::year_of_date;
+use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
@@ -15,7 +16,7 @@ use pulldown_cmark::{
 use slug::slugify;
 use std::collections::BTreeMap;
 use std::fmt::Write;
-use std::fs::read_to_string;
+use std::fs::{read, read_to_string};
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
@@ -68,6 +69,14 @@ async fn read_file(
         .map(|v| v.parse::<DateTime>().context("pubdate"))
         .transpose()?;
     let year = pubdate.unwrap_or_else(|| Local::now().into()).year() as i16;
+
+    if let Some(res) = metadata.get("res") {
+        for spec in res.split(',').map(|s| s.trim()) {
+            handle_assets(path, spec, year, db)
+                .with_context(|| format!("Asset {:?}", spec))?;
+        }
+    }
+
     if let Some((id, old_md)) = p::posts
         .select((p::id, p::orig_md))
         .filter(year_of_date(p::posted_at).eq(&year))
@@ -119,6 +128,53 @@ async fn read_file(
         if let Some(tags) = metadata.get("tags") {
             tag_post(post_id, tags, db)?;
         }
+    }
+    Ok(())
+}
+
+fn handle_assets(
+    path: &Path,
+    spec: &str,
+    year: i16,
+    db: &PgConnection,
+) -> Result<()> {
+    let (_all, name, _, mime) =
+        regex_captures!(r"^([\w_\.]+)\s+(\{([\w-]+/[\w-]+)\})$", spec)
+            .ok_or_else(|| anyhow!("Bad asset spec"))?;
+    let path = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
+    let content = read(&path).with_context(|| path.display().to_string())?;
+    if let Some((id, old_mime, old_content)) = a::assets
+        .select((a::id, a::mime, a::content))
+        .filter(a::year.eq(year))
+        .filter(a::name.eq(name))
+        .first::<(i32, String, Vec<u8>)>(db)
+        .optional()?
+    {
+        if mime != old_mime || content != old_content {
+            println!("Content #{} ({}) updating", id, name);
+            diesel::update(a::assets)
+                .filter(a::id.eq(id))
+                .set((
+                    a::year.eq(year),
+                    a::name.eq(name),
+                    a::mime.eq(mime),
+                    a::content.eq(&content),
+                ))
+                .execute(db)
+                .with_context(|| {
+                    format!("Update asset #{} {}/{}", id, year, name)
+                })?;
+        }
+    } else {
+        diesel::insert_into(a::assets)
+            .values((
+                a::year.eq(year),
+                a::name.eq(name),
+                a::mime.eq(mime),
+                a::content.eq(content),
+            ))
+            .execute(db)
+            .with_context(|| format!("Create asset {}/{}", year, name))?;
     }
     Ok(())
 }

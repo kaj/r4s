@@ -6,6 +6,7 @@ use self::error::ViewError;
 use self::templates::RenderRucte;
 use crate::dbopt::{DbOpt, Pool};
 use crate::models::{year_of_date, Post, Tag};
+use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use accept_language::intersection;
@@ -41,8 +42,19 @@ impl Args {
         let s = move || s.clone();
         let lang_filt = header::optional("accept-language")
             .map(Option::unwrap_or_default);
+        let asset_routes = goh()
+            .and(param())
+            .and(param())
+            .and(end())
+            .and(goh())
+            .and(s())
+            .then(asset_file)
+            .map(wrap)
+            .or(tail().and(goh()).then(static_file).map(wrap))
+            .unify();
+
         let routes = warp::any()
-            .and(path("s").and(tail()).and(goh()).then(static_file).map(wrap))
+            .and(path("s").and(asset_routes))
             .or(end().and(goh()).and(lang_filt).map(|lang: MyLang| {
                 redirect::see_other(
                     Uri::builder()
@@ -135,6 +147,29 @@ async fn static_file(name: Tail) -> Result<impl Reply> {
         .header(CONTENT_TYPE, data.mime.as_ref())
         .header(EXPIRES, far_expires.to_rfc2822())
         .body(data.content)
+        .unwrap())
+}
+
+async fn asset_file(year: i16, name: String, pool: Pool) -> Result<Response> {
+    let db = pool.get().await?;
+
+    let (mime, content) = db
+        .interact(move |db| {
+            a::assets
+                .select((a::mime, a::content))
+                .filter(a::year.eq(year))
+                .filter(a::name.eq(name))
+                .first::<(String, Vec<u8>)>(db)
+                .optional()
+        })
+        .await??
+        .ok_or(ViewError::NotFound)?;
+
+    use warp::http::header::CONTENT_TYPE;
+    Ok(Builder::new()
+        .header(CONTENT_TYPE, mime)
+        //.header(EXPIRES, far_expires.to_rfc2822())
+        .body(content.into())
         .unwrap())
 }
 

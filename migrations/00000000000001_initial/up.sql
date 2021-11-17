@@ -55,3 +55,15 @@ create function has_lang(yearp smallint, slugp varchar, langp varchar(2))
   as $func$
   select count(*) > 0 from posts p where year_of_date(posted_at) = yearp and p.slug = slugp and p.lang = langp
   $func$;
+
+create table assets (
+  id serial primary key,
+  updated_at timestamp with time zone not null default now(),
+  year smallint not null,
+  name varchar not null,
+  mime varchar not null,
+  content bytea not null
+);
+
+create unique index idx_asset_path on assets (year, name);
+select diesel_manage_updated_at('assets');
