@@ -27,7 +27,8 @@ body {
         border-bottom: .1em solid black;
         min-height: 42px;
         &::after {
-            content: url(static_name("bike-1.svg"));
+            background: url(static_name("bike-1.svg"));
+            content: "";
             display: block;
             height: 50px;
             margin: 0;
@@ -218,19 +219,22 @@ ul.tagcloud {
 }
 
 figure {
+    $paspect: 0.7;
     font-family: Cocanut;
+    margin: 1em 0;
+    max-width: -moz-available;
 
-    &.scaled {
-        margin: 1em 0;
-    }
-    &.sidebar {
-        clear: right;
-        float: right;
-        margin: 0 0 1ex 1em;
-        max-width: 60%;
-        width: 17em;
-        &.portrait, &.fa-cover {
-            width: 12em;
+    @media (min-width: 20em) {
+        &.sidebar {
+            $width: 19em;
+            clear: right;
+            float: right;
+            margin: 0 0 1ex 1em;
+            max-width: 50%;
+            width: $width;
+            &.portrait, &.fa-cover {
+                width: $paspect * $width;
+            }
         }
     }
     &.gallery {
@@ -272,17 +276,18 @@ article {
     &:after {
         $size: 12em;
         clear: both;
-        content: url(static_name("deco1.svg"));
+        background: url(static_name("deco1.svg"));
+        content: "";
         display: block;
         height: $size * 640 / 1280;
         margin: 0 auto 1em;
         width: $size;
     }
     &:nth-child(2n):after {
-        content: url(static_name("deco2.svg"));
+        background: url(static_name("deco2.svg"));
     }
     &:nth-child(3n):after {
-        content: url(static_name("deco3.svg"));
+        background: url(static_name("deco3.svg"));
     }
 }
 
@@ -297,7 +302,7 @@ pre {
         position: relative;
 
         &::before {
-            background: linear-gradient(60deg, rgba($bcol, 0) 20%, $bcol 40%);
+            background: linear-gradient(60deg, rgba($bcol, 0) 1em, $bcol 2em);
             content: attr(data-lang);
             display: block;
             font-family: cocanut;
