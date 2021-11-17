@@ -153,23 +153,29 @@ async fn extract_parts(
     lang: &str,
 ) -> Result<(String, String, String)> {
     let (title, body) = md_to_html(markdown, lang).await?;
-    let teaser = if markdown.len() < 800 {
-        body.clone()
-    } else {
-        let mut end = 700;
-        while !markdown.is_char_boundary(end) {
-            end -= 1;
-        }
-        let end = markdown[..end].rfind("\n\n").unwrap_or(0);
-        let end = markdown[..end].rfind("\n## ").unwrap_or(end);
-        let end = if end > 50 {
-            end
+    let end = markdown.find("<!-- more -->").or_else(|| {
+        if markdown.len() < 900 {
+            None
         } else {
-            end + 2 + markdown[end + 2..].find("\n\n").unwrap_or(0)
-        };
+            let mut end = 700;
+            while !markdown.is_char_boundary(end) {
+                end -= 1;
+            }
+            let end = markdown[..end].rfind("\n\n").unwrap_or(0);
+            let end = markdown[..end].rfind("\n## ").unwrap_or(end);
+            if end > 50 {
+                Some(end)
+            } else {
+                Some(end + 2 + markdown[end + 2..].find("\n\n").unwrap_or(0))
+            }
+        }
+    });
+    let teaser = if let Some(end) = end {
         md_to_html(&markdown[..end], lang)
             .await
             .map(|(_title, teaser)| teaser)?
+    } else {
+        body.clone()
     };
     Ok((dbg!(title), teaser, body))
 }
