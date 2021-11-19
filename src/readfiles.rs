@@ -8,7 +8,7 @@ use crate::schema::tags::dsl as t;
 use anyhow::{anyhow, Context, Result};
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
-use lazy_regex::regex_captures;
+use lazy_regex::{regex_captures, regex_find};
 use pulldown_cmark::escape::{escape_href, escape_html};
 use pulldown_cmark::{
     BrokenLink, CodeBlockKind, Event, Options, Parser, Tag,
@@ -209,6 +209,7 @@ async fn extract_parts(
     lang: &str,
 ) -> Result<(String, String, String)> {
     let (title, body) = md_to_html(markdown, lang).await?;
+    // Split at "more" marker, or try to find a good place if the text is long.
     let end = markdown.find("<!-- more -->").or_else(|| {
         if markdown.len() < 900 {
             None
@@ -218,18 +219,39 @@ async fn extract_parts(
                 end -= 1;
             }
             let end = markdown[..end].rfind("\n\n").unwrap_or(0);
-            let end = markdown[..end].rfind("\n## ").unwrap_or(end);
-            if end > 50 {
-                Some(end)
-            } else {
-                Some(end + 2 + markdown[end + 2..].find("\n\n").unwrap_or(0))
-            }
+            let end = markdown[..end].rfind("\n## ").unwrap_or_else(|| {
+                if end > 50 {
+                    end
+                } else {
+                    end + 2 + markdown[end + 2..].find("\n\n").unwrap_or(0)
+                }
+            });
+            Some(end)
         }
     });
-    let teaser = if let Some(end) = end {
-        md_to_html(&markdown[..end], lang)
-            .await
-            .map(|(_title, teaser)| teaser)?
+    let teaser = if let Some(teaser) = end.map(|e| &markdown[..e]) {
+        // If teaser don't have an image and there is a "front" image ...
+        if let Some(img) = (!teaser.contains("\n!["))
+            .then(|| ())
+            .and_then(|()| {
+                regex_find!(
+                    r#"!\[[^\]]*\]\[[^\]\{]*\{[^\}]*\bfront\b[^\}]*\}[^\]]*\]"#s,
+                    markdown
+                )
+            })
+        {
+            // ... try to put the front image directly after the header.
+            let s = teaser.find("\n\n").map(|s| s + 1).unwrap_or(0);
+            let teaser = format!(
+                "{}\n{}\n{}",
+                &teaser[..s],
+                img.replace("gallery", "sidebar"),
+                &teaser[s..],
+            );
+            md_to_html(&teaser, lang).await.map(|(_, teaser)| teaser)?
+        } else {
+            md_to_html(teaser, lang).await.map(|(_, teaser)| teaser)?
+        }
     } else {
         body.clone()
     };
