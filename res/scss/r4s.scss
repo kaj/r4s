@@ -175,6 +175,10 @@ blockquote {
     border-radius: 1ex;
     padding: 1ex 1em;
     margin: 1ex auto 1.5em 1ex;
+
+    *:last-child {
+        margin-bottom: 0;
+    }
 }
 
 p.publine {
