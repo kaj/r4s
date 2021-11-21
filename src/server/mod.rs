@@ -282,6 +282,9 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
                 .collect::<Result<Vec<_>, _>>())
         })
         .await??;
+    if posts.is_empty() {
+        return Err(ViewError::NotFound);
+    }
 
     let years = db
         .interact(move |db| {
