@@ -51,7 +51,7 @@ impl Args {
             .and(s())
             .then(asset_file)
             .map(wrap)
-            .or(tail().and(goh()).then(static_file).map(wrap))
+            .or(tail().and(goh()).map(static_file).map(wrap))
             .unify();
 
         let routes = warp::any()
@@ -117,7 +117,7 @@ fn goh() -> BoxedFilter<()> {
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
-async fn static_file(name: Tail) -> Result<impl Reply> {
+fn static_file(name: Tail) -> Result<impl Reply> {
     use chrono::{Duration, Utc};
     use templates::statics::StaticFile;
     use warp::http::header::{CONTENT_TYPE, EXPIRES};
