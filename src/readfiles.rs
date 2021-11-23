@@ -6,6 +6,7 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use anyhow::{anyhow, Context, Result};
+use async_recursion::async_recursion;
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
 use lazy_regex::{regex_captures, regex_find};
@@ -42,12 +43,42 @@ impl Args {
     pub async fn run(self) -> Result<()> {
         let db = self.db.get_db()?;
         for path in self.files {
-            read_file(&path, self.force, &db)
-                .await
-                .with_context(|| format!("Reading {:?}", path))?;
+            if path.is_file() {
+                read_file(&path, self.force, &db)
+                    .await
+                    .with_context(|| format!("Reading file {:?}", path))?;
+            } else {
+                read_dir(&path, &db)
+                    .await
+                    .with_context(|| format!("Reading dir {:?}", path))?;
+            }
         }
         Ok(())
     }
+}
+
+#[async_recursion(?Send)]
+async fn read_dir(path: &Path, db: &PgConnection) -> Result<()> {
+    for entry in path.read_dir()? {
+        let entry = entry?;
+        let path = entry.path();
+        if is_dotfile(&path) {
+            continue;
+        }
+        if entry.file_type()?.is_dir() {
+            read_dir(&path, db).await?
+        } else if path.extension().unwrap_or_default() == "md" {
+            read_file(&path, false, db).await?;
+        }
+    }
+    Ok(())
+}
+
+fn is_dotfile(path: &Path) -> bool {
+    path.file_name()
+        .and_then(std::ffi::OsStr::to_str)
+        .map(|name| name.starts_with('.'))
+        .unwrap_or(false)
 }
 
 async fn read_file(
