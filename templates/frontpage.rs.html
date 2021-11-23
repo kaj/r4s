@@ -1,21 +1,20 @@
+@use super::super::prelude::*;
 @use super::{footer, head_canon, me_box};
 @use crate::models::{Post, Tag};
-@use i18n_embed::fluent::FluentLanguageLoader;
-@use i18n_embed::LanguageLoader;
-@use i18n_embed_fl::fl;
 
-@(fluent: &FluentLanguageLoader, posts: &[(Post, Vec<Tag>)], years: &[i16])
+@(fluent: &FluentLanguageLoader, posts: &[(Post, Vec<Tag>)], years: &[i16], other_langs: &[String])
 
 <!doctype html>
 <html lang="@fluent.current_language()">
   <head>
-    <title>Rasmus.krats.se</title>
+    <title>@fl!(fluent, "sitename")</title>
     @:head_canon()
   </head>
   <body>
     <header>
-      <h1>Rasmus​.krats​.se</h1>
+      <h1>@fl!(fluent, "sitename")</h1>
       <p class="tagline">@fl!(fluent, "tagline")</p>
+      @for other in other_langs {<p>@Html(other)</p>}
     </header>
     <main>
       @for (post, tags) in posts {

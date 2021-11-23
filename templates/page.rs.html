@@ -1,20 +1,19 @@
+@use super::super::prelude::*;
 @use super::{footer, head_canon, me_box};
 @use crate::models::{Post, PostLink, Tag};
-@use i18n_embed::fluent::FluentLanguageLoader;
-@use i18n_embed_fl::fl;
 
-@(fluent: FluentLanguageLoader, post: &Post, tags: &[Tag], other_langs: &[String], similar: &[PostLink])
+@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang">
   <head>
-    <title>@post.title &#x2013; Rasmus.krats.se</title>
+    <title>@post.title — @fl!(fluent, "sitename")</title>
     @:head_canon()
   </head>
   <body>
     <header>
-      <a href="/@post.lang">Rasmus​.krats​.se</a>
-      @for other in other_langs {@Html(other)}
+      <p><a href="/@post.lang">@fl!(fluent, "sitename")</a></p>
+      @for other in other_langs {<p>@Html(other)</p>}
     </header>
 
     <main>
@@ -30,7 +29,7 @@
         }</ul>
     </aside>
     }
-    @:me_box(&fluent)
-    @:footer(&fluent)
+    @:me_box(fluent)
+    @:footer(fluent)
   </body>
 </html>

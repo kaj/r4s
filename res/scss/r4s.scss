@@ -26,6 +26,13 @@ body {
     > header {
         border-bottom: .1em solid black;
         min-height: 42px;
+        text-align: right;
+        h1 {
+            margin-top: 1ex;
+        }
+        p:not(.tagline) {
+            margin: 0;
+        }
         &::after {
             background: url(static_name("bike-1.svg"));
             content: "";
@@ -34,7 +41,7 @@ body {
             margin: 0;
             padding: 0;
             position: absolute;
-            right: 10%;
+            left: 10%;
             bottom: 0;
             width: calc(50px * 1.33);
         }
@@ -84,6 +91,11 @@ body {
     }
 }
 
+html:lang(en) a:not(:lang(en)),
+html:lang(sv) a:not(:lang(sv)) {
+    font-style: italic;
+}
+
 @font-face {
     font-family: Cocanut;
     font-style: regular;
@@ -116,9 +128,7 @@ h1, h2, h3, h4, header {
     font-family: "Cocanut";
     :link, :visited {
         text-decoration: none;
-    }
-    &:hover {
-        :link, :visited {
+        &:hover {
             text-decoration: underline;
         }
     }

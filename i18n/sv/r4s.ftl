@@ -1,5 +1,9 @@
+sitename = Rasmus​.krats​.se
 tagline = Skriverier då och då, på webben sedan 1994.
 from-year = Inlägg från år
+
+lang-name = Denna sida på svenska
+in-lang = På svenska: {$title}
 
 cc-by-kaj = Detta verk av
     <a href="/rkaj" xmlns:cc="https://creativecommons.org/ns#" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>

@@ -1,17 +1,18 @@
 mod error;
 pub mod language;
+mod prelude;
 mod tag;
 
 use self::error::ViewError;
+use self::language::MyLang;
+use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{DbOpt, Pool};
 use crate::models::{year_of_date, Post, Tag};
 use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
-use accept_language::intersection;
 use diesel::prelude::*;
-use i18n_embed_fl::fl;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -100,27 +101,6 @@ impl Args {
     }
 }
 
-/// Either "sv" or "en".
-#[derive(Debug)]
-struct MyLang(String);
-
-impl FromStr for MyLang {
-    type Err = ();
-    fn from_str(value: &str) -> Result<Self, ()> {
-        Ok(MyLang(
-            intersection(value, vec!["en", "sv"])
-                .drain(..)
-                .next()
-                .ok_or(())?,
-        ))
-    }
-}
-impl Default for MyLang {
-    fn default() -> Self {
-        MyLang("en".into())
-    }
-}
-
 fn wrap(result: Result<impl Reply>) -> Response {
     match result {
         Ok(reply) => reply.into_response(),
@@ -175,8 +155,8 @@ async fn asset_file(year: i16, name: String, pool: Pool) -> Result<Response> {
 
 async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
     let db = pool.get().await?;
-    let fluent = language::load(&lang.0)?;
     let limit = 5;
+    let langc = lang.clone();
     let posts = db
         .interact(move |db| {
             use diesel::dsl::sql;
@@ -221,8 +201,17 @@ async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
         })
         .await??;
 
+    let fluent = langc.fluent()?;
+    let other_langs = langc.other(|_, lang, name| {
+        format!(
+            "<a href='/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
+            lang=lang, name=name,
+        )});
+
     Ok(Builder::new()
-        .html(|o| templates::frontpage(o, &fluent, &posts, &years))
+        .html(|o| {
+            templates::frontpage(o, &fluent, &posts, &years, &other_langs)
+        })
         .unwrap())
 }
 
@@ -246,7 +235,7 @@ impl FromStr for SlugAndLang {
 
 async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
     let db = pool.get().await?;
-    let fluent = language::load(&lang.0)?;
+    let langc = lang.clone();
     let posts = db
         .interact(move |db| {
             use diesel::dsl::sql;
@@ -293,9 +282,18 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
         })
         .await??;
 
+    let fluent = langc.fluent()?;
     let h1 = fl!(fluent, "posts-year", year = year);
+    let other_langs = langc.other(|_, lang, name| {
+        format!(
+            "<a href='/{}/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
+            year, lang=lang, name=name,
+        )});
+
     Ok(Builder::new()
-        .html(|o| templates::posts(o, &fluent, &h1, &posts, &years))
+        .html(|o| {
+            templates::posts(o, &fluent, &h1, &posts, &years, &other_langs)
+        })
         .unwrap())
 }
 
@@ -306,18 +304,24 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
     let other_langs = db
         .interact(move |db| {
             p::posts
-                .select(p::lang)
+                .select((p::lang, p::title))
                 .filter(year_of_date(p::posted_at).eq(&year))
                 .filter(p::slug.eq(s1.slug))
                 .filter(p::lang.ne(s1.lang))
-                .load::<String>(db)
+                .load::<(String, String)>(db)
         })
         .await??
         .into_iter()
-        .map(|lang| format!(
-            "<a href='/{}/{}.{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{lang}</a>",
-            year, slug.slug, lang=lang,
-        ))
+        .map(|(lang, title)| {
+            let fluent = language::load(&lang).unwrap();
+            let name = fl!(fluent, "lang-name");
+            let title = fl!(fluent, "in-lang", title=title);
+
+            format!(
+                "<a href='/{}/{}.{lang}' hreflang='{lang}' lang='{lang}' title='{title}' rel='alternate'>{name}</a>",
+                year, slug.slug, lang=lang, title=title, name=name,
+            )
+        })
         .collect::<Vec<_>>();
 
     let post = db
@@ -381,7 +385,7 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
 
     Ok(Builder::new()
         .html(|o| {
-            templates::page(o, fluent, &post, &tags, &other_langs, &related)
+            templates::page(o, &fluent, &post, &tags, &other_langs, &related)
         })
         .unwrap())
 }

@@ -1,5 +1,9 @@
+sitename = Rasmus​.krats​.se
 tagline = Reminiscing this and that, on the web since 1994.
 from-year = Posts from year
+
+lang-name = This page in English
+in-lang = In English: {$title}
 
 cc-by-kaj = This work of
     <a href="/rkaj" xmlns:cc="https://creativecommons.org/ns#" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>

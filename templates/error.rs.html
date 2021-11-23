@@ -1,8 +1,8 @@
+@use super::super::prelude::*;
 @use super::{footer, head_canon};
 @use warp::http::StatusCode;
-@use i18n_embed::fluent::FluentLanguageLoader;
 
-@(fluent: FluentLanguageLoader, code: StatusCode, message: &str)
+@(fluent: &FluentLanguageLoader, code: StatusCode, message: &str)
 
 <!doctype html>
 <html lang="sv" class="error">
@@ -22,6 +22,6 @@
 	In a real application, this would mention the incident having
 	been logged, and giving contact details for further reporting.</p>
     </main>
-    @:footer(&fluent)
+    @:footer(fluent)
   </body>
 </html>

@@ -31,7 +31,7 @@ fn error_response(code: StatusCode, message: &str) -> Response {
     let fluent = language::load("en").unwrap();
     Builder::new()
         .status(code)
-        .html(|o| templates::error(o, fluent, code, message))
+        .html(|o| templates::error(o, &fluent, code, message))
         .unwrap()
 }
 

@@ -1,12 +1,10 @@
+@use super::super::prelude::*;
 @use super::page_base;
 @use crate::models::Tag;
-@use i18n_embed::fluent::FluentLanguageLoader;
-@use i18n_embed::LanguageLoader;
-@use i18n_embed_fl::fl;
 
-@(fluent: &FluentLanguageLoader, tags: &[(Tag, i32, usize)])
+@(fluent: &FluentLanguageLoader, tags: &[(Tag, i32, usize)], other_langs: &[String])
 
-@:page_base(fluent, &fl!(fluent, "tagshead"), {
+@:page_base(fluent, &fl!(fluent, "tagshead"), other_langs, {
 
   <ul class="tagcloud">
     @for (tag, n, w) in tags {

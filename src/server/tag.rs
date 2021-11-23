@@ -1,7 +1,5 @@
 use super::templates::{self, RenderRucte};
-use super::{
-    goh, language, wrap, MyLang, Pool, Result, SlugAndLang, ViewError,
-};
+use super::{goh, wrap, MyLang, Pool, Result, SlugAndLang, ViewError};
 use crate::models::{year_of_date, Post, Tag};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
@@ -49,16 +47,23 @@ async fn tagcloud(lang: MyLang, pool: Pool) -> Result<Response> {
         .map(|(i, (tag, j))| (tag, j, ((n - i - 1) * m) / n))
         .collect::<Vec<_>>();
     tags.sort_by(|(a, _, _), (b, _, _)| a.slug.cmp(&b.slug));
-    let fluent = language::load(&lang.0)?;
+
+    let fluent = lang.fluent()?;
+    let other_langs = lang.other(|_, lang, name| {
+        format!(
+            "<a href='/tag/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
+            lang=lang, name=name,
+        )});
+
     Ok(Builder::new()
-        .html(|o| templates::tags(o, &fluent, &tags))
+        .html(|o| templates::tags(o, &fluent, &tags, &other_langs))
         .unwrap())
 }
 
 async fn tagpage(tag: SlugAndLang, pool: Pool) -> Result<Response> {
     let db = pool.get().await?;
     let lang = tag.lang;
-    let fluent = language::load(&lang)?;
+    let langc = MyLang(lang.clone());
     let tag = db
         .interact(move |db| {
             t::tags
@@ -106,8 +111,17 @@ async fn tagpage(tag: SlugAndLang, pool: Pool) -> Result<Response> {
         })
         .await??;
 
+    let fluent = langc.fluent()?;
     let h1 = fl!(fluent, "posts-tagged", tag = tag.name);
+    let other_langs = langc.other(|_, lang, name| {
+        format!(
+            "<a href='/tag/{tag}.{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
+            tag=tag.slug, lang=lang, name=name,
+        )});
+
     Ok(Builder::new()
-        .html(|o| templates::posts(o, &fluent, &h1, &posts, &[]))
+        .html(|o| {
+            templates::posts(o, &fluent, &h1, &posts, &[], &other_langs)
+        })
         .unwrap())
 }
