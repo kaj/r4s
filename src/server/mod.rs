@@ -131,6 +131,7 @@ fn static_file(name: Tail) -> Result<impl Reply> {
 }
 
 async fn asset_file(year: i16, name: String, pool: Pool) -> Result<Response> {
+    use warp::http::header::CONTENT_TYPE;
     let db = pool.get().await?;
 
     let (mime, content) = db
@@ -145,7 +146,6 @@ async fn asset_file(year: i16, name: String, pool: Pool) -> Result<Response> {
         .await??
         .ok_or(ViewError::NotFound)?;
 
-    use warp::http::header::CONTENT_TYPE;
     Ok(Builder::new()
         .header(CONTENT_TYPE, mime)
         //.header(EXPIRES, far_expires.to_rfc2822())
@@ -298,6 +298,8 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
 }
 
 async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
+    use crate::models::{has_lang, PostLink};
+    use diesel::dsl::not;
     let db = pool.get().await?;
     let fluent = language::load(&slug.lang)?;
     let s1 = slug.clone();
@@ -352,13 +354,11 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
     let tag_ids = tags.iter().map(|t| t.id).collect::<Vec<_>>();
     let post_id = post.id;
     let lang = post.lang.clone();
-    use crate::models::{has_lang, PostLink};
-    use diesel::dsl::not;
     let related = db
         .interact(move |db| {
             use diesel::dsl::sql;
-            use diesel::sql_types::Integer;
-            let c = sql::<Integer>("cast(count(*) as integer)");
+            use diesel::sql_types::BigInt;
+            let c = sql::<BigInt>("count(*)");
             let post_fields = (
                 p::id,
                 year_of_date(p::posted_at),

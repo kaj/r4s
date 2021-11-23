@@ -241,7 +241,7 @@ async fn extract_parts(
             })
         {
             // ... try to put the front image directly after the header.
-            let s = teaser.find("\n\n").map(|s| s + 1).unwrap_or(0);
+            let s = teaser.find("\n\n").map_or(0, |s| s + 1);
             let teaser = format!(
                 "{}\n{}\n{}",
                 &teaser[..s],
