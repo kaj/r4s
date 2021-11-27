@@ -1,0 +1,108 @@
+$shade: rgba(40, 40, 40, .5);
+
+#kratsbox {
+    background: $shade;
+    height: 100%;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 1s, height 1s;
+    &.showing {
+        opacity: 1;
+        height: 100%;
+    }
+    &.hidden {
+        height: 0;
+        overflow: hidden;
+    }
+
+    div {
+        background: #444044;
+        border-radius: 1em;
+        padding: 1em 1em .2em 1em;
+        margin: 1.5em auto 0;
+        width: 90%; /* default, to be overridden with actual image size */
+        box-shadow: 0 0 2em .4em black;
+        position: relative;
+        z-index: 20;
+        overflow: hidden;
+    }
+    img {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 100%;
+    }
+}
+#kratsbox .extra {
+    position: absolute;
+    top: 1em;
+    height: 90%;
+    width: 30%;
+}
+#kratsbox a:hover {
+    color: red;
+}
+
+#kratsbox .prev .extra { left: 1em; }
+#kratsbox .next .extra { right: 1em; }
+#kratsbox .prev .extra:hover:before,
+#kratsbox .next .extra:hover:before {
+    display: block;
+    position: absolute;
+    top: 30%;
+    background: #444044;
+    padding: .5em .5em;
+    font-size: 2em;
+}
+#kratsbox .prev .extra:hover:before {
+    content: '\2190'; left: 0;
+    border-radius: 0 1ex 1ex 0;
+}
+#kratsbox .next .extra:hover:before {
+    content: '\2192'; right: 0;
+    border-radius: 1ex 0 0 1ex;
+}
+
+#kratsbox p {
+    margin: 0;
+    padding: .3em 0;
+    color: #cccccc;
+    text-align: left;
+    text-shadow: -1px 0 black, 0 -1px black;
+}
+#kratsbox .single .next,
+#kratsbox .single .prev {
+    display: none;
+}
+#kratsbox .krbxbtn {
+    float: right;
+}
+#kratsbox :link, #kratsbox :visited {
+    color: white;
+}
+#kratsbox .krbxbtn:link, #kratsbox .krbxbtn:visited {
+    font-weight: bold;
+    text-decoration: none;
+    margin: 0 .2em;
+    padding: .2em;
+}
+#kratsbox.loading div {
+    position: relative;
+    &::after {
+        background: $shade;
+        content: "⏳";
+        display: block;
+        font-size: 300%;
+        height: 100%;
+        left: 0;
+        line-height: 2em;
+        position: absolute;
+        text-align: center;
+        top: 0;
+        width: 100%;
+    }
+}
