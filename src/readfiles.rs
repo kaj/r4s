@@ -68,7 +68,7 @@ async fn read_dir(path: &Path, db: &PgConnection) -> Result<()> {
             continue;
         }
         if entry.file_type()?.is_dir() {
-            read_dir(&path, db).await?
+            read_dir(&path, db).await?;
         } else if path.extension().unwrap_or_default() == "md" {
             read_file(&path, false, db)
                 .await
@@ -81,8 +81,7 @@ async fn read_dir(path: &Path, db: &PgConnection) -> Result<()> {
 fn is_dotfile(path: &Path) -> bool {
     path.file_name()
         .and_then(std::ffi::OsStr::to_str)
-        .map(|name| name.starts_with('.'))
-        .unwrap_or(false)
+        .map_or(false, |name| name.starts_with('.'))
 }
 
 struct UpdateInfo {
@@ -121,7 +120,10 @@ async fn read_file(
         .get("pubdate")
         .map(|v| v.parse::<DateTime>().context("pubdate"))
         .transpose()?;
-    let year = pubdate.unwrap_or_else(|| Local::now().into()).year() as i16;
+    let year: i16 = pubdate
+        .unwrap_or_else(|| Local::now().into())
+        .year()
+        .try_into()?;
 
     let update = metadata
         .get("update")
@@ -459,13 +461,13 @@ fn link_ext(
     source: &str,
     lang: &str,
 ) -> Option<(String, String)> {
-    let (_all, text, kind, _, attr0, _, attrs) = regex_captures!(
+    let (_all, text, kind, _, attr_0, _, attrs) = regex_captures!(
         r"^\[(.*)\]\[(\w+)(:(\w+))?([,\s]+(.*))?\]$",
         &source[link.span.clone()],
     )?;
     match kind {
         "personname" | "wp" => {
-            let lang = if attr0.is_empty() { lang } else { attr0 };
+            let lang = if attr_0.is_empty() { lang } else { attr_0 };
             Some(wikilink(text, lang, attrs))
         }
         "sw" => Some((
@@ -483,8 +485,8 @@ fn link_ext(
             format!("Se {} i free online dictionary of computing", text),
         )),
         "rfc" => Some((
-            format!("http://www.faqs.org/rfcs/rfc{}.html", attr0),
-            format!("RFC {}", attr0),
+            format!("http://www.faqs.org/rfcs/rfc{}.html", attr_0),
+            format!("RFC {}", attr_0),
         )),
         _ => None,
     }
