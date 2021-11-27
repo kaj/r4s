@@ -5,11 +5,13 @@ use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
+use crate::server::language;
 use anyhow::{anyhow, Context, Result};
 use async_recursion::async_recursion;
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
-use lazy_regex::{regex_captures, regex_find};
+use i18n_embed_fl::fl;
+use lazy_regex::{regex_captures, regex_find, regex_replace_all};
 use pulldown_cmark::escape::{escape_href, escape_html};
 use pulldown_cmark::{
     BrokenLink, CodeBlockKind, Event, Options, Parser, Tag,
@@ -68,7 +70,9 @@ async fn read_dir(path: &Path, db: &PgConnection) -> Result<()> {
         if entry.file_type()?.is_dir() {
             read_dir(&path, db).await?
         } else if path.extension().unwrap_or_default() == "md" {
-            read_file(&path, false, db).await?;
+            read_file(&path, false, db)
+                .await
+                .with_context(|| format!("Reading file {:?}", path))?;
         }
     }
     Ok(())
@@ -79,6 +83,24 @@ fn is_dotfile(path: &Path) -> bool {
         .and_then(std::ffi::OsStr::to_str)
         .map(|name| name.starts_with('.'))
         .unwrap_or(false)
+}
+
+struct UpdateInfo {
+    date: DateTime,
+    info: String,
+}
+
+impl FromStr for UpdateInfo {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        let (date, info) = s.split_once(' ').unwrap_or((s, ""));
+        let date = date
+            .trim()
+            .parse()
+            .with_context(|| format!("Bad date: {:?}", date))?;
+        let info = info.trim().to_string();
+        Ok(UpdateInfo { date, info })
+    }
 }
 
 async fn read_file(
@@ -100,6 +122,11 @@ async fn read_file(
         .map(|v| v.parse::<DateTime>().context("pubdate"))
         .transpose()?;
     let year = pubdate.unwrap_or_else(|| Local::now().into()).year() as i16;
+
+    let update = metadata
+        .get("update")
+        .map(|v| v.parse::<UpdateInfo>().context("update"))
+        .transpose()?;
 
     if let Some(res) = metadata.get("res") {
         for spec in res.split(',').map(|s| s.trim()) {
@@ -124,10 +151,12 @@ async fn read_file(
                 id, year, slug, lang, metadata
             );
             let (title, teaser, body) =
-                extract_parts(contents_md, lang).await?;
+                extract_parts(year, slug, lang, contents_md, update.as_ref())
+                    .await?;
             diesel::update(p::posts)
                 .filter(p::id.eq(id))
                 .set((
+                    update.as_ref().map(|u| p::updated_at.eq(&u.date)),
                     p::title.eq(&title),
                     p::teaser.eq(&teaser),
                     p::content.eq(&body),
@@ -141,11 +170,17 @@ async fn read_file(
         }
     } else {
         println!("New post /{}/{}.{}\n   {:?}", year, slug, lang, metadata);
-        let (title, teaser, body) = extract_parts(contents_md, lang).await?;
+        let (title, teaser, body) =
+            extract_parts(year, slug, lang, contents_md, update.as_ref())
+                .await?;
         let post_id = diesel::insert_into(p::posts)
             .values((
                 pubdate.map(|date| p::posted_at.eq(date)),
-                pubdate.map(|date| p::updated_at.eq(date)),
+                update
+                    .as_ref()
+                    .map(|u| &u.date)
+                    .or_else(|| pubdate.as_ref())
+                    .map(|date| p::updated_at.eq(date)),
                 p::slug.eq(slug),
                 p::lang.eq(lang),
                 p::title.eq(&title),
@@ -236,8 +271,11 @@ fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
 }
 
 async fn extract_parts(
-    markdown: &str,
+    year: i16,
+    slug: &str,
     lang: &str,
+    markdown: &str,
+    update: Option<&UpdateInfo>,
 ) -> Result<(String, String, String)> {
     let (title, body) = md_to_html(markdown, lang).await?;
     // Split at "more" marker, or try to find a good place if the text is long.
@@ -262,7 +300,7 @@ async fn extract_parts(
     });
     let teaser = if let Some(teaser) = end.map(|e| &markdown[..e]) {
         // If teaser don't have an image and there is a "front" image ...
-        if let Some(img) = (!teaser.contains("\n!["))
+        let mut teaser = if let Some(img) = (!teaser.contains("\n!["))
             .then(|| ())
             .and_then(|()| {
                 regex_find!(
@@ -273,16 +311,34 @@ async fn extract_parts(
         {
             // ... try to put the front image directly after the header.
             let s = teaser.find("\n\n").map_or(0, |s| s + 1);
-            let teaser = format!(
+            format!(
                 "{}\n{}\n{}",
                 &teaser[..s],
                 img.replace("gallery", "sidebar"),
                 &teaser[s..],
-            );
-            md_to_html(&teaser, lang).await.map(|(_, teaser)| teaser)?
+            )
         } else {
-            md_to_html(teaser, lang).await.map(|(_, teaser)| teaser)?
+            teaser.into()
+        };
+        let fluent = language::load(lang).unwrap();
+        if let Some(update) = update {
+            if !update.info.is_empty() {
+                teaser.push_str("\n\n**");
+                teaser.push_str(&fl!(
+                    fluent,
+                    "update-at",
+                    date = update.date.to_string()
+                ));
+                teaser.push_str("** ");
+                teaser.push_str(&update.info);
+            }
         }
+        let teaser = regex_replace_all!(
+            r#"\]\(\#([a-z0-0_]+)\)"#,
+            &teaser,
+            |_, target| format!("](/{}/{}.{}#{})", year, slug, lang, target),
+        );
+        md_to_html(&teaser, lang).await.map(|(_, teaser)| teaser)?
     } else {
         body.clone()
     };

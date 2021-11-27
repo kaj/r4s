@@ -16,6 +16,7 @@ use-cookies = Denna site <a href='/om#cookie'>använder kakor</a>.
 
 posted-at = Publicerad { $date }.
 updated-at = Senast uppdaterad { $date }.
+update-at = Uppdaterat { $date }:
 tagged = Taggat
 related = Liknande inlägg
 
