@@ -207,7 +207,7 @@ fn handle_assets(
     db: &PgConnection,
 ) -> Result<()> {
     let (_all, name, _, mime) =
-        regex_captures!(r"^([\w_\.]+)\s+(\{([\w-]+/[\w-]+)\})$", spec)
+        regex_captures!(r"^([\w_\.-]+)\s+(\{([\w-]+/[\w-]+)\})$", spec)
             .ok_or_else(|| anyhow!("Bad asset spec"))?;
     let path = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
     let content = read(&path).with_context(|| path.display().to_string())?;
