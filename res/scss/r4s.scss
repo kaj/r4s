@@ -22,7 +22,7 @@ body {
 
     > header, > footer {
         grid-column: 1 / 3;
-        padding: 1ex 1em;
+        padding: 1ex 2vw;
         position: relative;
     }
     > header {
@@ -50,7 +50,7 @@ body {
     }
     > main {
         grid-row: 2 / 8;
-        padding: 1em;
+        padding: 1em 2vw;
         max-width: 54em;
         margin: 0;
     }
@@ -328,5 +328,18 @@ pre {
             right: 0;
             top: 0;
         }
+    }
+}
+
+:target {
+    position: relative;
+    &::before {
+        background: $purple;
+        border-radius: .3em;
+        content: " ";
+        height: 100%;
+        left: max(-.8em, -2vw);
+        position: absolute;
+        width: min(.3em, 1vw);
     }
 }
