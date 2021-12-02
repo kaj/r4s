@@ -25,6 +25,10 @@ impl ImageInfo {
         self.medium.width < self.medium.height
     }
 
+    pub fn is_public(&self) -> bool {
+        self.public
+    }
+
     pub fn markup(&self, alt: &str) -> String {
         format!(
             "<a href='https://img.krats.se{}'><img src='https://img.krats.se{}' \

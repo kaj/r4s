@@ -19,13 +19,6 @@ sql_function! {
 pub type DateTime = chrono::DateTime<chrono::Utc>;
 
 #[derive(Debug, Queryable)]
-pub struct User {
-    id: i32,
-    username: String,
-    realname: String,
-}
-
-#[derive(Debug, Queryable)]
 pub struct PostLink {
     pub id: i32,
     pub year: i16,

@@ -607,6 +607,9 @@ async fn collect_html<'a>(
                     let imgdata = ImageInfo::fetch(imgref)
                         .await
                         .context("Image api")?;
+                    if !imgdata.is_public() {
+                        println!("WARNING: Image {} is not public", imgref)
+                    }
                     let alt = inner.trim();
                     let imgtag = if classes
                         .split_ascii_whitespace()
