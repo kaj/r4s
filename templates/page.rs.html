@@ -1,8 +1,8 @@
 @use super::super::prelude::*;
 @use super::{footer, head_canon, me_box};
-@use crate::models::{Post, PostLink, Tag};
+@use crate::models::{Comment, Post, PostLink, Tag};
 
-@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], other_langs: &[String], similar: &[PostLink])
+@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], comments: &[Comment], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang">
@@ -20,6 +20,45 @@
       <h1>@Html(&post.title)</h1>
       <p class="publine">@Html(post.publine(tags))</p>
       @Html(&post.content)
+
+      <section id="comments">
+        <h2>@fl!(fluent, "comments")</h2>
+        @for c in comments {
+        <section>
+          <h3>@c.name, @c.posted_at</h3>
+          @Html(&c.content)</section>
+        }
+        <section id="writecomment">
+          <h3>@fl!(fluent, "write-comments")</h3>
+          <form action="/comment" method="post">
+            <p>
+              <label for="cmt_md">Comment:</label>
+              <i class="helptext">Basic markdown is accepted.</i>
+              <textarea name="comment" cols="40" rows="10" required id="cmt_md"></textarea>
+            </p>
+	    <p>
+              <label for="cmt_name">Name:</label>
+              <input name="name" type="text" maxlength="100" required id="cmt_name">
+              <i class="helptext">Your name (or pseudonym).</i>
+            </p>
+            <p>
+              <label for="cmt_mail">Email:</label>
+              <input type="email" name="email" maxlength="254" required id="cmt_mail">
+              <i class="helptext">Not published, except as gravatar.</i>
+            </p>
+            <p>
+              <label for="cmt_url">URL:</label>
+              <input type="url" name="url" maxlength="200" id="cmt_url">
+              <i class="helptext">Your homepage / presentation.</i>
+            </p>
+	    <p class="submit">
+              <input type="hidden" name="post" value="@post.id" id="id_post">
+	      <input type="hidden" name="csrftoken" value="FIXME">
+	      <input type="submit" value="Post the comment">
+            </p>
+          </form>
+        </section>
+      </section>
     </main>
     @if !similar.is_empty() {
     <aside>

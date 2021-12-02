@@ -67,3 +67,14 @@ create table assets (
 
 create unique index idx_asset_path on assets (year, name);
 select diesel_manage_updated_at('assets');
+
+create table comments (
+  id serial primary key,
+  post_id integer not null references posts (id),
+  posted_at timestamp with time zone not null default now(),
+  content text not null,
+  name varchar not null,
+  email varchar not null,
+  url varchar,
+  raw_md text not null
+);

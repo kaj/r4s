@@ -1,3 +1,4 @@
+drop table comments;
 drop table assets;
 drop table post_tags;
 drop table tags;

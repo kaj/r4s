@@ -126,7 +126,7 @@ html:lang(sv) a:not(:lang(sv)) {
     src: local("Cocanut Bold Italic.otf"),
          url(static_name("cocanut_bold_italic.otf"));
 }
-h1, h2, h3, h4, header {
+h1, h2, h3, h4, h5, h6, header {
     font-family: "Cocanut";
     :link, :visited {
         text-decoration: none;
@@ -165,8 +165,11 @@ aside {
 h2 {
     font-size: 200%;
 }
-h3 {
+h3, h4 {
     font-size: 140%;
+}
+h5, h6 {
+    font-size: 120%;
 }
 header {
     font-size: 120%;
@@ -174,8 +177,17 @@ header {
 section {
     margin-top: 1.6em;
 }
-h1, h2, h3 {
-    margin: 0;
+h1, h2, h3, h4, h5, h6 {
+    margin: 1em 0 0 0;
+    &:first-child {
+        margin: 0;
+    }
+}
+h1, h2, h3, h5 {
+    font-weight: bold;
+}
+h4, h6 {
+    font-weight: normal;
 }
 p {
     margin: 0 0 1em;
@@ -341,5 +353,33 @@ pre {
         left: max(-.8em, -2vw);
         position: absolute;
         width: min(.3em, 1vw);
+    }
+}
+
+#writecomment form {
+    display: grid;
+    grid-template-columns: 1fr 3fr 6fr;
+    gap: .2em .6em;
+    max-width: 38em;
+    align-items: first baseline;
+
+    p {
+        display: contents;
+    }
+    label {
+        grid-column: 1;
+    }
+    #cmt_md {
+        grid-column: 1 / 4;
+    }
+    p.submit {
+        display: block;
+        grid-column: 1 / 4;
+        text-align: right;
+    }
+    // help for the comment itself
+    p:nth-child(1) > i:nth-child(2) {
+        grid-column: 2 / 4;
+        text-align: right;
     }
 }

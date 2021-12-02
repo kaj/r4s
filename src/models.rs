@@ -1,3 +1,4 @@
+use crate::schema::comments::dsl as c;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
@@ -134,5 +135,27 @@ impl Tag {
                 ),
             )
             .load(db)
+    }
+}
+
+#[derive(Debug, Queryable)]
+pub struct Comment {
+    pub posted_at: DateTime,
+    pub content: String,
+    pub name: String,
+    pub email: String,
+    pub url: Option<String>,
+}
+
+impl Comment {
+    pub fn for_post(
+        post_id: i32,
+        db: &PgConnection,
+    ) -> Result<Vec<Comment>, diesel::result::Error> {
+        c::comments
+            .select((c::posted_at, c::content, c::name, c::email, c::url))
+            .filter(c::post_id.eq(post_id))
+            .order_by(c::posted_at.asc())
+            .load::<Comment>(db)
     }
 }

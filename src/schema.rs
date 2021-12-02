@@ -10,6 +10,19 @@ table! {
 }
 
 table! {
+    comments (id) {
+        id -> Int4,
+        post_id -> Int4,
+        posted_at -> Timestamptz,
+        content -> Text,
+        name -> Varchar,
+        email -> Varchar,
+        url -> Nullable<Varchar>,
+        raw_md -> Text,
+    }
+}
+
+table! {
     post_tags (id) {
         id -> Int4,
         post_id -> Int4,
@@ -39,7 +52,10 @@ table! {
     }
 }
 
+joinable!(comments -> posts (post_id));
 joinable!(post_tags -> posts (post_id));
 joinable!(post_tags -> tags (tag_id));
 
-allow_tables_to_appear_in_same_query!(assets, post_tags, posts, tags,);
+allow_tables_to_appear_in_same_query!(
+    assets, comments, post_tags, posts, tags,
+);

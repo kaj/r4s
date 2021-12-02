@@ -12,6 +12,19 @@ pub enum ViewError {
     Err(String),
 }
 
+pub trait ViewResult<T> {
+    fn ise(self) -> Result<T, ViewError>;
+}
+
+impl<T, E> ViewResult<T> for Result<T, E>
+where
+    E: std::error::Error,
+{
+    fn ise(self) -> Result<T, ViewError> {
+        self.map_err(|e| ViewError::Err(e.to_string()))
+    }
+}
+
 impl Reply for ViewError {
     fn into_response(self) -> Response {
         match self {

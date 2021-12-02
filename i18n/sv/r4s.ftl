@@ -27,3 +27,6 @@ posts-tagged = Inlägg taggade ”{ $tag }”
 
 meb-h1 = Rasmus & siten
 meb-about = Om Rasmus​.krats​.se
+
+comments = Kommentarer
+write-comments = Skriv en kommentar

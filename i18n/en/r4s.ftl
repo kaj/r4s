@@ -27,3 +27,6 @@ posts-tagged = Posts tagged “{ $tag }”
 
 meb-h1 = Rasmus & this site
 meb-about = About Rasmus​.krats​.se
+
+comments = Comments
+write-comments = Write a comment

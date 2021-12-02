@@ -1,3 +1,4 @@
+mod comment;
 mod error;
 pub mod language;
 mod prelude;
@@ -8,7 +9,7 @@ use self::language::MyLang;
 use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{DbOpt, Pool};
-use crate::models::{year_of_date, Post, Tag};
+use crate::models::{year_of_date, Comment, Post, Tag};
 use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
@@ -56,6 +57,7 @@ impl Args {
 
         let routes = warp::any()
             .and(path("s").and(asset_routes))
+            .or(path("comment").and(comment::route(s())))
             .or(end().and(goh()).and(lang_filt).map(|lang: MyLang| {
                 redirect::see_other(
                     Uri::builder()
@@ -349,6 +351,11 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
         .ok_or(ViewError::NotFound)?;
 
     let post_id = post.id;
+    let comments = db
+        .interact(move |db| Comment::for_post(post_id, db))
+        .await??;
+
+    let post_id = post.id;
     let tags = db.interact(move |db| Tag::for_post(post_id, db)).await??;
 
     let tag_ids = tags.iter().map(|t| t.id).collect::<Vec<_>>();
@@ -385,7 +392,15 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
 
     Ok(Builder::new()
         .html(|o| {
-            templates::page(o, &fluent, &post, &tags, &other_langs, &related)
+            templates::page(
+                o,
+                &fluent,
+                &post,
+                &tags,
+                &comments,
+                &other_langs,
+                &related,
+            )
         })
         .unwrap())
 }
