@@ -151,4 +151,14 @@ impl Comment {
             .order_by(c::posted_at.asc())
             .load::<Comment>(db)
     }
+
+    pub fn gravatar(&self) -> String {
+        use gravatar::{Default, Gravatar, Rating};
+        Gravatar::new(&self.email)
+            .set_size(Some(160))
+            .set_default(Some(Default::Retro))
+            .set_rating(Some(Rating::Pg))
+            .image_url()
+            .to_string()
+    }
 }

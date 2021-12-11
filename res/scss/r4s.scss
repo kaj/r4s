@@ -356,11 +356,24 @@ pre {
     }
 }
 
+
+#comments {
+    section {
+        clear: both;
+    }
+    img.gravatar {
+        width: 5em;
+        height: 5em;
+        border-radius: 1em;
+        margin: 0 0 1ex 1em;
+        float: right;
+    }
+}
+
 #writecomment form {
     display: grid;
     grid-template-columns: 1fr 3fr 6fr;
     gap: .2em .6em;
-    max-width: 38em;
     align-items: first baseline;
 
     p {

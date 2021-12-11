@@ -21,6 +21,7 @@ deadpool-diesel = { version = "0.3.0", features = ["postgres"] }
 diesel = { version = "1.4.0", features = ["chrono", "postgres"] }
 dotenv = "0.15.0"
 env_logger = "0.9.0"
+gravatar = "0.2.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
 i18n-embed-fl = "0.6.0"
 lazy-regex = "2.2.2"
