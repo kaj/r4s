@@ -30,3 +30,5 @@ meb-about = About Rasmus​.krats​.se
 
 comments = Comments
 write-comments = Write a comment
+recent-comments = Recent comments
+on = on

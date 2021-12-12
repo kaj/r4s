@@ -24,7 +24,7 @@
       <section id="comments">
         <h2>@fl!(fluent, "comments")</h2>
         @for c in comments {
-        <section>
+        <section id="@c.html_id()">
           <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
           <h3>@c.name, @c.posted_at</h3>
           @Html(&c.content)</section>
@@ -63,7 +63,7 @@
     </main>
     @if !similar.is_empty() {
     <aside>
-      <h1>@fl!(fluent, "related")</h1>
+      <h2>@fl!(fluent, "related")</h2>
       <ul>@for link in similar {
         <li><a href="@link.url()">@link.title</a> (@link.year)</li>
         }</ul>

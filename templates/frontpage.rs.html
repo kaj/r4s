@@ -1,8 +1,8 @@
 @use super::super::prelude::*;
 @use super::{footer, head_canon, me_box};
-@use crate::models::{Post, Tag};
+@use crate::models::{Post, PostComment, Tag};
 
-@(fluent: &FluentLanguageLoader, posts: &[(Post, Vec<Tag>)], years: &[i16], other_langs: &[String])
+@(fluent: &FluentLanguageLoader, posts: &[(Post, Vec<Tag>)], comments: &[PostComment], years: &[i16], other_langs: &[String])
 
 <!doctype html>
 <html lang="@fluent.current_language()">
@@ -32,6 +32,16 @@
       }
     </main>
     @:me_box(fluent)
+    <aside id="recentcomments">
+      <h2>@fl!(fluent, "recent-comments")</h2>
+      @for c in comments {<p>
+        <a href="@c.url()">
+          <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
+          @c.name(), @c.posted_at() @fl!(fluent, "on") @c.post_title()</a>
+        @c.text_start()
+      </p>
+      }
+    </aside>
     @:footer(fluent)
   </body>
 </html>

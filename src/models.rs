@@ -133,6 +133,7 @@ impl Tag {
 
 #[derive(Debug, Queryable)]
 pub struct Comment {
+    id: i32,
     pub posted_at: DateTime,
     pub content: String,
     pub name: String,
@@ -146,10 +147,21 @@ impl Comment {
         db: &PgConnection,
     ) -> Result<Vec<Comment>, diesel::result::Error> {
         c::comments
-            .select((c::posted_at, c::content, c::name, c::email, c::url))
+            .select((
+                c::id,
+                c::posted_at,
+                c::content,
+                c::name,
+                c::email,
+                c::url,
+            ))
             .filter(c::post_id.eq(post_id))
             .order_by(c::posted_at.asc())
-            .load::<Comment>(db)
+            .load(db)
+    }
+
+    pub fn html_id(&self) -> String {
+        format!("c{:x}", self.id)
     }
 
     pub fn gravatar(&self) -> String {
@@ -160,5 +172,62 @@ impl Comment {
             .set_rating(Some(Rating::Pg))
             .image_url()
             .to_string()
+    }
+}
+
+#[derive(Debug, Queryable)]
+pub struct PostComment {
+    comment: Comment,
+    post: PostLink,
+}
+
+impl PostComment {
+    pub fn recent(
+        db: &PgConnection,
+    ) -> Result<Vec<PostComment>, diesel::result::Error> {
+        c::comments
+            .inner_join(p::posts.on(p::id.eq(c::post_id)))
+            .select((
+                (c::id, c::posted_at, c::raw_md, c::name, c::email, c::url),
+                (
+                    p::id,
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    p::lang,
+                    p::title,
+                ),
+            ))
+            .order_by(c::posted_at.desc())
+            .limit(5)
+            .load(db)
+    }
+
+    pub fn url(&self) -> String {
+        format!("{}#{}", self.post.url(), self.comment.html_id())
+    }
+    pub fn gravatar(&self) -> String {
+        self.comment.gravatar()
+    }
+    pub fn name(&self) -> &str {
+        &self.comment.name
+    }
+    pub fn posted_at(&self) -> &DateTime {
+        &self.comment.posted_at
+    }
+    pub fn post_title(&self) -> &str {
+        &self.post.title
+    }
+    pub fn text_start(&self) -> String {
+        let text = &self.comment.content;
+        if text.len() < 100 {
+            text.to_string()
+        } else {
+            let mut end = 90;
+            while !text.is_char_boundary(end) {
+                end -= 1;
+            }
+            let end = text[..end].rfind(' ').unwrap_or(end);
+            format!("{} …", &text[..end])
+        }
     }
 }

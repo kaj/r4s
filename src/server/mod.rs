@@ -9,7 +9,7 @@ use self::language::MyLang;
 use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{DbOpt, Pool};
-use crate::models::{year_of_date, Comment, Post, Tag};
+use crate::models::{year_of_date, Comment, Post, PostComment, Tag};
 use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
@@ -196,6 +196,8 @@ async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
         })
         .await??;
 
+    let comments = db.interact(move |db| PostComment::recent(db)).await??;
+
     let years = db
         .interact(move |db| {
             let year = year_of_date(p::posted_at);
@@ -212,7 +214,14 @@ async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
 
     Ok(Builder::new()
         .html(|o| {
-            templates::frontpage(o, &fluent, &posts, &years, &other_langs)
+            templates::frontpage(
+                o,
+                &fluent,
+                &posts,
+                &comments,
+                &years,
+                &other_langs,
+            )
         })
         .unwrap())
 }

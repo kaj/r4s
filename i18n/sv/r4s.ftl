@@ -30,3 +30,5 @@ meb-about = Om Rasmus​.krats​.se
 
 comments = Kommentarer
 write-comments = Skriv en kommentar
+recent-comments = Senaste kommentarer
+on = på

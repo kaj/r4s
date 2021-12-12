@@ -139,7 +139,7 @@ h1 {
     font-size: 320%;
 }
 aside {
-    h1 {
+    h2 {
         font-size: 180%;
         font-weight: bold;
         font-style: italic;
@@ -357,17 +357,23 @@ pre {
 }
 
 
+#recentcomments {
+    p {
+        clear: both;
+    }
+}
 #comments {
     section {
         clear: both;
     }
-    img.gravatar {
-        width: 5em;
-        height: 5em;
-        border-radius: 1em;
-        margin: 0 0 1ex 1em;
-        float: right;
-    }
+}
+img.gravatar {
+    border-radius: 1em;
+    float: right;
+    height: auto;
+    margin: 0 0 1ex 1em;
+    max-width: 18%;
+    width: 5em;
 }
 
 #writecomment form {
