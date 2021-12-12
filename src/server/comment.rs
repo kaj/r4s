@@ -1,14 +1,14 @@
-use super::error::ViewResult;
-use super::{wrap, Pool, Result, Uri};
+use super::error::{ViewError, ViewResult};
+use super::{wrap, Pool, Result};
 use crate::models::PostLink;
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
+use diesel::dsl::sql;
 use diesel::prelude::*;
 use pulldown_cmark::{html::push_html, Event, Parser, Tag};
 use serde::Deserialize;
 use warp::filters::BoxedFilter;
 use warp::path::end;
-use warp::redirect::found;
 use warp::{self, body, post, Filter, Reply};
 
 pub fn route(s: BoxedFilter<(Pool,)>) -> BoxedFilter<(impl Reply,)> {
@@ -31,22 +31,70 @@ async fn postcomment(form: CommentForm, pool: Pool) -> Result<impl Reply> {
                 .first::<PostLink>(db)
         })
         .await??;
-    db.interact(move |db| {
-        diesel::insert_into(c::comments)
-            .values((
-                c::post_id.eq(&form.post),
-                c::content.eq(form.html()),
-                c::name.eq(&form.name),
-                c::email.eq(&form.email),
-                form.url.as_ref().map(|u| c::url.eq(u)),
-                c::raw_md.eq(&form.comment),
-            ))
-            .execute(db)
-    })
-    .await??;
 
-    Ok(found(
-        Uri::builder().path_and_query(post.url()).build().ise()?,
+    let name = form.name.clone();
+    let email = form.email.clone();
+    let (public, spam) = db
+        .interact(move |db| {
+            c::comments
+                .select(((c::is_public, c::is_spam), sql("count(*)")))
+                .group_by((c::is_public, c::is_spam))
+                .filter(c::name.eq(name))
+                .filter(c::email.eq(email))
+                .load::<((bool, bool), i64)>(db)
+        })
+        .await?
+        .map(|raw| {
+            let mut public = 0;
+            let mut spam = 0;
+            for ((is_public, is_spam), count) in raw {
+                if is_spam {
+                    spam += count;
+                } else if is_public {
+                    public += count;
+                }
+            }
+            (public, spam)
+        })?;
+    if spam > 0 {
+        return Err(ViewError::BadRequest(
+            "This seems like spam.  Sorry.".into(),
+        ));
+    }
+    let public = public > 0;
+
+    let (id, public) = db
+        .interact(move |db| {
+            diesel::insert_into(c::comments)
+                .values((
+                    c::post_id.eq(&form.post),
+                    c::content.eq(form.html()),
+                    c::name.eq(&form.name),
+                    c::email.eq(&form.email),
+                    form.url.as_ref().map(|u| c::url.eq(u)),
+                    c::raw_md.eq(&form.comment),
+                    c::is_public.eq(public),
+                ))
+                .returning((c::id, c::is_public))
+                .get_result::<(i32, bool)>(db)
+        })
+        .await??;
+
+    my_found(&post, public.then(|| id))
+}
+
+fn my_found(post: &PostLink, comment: Option<i32>) -> Result<impl Reply> {
+    use warp::http::header;
+    use warp::http::StatusCode;
+    let mut url = post.url();
+    if let Some(comment) = comment {
+        use std::fmt::Write;
+        write!(&mut url, "#c{:x}", comment).ise()?
+    }
+    Ok(warp::reply::with_header(
+        StatusCode::FOUND,
+        header::LOCATION,
+        url,
     ))
 }
 

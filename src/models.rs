@@ -156,12 +156,16 @@ impl Comment {
                 c::url,
             ))
             .filter(c::post_id.eq(post_id))
+            .filter(c::is_public.eq(true))
             .order_by(c::posted_at.asc())
             .load(db)
     }
 
     pub fn html_id(&self) -> String {
         format!("c{:x}", self.id)
+    }
+    pub fn id(&self) -> i32 {
+        self.id
     }
 
     pub fn gravatar(&self) -> String {
@@ -197,11 +201,40 @@ impl PostComment {
                     p::title,
                 ),
             ))
+            .filter(c::is_public.eq(true))
             .order_by(c::posted_at.desc())
             .limit(5)
             .load(db)
     }
 
+    pub fn mod_queue(
+        db: &PgConnection,
+    ) -> Result<Vec<PostComment>, diesel::result::Error> {
+        c::comments
+            .inner_join(p::posts.on(p::id.eq(c::post_id)))
+            .select((
+                (c::id, c::posted_at, c::raw_md, c::name, c::email, c::url),
+                (
+                    p::id,
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    p::lang,
+                    p::title,
+                ),
+            ))
+            .filter(c::is_public.eq(false))
+            .filter(c::is_spam.eq(false))
+            .order_by(c::posted_at.desc())
+            .limit(50)
+            .load(db)
+    }
+
+    pub fn c(&self) -> &Comment {
+        &self.comment
+    }
+    pub fn p(&self) -> &PostLink {
+        &self.post
+    }
     pub fn url(&self) -> String {
         format!("{}#{}", self.post.url(), self.comment.html_id())
     }

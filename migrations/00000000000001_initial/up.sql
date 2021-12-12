@@ -76,5 +76,7 @@ create table comments (
   name varchar not null,
   email varchar not null,
   url varchar,
-  raw_md text not null
+  raw_md text not null,
+  is_public boolean not null,
+  is_spam boolean not null default false
 );

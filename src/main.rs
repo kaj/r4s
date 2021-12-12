@@ -6,6 +6,7 @@ extern crate diesel;
 mod dbopt;
 mod imgcli;
 mod listposts;
+mod modcomments;
 mod models;
 mod readfiles;
 mod schema;
@@ -34,6 +35,8 @@ async fn main() -> Result<()> {
 enum R4s {
     /// List known posts
     List(listposts::Args),
+    /// Moderate new coments
+    ModerateComments(modcomments::Args),
     /// Read content from markdown files
     ReadFiles(readfiles::Args),
     /// Run the web server
@@ -44,6 +47,7 @@ impl R4s {
     async fn run(self) -> Result<()> {
         match self {
             R4s::List(args) => args.run(),
+            R4s::ModerateComments(args) => args.run(),
             R4s::ReadFiles(args) => args.run().await,
             R4s::RunServer(args) => args.run().await,
         }
