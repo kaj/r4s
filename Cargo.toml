@@ -24,6 +24,8 @@ env_logger = "0.9.0"
 gravatar = "0.2.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
 i18n-embed-fl = "0.6.0"
+fluent = "0.16.0"
+intl-memoizer =  "0.5.1"
 lazy-regex = "2.2.2"
 lazy_static = "1.4.0"
 log = "0.4.6"

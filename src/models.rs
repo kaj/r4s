@@ -3,10 +3,15 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use diesel::helper_types::Select;
-use diesel::pg::PgConnection;
+use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
 use diesel::sql_types::{Smallint, Timestamptz, Varchar};
+use fluent::types::FluentType;
+use fluent::FluentValue;
 use i18n_embed_fl::fl;
+use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
+use intl_memoizer::IntlLangMemoizer;
+use std::borrow::Cow;
 
 sql_function! {
     fn year_of_date(arg: Timestamptz) -> Smallint;
@@ -16,7 +21,37 @@ sql_function! {
     fn has_lang(yearp: Smallint, slugp: Varchar, langp: Varchar) -> Bool;
 }
 
-pub type DateTime = chrono::DateTime<chrono::Utc>;
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
+pub struct DateTime(chrono::DateTime<chrono::Utc>);
+
+impl Queryable<Timestamptz, Pg> for DateTime {
+    type Row =
+        <chrono::DateTime<chrono::Utc> as Queryable<Timestamptz, Pg>>::Row;
+    fn build(row: Self::Row) -> Self {
+        DateTime(chrono::DateTime::<chrono::Utc>::build(row))
+    }
+}
+
+impl<'a> From<&'a DateTime> for FluentValue<'static> {
+    fn from(val: &'a DateTime) -> FluentValue<'static> {
+        FluentValue::Custom(val.duplicate())
+    }
+}
+
+impl FluentType for DateTime {
+    fn duplicate(&self) -> Box<dyn FluentType + Send + 'static> {
+        Box::new(*self)
+    }
+    fn as_string(&self, _intls: &IntlLangMemoizer) -> Cow<'static, str> {
+        self.0.format("%Y-%m-%d %H:%M").to_string().into()
+    }
+    fn as_string_threadsafe(
+        &self,
+        _intls: &CcIntlLangMemoizer,
+    ) -> Cow<'static, str> {
+        self.0.format("%Y-%m-%d %H:%M").to_string().into()
+    }
+}
 
 #[derive(Debug, Queryable)]
 pub struct PostLink {
@@ -70,14 +105,13 @@ impl Post {
     pub fn publine(&self, tags: &[Tag]) -> String {
         use std::fmt::Write;
         let lang = crate::server::language::load(&self.lang).unwrap();
-        let mut line =
-            fl!(lang, "posted-at", date = self.posted_at.to_string());
+        let mut line = fl!(lang, "posted-at", date = (&self.posted_at));
 
         if self.updated_at > self.posted_at {
             write!(
                 &mut line,
                 " {}",
-                fl!(lang, "updated-at", date = self.updated_at.to_string())
+                fl!(lang, "updated-at", date = (&self.updated_at))
             )
             .unwrap();
         }

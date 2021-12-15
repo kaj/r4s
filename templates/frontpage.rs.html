@@ -37,7 +37,8 @@
       @for c in comments {<p>
         <a href="@c.url()">
           <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
-          @c.name(), @c.posted_at() @fl!(fluent, "on") @c.post_title()</a>
+          @fl!(fluent, "byon", by=c.name(), date=c.posted_at())
+          @fl!(fluent, "on") @c.post_title()</a>
         @c.text_start()
       </p>
       }
