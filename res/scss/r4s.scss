@@ -10,21 +10,41 @@ html, body {
     padding: 0;
 }
 body {
-    background: $paper;
+    background-color: $paper;
+    background:
+        linear-gradient(176deg, transparent, white 12em, transparent 40em),
+        linear-gradient(90deg, color.mix($paper, black, 97%), $paper 40%, $paper 87%, color.mix($paper, black, 92%));
     color: black;
     min-height: 100vh;
     line-height: 1.4;
 
-    @media screen and (min-width: 42em) {
-        display: grid;
-        grid-template-columns: 5fr 2fr;
+    > main, > aside {
+        padding: 1em 2vw;
     }
-
     > header, > footer {
-        grid-column: 1 / 3;
         padding: 1ex 2vw;
         position: relative;
     }
+
+    @media screen and (min-width: 42em) {
+        display: grid;
+        grid-template-columns: 7fr 3fr;
+        > header, > footer {
+            grid-column: 1 / 3;
+        }
+        aside#me_box {
+            position: sticky;
+            top: 0;
+        }
+    }
+    @media screen and (min-width: 100em) {
+        grid-template-columns: 3fr 2fr;
+
+        > header, > footer, > main, > aside {
+            padding: 1em 7vw;
+        }
+    }
+
     > header {
         border-bottom: .1em solid black;
         min-height: 42px;
@@ -50,14 +70,12 @@ body {
     }
     > main {
         grid-row: 2 / 8;
-        padding: 1em 2vw;
         max-width: 54em;
         margin: 0;
     }
     > aside {
         grid-column: 2;
         margin: 1em 0 0;
-        padding: 1ex 1em;
         width: -moz-available;
         &:last-of-type {
             margin-bottom: 30vmin;
@@ -192,18 +210,38 @@ h4, h6 {
 p {
     margin: 0 0 1em;
 }
+
 blockquote {
     font-family: Cocanut;
-    // TODO: Something nice and swirly?
-    border-left: solid purple 1px;
+    border-left: solid color.mix($purple, $paper) 2px;
     border-radius: 1ex;
     padding: 1ex 1em;
-    margin: 1ex auto 1.5em 1ex;
+    margin: 1ex auto 1.5em 2em;
+    position: relative;
+
+    &::before {
+        content: '”';
+        display: block;
+        font-size: 600%;
+        position: absolute;
+        color: $purple;
+        font-weight: bold;
+        top: -0.29em;
+        left: -.24em;
+    }
+    &:lang(en)::before {
+        content: '“';
+        left: -.27em;
+    }
 
     *:last-child {
         margin-bottom: 0;
     }
 }
+
+
+
+
 
 p.publine {
     font-family: Cocanut;
@@ -397,8 +435,31 @@ img.gravatar {
         text-align: right;
     }
     // help for the comment itself
-    p:nth-child(1) > i:nth-child(2) {
+    p:nth-child(1) i.helptext {
         grid-column: 2 / 4;
         text-align: right;
+    }
+}
+
+@media (max-width: 30em) {
+    #writecomment form {
+        grid-template-columns: 1fr 3fr;
+
+        p:nth-child(1) i.helptext {
+            grid-column: 2/3;
+            margin: 0;
+        }
+        #cmt_md {
+            grid-column: 1/3;
+        }
+        .helptext {
+            grid-column: 1/3;
+            text-align: right;
+            margin: -.2em 0 .6em;
+            font-size: 87%;
+        }
+        p.submit {
+            grid-column: 1/3;
+        }
     }
 }
