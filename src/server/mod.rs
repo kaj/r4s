@@ -101,7 +101,9 @@ impl Args {
                 .then(page)
                 .map(wrap));
 
-        warp::serve(routes).run(self.bind).await;
+        warp::serve(routes.recover(error::for_rejection))
+            .run(self.bind)
+            .await;
         Ok(())
     }
 }
