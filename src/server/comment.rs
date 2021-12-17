@@ -80,22 +80,22 @@ async fn postcomment(form: CommentForm, pool: Pool) -> Result<impl Reply> {
         })
         .await??;
 
-    my_found(&post, public.then(|| id))
+    my_found(&post, public, id)
 }
 
-fn my_found(post: &PostLink, comment: Option<i32>) -> Result<impl Reply> {
-    use warp::http::header;
-    use warp::http::StatusCode;
+pub fn my_found(
+    post: &PostLink,
+    public: bool,
+    comment: i32,
+) -> Result<impl Reply> {
+    use std::fmt::Write;
     let mut url = post.url();
-    if let Some(comment) = comment {
-        use std::fmt::Write;
+    if public {
         write!(&mut url, "#c{:x}", comment).ise()?
+    } else {
+        write!(&mut url, "?c={}#cxmod", comment).ise()?
     }
-    Ok(warp::reply::with_header(
-        StatusCode::FOUND,
-        header::LOCATION,
-        url,
-    ))
+    Ok(super::found(&url))
 }
 
 #[derive(Debug, Deserialize)]

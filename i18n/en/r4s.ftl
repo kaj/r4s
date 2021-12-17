@@ -33,3 +33,4 @@ write-comments = Write a comment
 recent-comments = Recent comments
 on = on
 byon = { $by }, { $date }
+c-mod = Your comment awaits manual moderation.  Please be patient.

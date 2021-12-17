@@ -167,7 +167,7 @@ impl Tag {
 
 #[derive(Debug, Queryable)]
 pub struct Comment {
-    id: i32,
+    pub id: i32,
     pub posted_at: DateTime,
     pub content: String,
     pub name: String,

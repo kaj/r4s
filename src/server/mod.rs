@@ -14,6 +14,7 @@ use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use diesel::prelude::*;
+use serde::Deserialize;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -39,6 +40,7 @@ pub struct Args {
 impl Args {
     pub async fn run(self) -> Result<(), anyhow::Error> {
         use warp::path::{end, param, path, tail};
+        use warp::query;
         let pool = self.db.build_pool()?;
         let s = warp::any().map(move || pool.clone()).boxed();
         let s = move || s.clone();
@@ -93,6 +95,7 @@ impl Args {
             .or(param()
                 .and(param())
                 .and(end())
+                .and(query())
                 .and(goh())
                 .and(s())
                 .then(page)
@@ -308,7 +311,12 @@ async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
         .unwrap())
 }
 
-async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
+async fn page(
+    year: i16,
+    slug: SlugAndLang,
+    query: PageQuery,
+    pool: Pool,
+) -> Result<Response> {
     use crate::models::{has_lang, PostLink};
     use diesel::dsl::not;
     let db = pool.get().await?;
@@ -337,6 +345,7 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
         })
         .collect::<Vec<_>>();
 
+    let slugc = slug.clone();
     let post = db
         .interact(move |db| {
             p::posts
@@ -363,6 +372,21 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
     let comments = db
         .interact(move |db| Comment::for_post(post_id, db))
         .await??;
+
+    let bad_comment = if let Some(q_comment) = query.c {
+        for cmt in &comments {
+            if cmt.id == q_comment {
+                return Ok(found(&format!(
+                    "/{}/{}.{}#c{:x}",
+                    year, slugc.slug, slugc.lang, q_comment,
+                ))
+                .into_response());
+            }
+        }
+        true
+    } else {
+        false
+    };
 
     let post_id = post.id;
     let tags = db.interact(move |db| Tag::for_post(post_id, db)).await??;
@@ -406,12 +430,24 @@ async fn page(year: i16, slug: SlugAndLang, pool: Pool) -> Result<Response> {
                 &fluent,
                 &post,
                 &tags,
+                bad_comment,
                 &comments,
                 &other_langs,
                 &related,
             )
         })
         .unwrap())
+}
+
+fn found(url: &str) -> impl Reply {
+    use warp::http::header;
+    use warp::http::StatusCode;
+    warp::reply::with_header(StatusCode::FOUND, header::LOCATION, url)
+}
+
+#[derive(Debug, Deserialize)]
+struct PageQuery {
+    c: Option<i32>,
 }
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));

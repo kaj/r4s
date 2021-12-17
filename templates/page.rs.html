@@ -2,7 +2,7 @@
 @use super::{footer, head_canon, me_box};
 @use crate::models::{Comment, Post, PostLink, Tag};
 
-@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], comments: &[Comment], other_langs: &[String], similar: &[PostLink])
+@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], bad_comment: bool, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang">
@@ -23,6 +23,11 @@
 
       <section id="comments">
         <h2>@fl!(fluent, "comments")</h2>
+        @if bad_comment {
+        <div id="cxmod">
+          <p>@fl!(fluent, "c-mod")</p>
+        </div>
+        }
         @for c in comments {
         <section id="@c.html_id()">
           <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">

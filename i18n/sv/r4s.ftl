@@ -33,3 +33,4 @@ write-comments = Skriv en kommentar
 recent-comments = Senaste kommentarer
 on = på
 byon = { $by }, { $date }
+c-mod = Din kommentar väntar på manuellt godkännande.  Tack för ditt tålamod.
