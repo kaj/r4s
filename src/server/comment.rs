@@ -1,5 +1,5 @@
 use super::error::{ViewError, ViewResult};
-use super::{wrap, Pool, Result};
+use super::{wrap, App, Result};
 use crate::models::PostLink;
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
@@ -11,7 +11,7 @@ use warp::filters::BoxedFilter;
 use warp::path::end;
 use warp::{self, body, post, Filter, Reply};
 
-pub fn route(s: BoxedFilter<(Pool,)>) -> BoxedFilter<(impl Reply,)> {
+pub fn route(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
     end()
         .and(post())
         .and(body::form())
@@ -21,8 +21,8 @@ pub fn route(s: BoxedFilter<(Pool,)>) -> BoxedFilter<(impl Reply,)> {
         .boxed()
 }
 
-async fn postcomment(form: CommentForm, pool: Pool) -> Result<impl Reply> {
-    let db = pool.get().await?;
+async fn postcomment(form: CommentForm, app: App) -> Result<impl Reply> {
+    let db = app.db().await?;
     let post = form.post;
     let post = db
         .interact(move |db| {

@@ -53,3 +53,10 @@ impl R4s {
         }
     }
 }
+
+#[derive(StructOpt)]
+pub struct PubBaseOpt {
+    /// Base url for the server, in absolute urls
+    #[structopt(long, short = "b", env = "R4S_BASE")]
+    public_base: String,
+}

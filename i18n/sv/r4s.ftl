@@ -21,6 +21,7 @@ tagged = Taggat
 related = Liknande inlägg
 
 tagshead = Taggar på Rasmus​.krats​.se
+taggedhead = Taggat { $tag } på Rasmus​.krats​.se
 
 posts-year = Inlägg från { $year }
 posts-tagged = Inlägg taggade ”{ $tag }”

@@ -1,5 +1,6 @@
 mod comment;
 mod error;
+mod feeds;
 pub mod language;
 mod prelude;
 mod tag;
@@ -8,15 +9,18 @@ use self::error::ViewError;
 use self::language::MyLang;
 use self::prelude::*;
 use self::templates::RenderRucte;
-use crate::dbopt::{DbOpt, Pool};
+use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{year_of_date, Comment, Post, PostComment, Tag};
 use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
+use crate::PubBaseOpt;
+use deadpool_diesel::PoolError;
 use diesel::prelude::*;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::str::FromStr;
+use std::sync::Arc;
 use structopt::StructOpt;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
@@ -35,14 +39,17 @@ pub struct Args {
     /// Adress to listen on
     #[structopt(long, default_value = "127.0.0.1:8765")]
     bind: SocketAddr,
+
+    #[structopt(flatten)]
+    base: PubBaseOpt,
 }
 
 impl Args {
     pub async fn run(self) -> Result<(), anyhow::Error> {
         use warp::path::{end, param, path, tail};
         use warp::query;
-        let pool = self.db.build_pool()?;
-        let s = warp::any().map(move || pool.clone()).boxed();
+        let app = AppData::new(&self)?;
+        let s = warp::any().map(move || app.clone()).boxed();
         let s = move || s.clone();
         let lang_filt = header::optional("accept-language")
             .map(Option::unwrap_or_default);
@@ -99,12 +106,31 @@ impl Args {
                 .and(goh())
                 .and(s())
                 .then(page)
-                .map(wrap));
+                .map(wrap))
+            .or(feeds::routes(s()));
 
         warp::serve(routes.recover(error::for_rejection))
             .run(self.bind)
             .await;
         Ok(())
+    }
+}
+
+pub struct AppData {
+    pool: Pool,
+    base: String,
+}
+type App = Arc<AppData>;
+
+impl AppData {
+    fn new(args: &Args) -> Result<App, anyhow::Error> {
+        Ok(Arc::new(AppData {
+            pool: args.db.build_pool()?,
+            base: args.base.public_base.clone(),
+        }))
+    }
+    async fn db(&self) -> Result<Connection, PoolError> {
+        self.pool.get().await
     }
 }
 
@@ -137,9 +163,9 @@ fn static_file(name: Tail) -> Result<impl Reply> {
         .unwrap())
 }
 
-async fn asset_file(year: i16, name: String, pool: Pool) -> Result<Response> {
+async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
     use warp::http::header::CONTENT_TYPE;
-    let db = pool.get().await?;
+    let db = app.db().await?;
 
     let (mime, content) = db
         .interact(move |db| {
@@ -160,45 +186,12 @@ async fn asset_file(year: i16, name: String, pool: Pool) -> Result<Response> {
         .unwrap())
 }
 
-async fn frontpage(lang: MyLang, pool: Pool) -> Result<Response> {
-    let db = pool.get().await?;
+async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
+    let db = app.db().await?;
     let limit = 5;
     let langc = lang.clone();
     let posts = db
-        .interact(move |db| {
-            use diesel::dsl::sql;
-            use diesel::sql_types::Bool;
-            p::posts
-                .select((
-                    (
-                        p::id,
-                        year_of_date(p::posted_at),
-                        p::slug,
-                        p::lang,
-                        p::title,
-                        p::posted_at,
-                        p::updated_at,
-                        p::teaser,
-                    ),
-                    sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
-                ))
-                .order(p::updated_at.desc())
-                .limit(2 * limit as i64)
-                .load::<(Post, bool)>(db)?
-                .into_iter()
-                .filter_map(|(post, langq)| {
-                    if post.lang == lang.0 || !langq {
-                        Some(post)
-                    } else {
-                        None
-                    }
-                })
-                .take(limit)
-                .map(|post| {
-                    Tag::for_post(post.id, db).map(|tags| (post, tags))
-                })
-                .collect::<Result<Vec<_>, _>>()
-        })
+        .interact(move |db| Post::recent(&lang.0, limit, db))
         .await??;
 
     let comments = db.interact(move |db| PostComment::recent(db)).await??;
@@ -249,8 +242,8 @@ impl FromStr for SlugAndLang {
     }
 }
 
-async fn yearpage(year: i16, lang: MyLang, pool: Pool) -> Result<impl Reply> {
-    let db = pool.get().await?;
+async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
+    let db = app.db().await?;
     let langc = lang.clone();
     let posts = db
         .interact(move |db| {
@@ -317,11 +310,11 @@ async fn page(
     year: i16,
     slug: SlugAndLang,
     query: PageQuery,
-    pool: Pool,
+    app: App,
 ) -> Result<Response> {
     use crate::models::{has_lang, PostLink};
     use diesel::dsl::not;
-    let db = pool.get().await?;
+    let db = app.db().await?;
     let fluent = language::load(&slug.lang)?;
     let s1 = slug.clone();
     let other_langs = db

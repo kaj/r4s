@@ -2,10 +2,11 @@ use crate::schema::comments::dsl as c;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
+use diesel::dsl::sql;
 use diesel::helper_types::Select;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use diesel::sql_types::{Smallint, Timestamptz, Varchar};
+use diesel::sql_types::{Bool, Smallint, Timestamptz, Varchar};
 use fluent::types::FluentType;
 use fluent::FluentValue;
 use i18n_embed_fl::fl;
@@ -23,6 +24,12 @@ sql_function! {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
 pub struct DateTime(chrono::DateTime<chrono::Utc>);
+
+impl DateTime {
+    pub fn raw(&self) -> chrono::DateTime<chrono::Utc> {
+        self.0
+    }
+}
 
 impl Queryable<Timestamptz, Pg> for DateTime {
     type Row =
@@ -99,6 +106,79 @@ pub struct Post {
 }
 
 impl Post {
+    pub fn recent(
+        lang: &str,
+        limit: usize,
+        db: &PgConnection,
+    ) -> Result<Vec<(Post, Vec<Tag>)>, diesel::result::Error> {
+        p::posts
+            .select((
+                (
+                    p::id,
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    p::lang,
+                    p::title,
+                    p::posted_at,
+                    p::updated_at,
+                    p::teaser,
+                ),
+                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
+            ))
+            .order(p::updated_at.desc())
+            .limit(2 * limit as i64)
+            .load::<(Post, bool)>(db)?
+            .into_iter()
+            .filter_map(|(post, langq)| {
+                if post.lang == lang || !langq {
+                    Some(post)
+                } else {
+                    None
+                }
+            })
+            .take(limit)
+            .map(|post| {
+                Tag::for_post(post.id, db).map(|tags| (post, tags))
+            })
+            .collect::<Result<Vec<_>, _>>()
+    }
+    pub fn tagged(
+        tag_id: i32,
+        lang: &str,
+        limit: i64,
+        db: &PgConnection,
+    ) -> Result<Vec<(Post, Vec<Tag>)>, diesel::result::Error> {
+        p::posts
+            .select((
+                (
+                    p::id,
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    p::lang,
+                    p::title,
+                    p::posted_at,
+                    p::updated_at,
+                    p::teaser,
+                ),
+                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
+            ))
+            .filter(p::id.eq_any(pt::post_tags.select(pt::post_id).filter(pt::tag_id.eq(tag_id))))
+            .order(p::updated_at.desc())
+            .limit(limit)
+            .load::<(Post, bool)>(db)?
+            .into_iter()
+            .filter_map(|(post, langq)| {
+                if post.lang == lang || !langq {
+                    Some(post)
+                } else {
+                    None
+                }
+            })
+            .map(|post| {
+                Tag::for_post(post.id, db).map(|tags| (post, tags))
+            })
+            .collect::<Result<Vec<_>, _>>()
+    }
     pub fn url(&self) -> String {
         format!("/{}/{}.{}", self.year, self.slug, self.lang)
     }
@@ -149,6 +229,12 @@ pub struct Tag {
 }
 
 impl Tag {
+    pub fn by_slug(
+        slug: &str,
+        db: &PgConnection,
+    ) -> Result<Option<Tag>, diesel::result::Error> {
+        t::tags.filter(t::slug.eq(slug)).first::<Tag>(db).optional()
+    }
     pub fn for_post(
         post_id: i32,
         db: &PgConnection,

@@ -1,8 +1,9 @@
 use anyhow::Result;
-pub use deadpool_diesel::postgres::Pool;
+pub use deadpool_diesel::postgres::{Connection, Pool, PoolError};
 use deadpool_diesel::{postgres::Manager, Runtime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::Connection as _;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]

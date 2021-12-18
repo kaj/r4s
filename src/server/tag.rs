@@ -1,8 +1,7 @@
 use super::templates::{self, RenderRucte};
-use super::{goh, wrap, MyLang, Pool, Result, SlugAndLang, ViewError};
-use crate::models::{year_of_date, Post, Tag};
+use super::{goh, wrap, App, MyLang, Result, SlugAndLang, ViewError};
+use crate::models::{Post, Tag};
 use crate::schema::post_tags::dsl as pt;
-use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
 use i18n_embed_fl::fl;
@@ -11,7 +10,7 @@ use warp::http::response::Builder;
 use warp::reply::Response;
 use warp::{Filter, Reply};
 
-pub fn routes(s: BoxedFilter<(Pool,)>) -> BoxedFilter<(impl Reply,)> {
+pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
     use warp::path::{end, param};
 
     let cloud = param()
@@ -24,8 +23,8 @@ pub fn routes(s: BoxedFilter<(Pool,)>) -> BoxedFilter<(impl Reply,)> {
     cloud.or(page).unify().boxed()
 }
 
-async fn tagcloud(lang: MyLang, pool: Pool) -> Result<Response> {
-    let db = pool.get().await?;
+async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
+    let db = app.db().await?;
     let tags = db
         .interact(move |db| {
             use diesel::dsl::sql;
@@ -60,55 +59,18 @@ async fn tagcloud(lang: MyLang, pool: Pool) -> Result<Response> {
         .unwrap())
 }
 
-async fn tagpage(tag: SlugAndLang, pool: Pool) -> Result<Response> {
-    let db = pool.get().await?;
+async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
+    let db = app.db().await?;
     let lang = tag.lang;
     let langc = MyLang(lang.clone());
     let tag = db
-        .interact(move |db| {
-            t::tags
-                .filter(t::slug.eq(tag.slug))
-                .first::<Tag>(db)
-                .optional()
-        })
+        .interact(move |db| Tag::by_slug(&tag.slug, db))
         .await??
         .ok_or(ViewError::NotFound)?;
 
     let tag_id = tag.id;
     let posts = db
-        .interact(move |db| {
-            use diesel::dsl::sql;
-            use diesel::sql_types::Bool;
-            p::posts
-                .select((
-                    (
-                        p::id,
-                        year_of_date(p::posted_at),
-                        p::slug,
-                        p::lang,
-                        p::title,
-                        p::posted_at,
-                        p::updated_at,
-                        p::teaser,
-                    ),
-                    sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
-                ))
-                .filter(p::id.eq_any(pt::post_tags.select(pt::post_id).filter(pt::tag_id.eq(tag_id))))
-                .order(p::updated_at.desc())
-                .load::<(Post, bool)>(db)
-                .and_then(|data| data.into_iter()
-                .filter_map(|(post, langq)| {
-                    if post.lang == lang || !langq {
-                        Some(post)
-                    } else {
-                        None
-                    }
-                })
-                .map(|post| {
-                    Tag::for_post(post.id, db).map(|tags| (post, tags))
-                })
-                .collect::<Result<Vec<_>, _>>())
-        })
+        .interact(move |db| Post::tagged(tag_id, &lang, 50, db))
         .await??;
 
     let fluent = langc.fluent()?;
