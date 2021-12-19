@@ -1,9 +1,11 @@
-use super::{Result, ViewError};
+use super::error::{ViewError, ViewResult};
+use super::Result;
 use accept_language::intersection;
 use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
 use i18n_embed::LanguageLoader;
 use i18n_embed_fl::fl;
 use rust_embed::RustEmbed;
+use rust_icu_ucol::UCollator;
 use std::str::FromStr;
 
 #[derive(RustEmbed)]
@@ -47,6 +49,9 @@ impl MyLang {
                 fmt(fluent, lang, &name)
             })
             .collect()
+    }
+    pub fn collator(&self) -> Result<UCollator> {
+        UCollator::try_from(self.0.as_str()).ise()
     }
 }
 

@@ -7,20 +7,14 @@ use diesel::prelude::*;
 use i18n_embed_fl::fl;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
+use warp::path::{end, param};
 use warp::reply::Response;
 use warp::{Filter, Reply};
 
 pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
-    use warp::path::{end, param};
-
-    let cloud = param()
-        .and(end())
-        .and(goh())
-        .and(s.clone())
-        .then(tagcloud)
-        .map(wrap);
-    let page = param().and(end()).and(goh()).and(s).then(tagpage).map(wrap);
-    cloud.or(page).unify().boxed()
+    let cloud = param().and(end()).and(goh()).and(s.clone()).then(tagcloud);
+    let page = param().and(end()).and(goh()).and(s).then(tagpage);
+    cloud.or(page).unify().map(wrap).boxed()
 }
 
 async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
@@ -45,7 +39,10 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
         .enumerate()
         .map(|(i, (tag, j))| (tag, j, ((n - i - 1) * m) / n))
         .collect::<Vec<_>>();
-    tags.sort_by(|(a, _, _), (b, _, _)| a.slug.cmp(&b.slug));
+    let col = lang.collator()?;
+    tags.sort_by(|(a, _, _), (b, _, _)| {
+        col.strcoll_utf8(&a.name, &b.name).unwrap()
+    });
 
     let fluent = lang.fluent()?;
     let other_langs = lang.other(|_, lang, name| {
