@@ -1,5 +1,5 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon, me_box};
+@use super::{footer, head_canon, header, me_box};
 
 @(fluent: &FluentLanguageLoader, title: &str, other_langs: &[String], content: Content)
 
@@ -10,11 +10,7 @@
     @:head_canon()
   </head>
   <body>
-    <header>
-      <p><a href="/@fluent.current_language()">@fl!(fluent, "sitename")</a></p>
-      @for other in other_langs {<p>@Html(other)</p>}
-    </header>
-
+    @:header(fluent, other_langs)
     <main>
       <h1>@title</h1>
       @:content()

@@ -1,5 +1,5 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon};
+@use super::{footer, head_canon, header};
 @use warp::http::StatusCode;
 
 @(fluent: &FluentLanguageLoader, code: StatusCode, message: &str)
@@ -11,9 +11,7 @@
     @:head_canon()
   </head>
   <body>
-    <header>
-      <a href="/">Rasmus​.krats​.se</a>
-    </header>
+    @:header(fluent, &[])
     <main>
       <h1>@code.canonical_reason().unwrap_or("error")</h1>
 

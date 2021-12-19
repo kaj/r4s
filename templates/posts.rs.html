@@ -1,24 +1,43 @@
 @use super::super::prelude::*;
-@use super::page_base;
+@use super::{footer, head_canon, header, me_box};
 @use crate::models::{Post, Tag};
 
-@(fluent: &FluentLanguageLoader, h1: &str, posts: &[(Post, Vec<Tag>)], years: &[i16], other_langs: &[String])
+@(fluent: &FluentLanguageLoader, h1: &str, feed: Option<&str>, posts: &[(Post, Vec<Tag>)], years: &[i16], other_langs: &[String])
 
-@:page_base(fluent, h1, other_langs, {
+<!doctype html>
+<html lang="@fluent.current_language()">
+  <head>
+    <title>@h1 — @fl!(fluent, "sitename")</title>
+    @:head_canon()
+  </head>
+  <body>
+    @:header(fluent, other_langs)
+    <main>
+      <h1>@h1</h1>
+      <p class="tagline">@fl!(fluent, "tagline")</p>
 
-  <p class="tagline">@fl!(fluent, "tagline")</p>
+      @for (post, tags) in posts {
+      <article id="post_@(post.year)_@post.slug" lang="@post.lang">
+        <h2><a href="@post.url()">@Html(&post.title)</a></h2>
+        <p class="publine">@Html(post.publine(tags))</p>
+        @Html(&post.content)
+      </article>
+      }
 
-  @for (post, tags) in posts {
-  <article id="post_@(post.year)_@post.slug" lang="@post.lang">
-    <h2><a href="@post.url()">@Html(&post.title)</a></h2>
-    <p class="publine">@Html(post.publine(tags))</p>
-    @Html(&post.content)
-  </article>
-  }
-
-  @if let Some((first, rest)) = years.split_first() {
-  <p>@fl!(fluent, "from-year")
-    <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
-    <a href="/@year/@fluent.current_language()">@year</a>}.</p>
-  }
-})
+      @if let Some((first, rest)) = years.split_first() {
+      <p>@fl!(fluent, "from-year")
+        <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
+        <a href="/@year/@fluent.current_language()">@year</a>}.</p>
+      }
+    </main>
+    @:me_box(fluent)
+    @if let Some(feed) = feed {
+    <aside>
+      <h2>@fl!(fluent, "feed-h")</h2>
+      <p>@fl!(fluent, "feed-pre")
+      <a href="@feed" rel="alternate" type="application/atom+xml">@fl!(fluent, "feed-link")</a>.</p>
+    </aside>
+    }
+    @:footer(fluent)
+  </body>
+</html>

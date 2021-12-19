@@ -1,5 +1,5 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon, me_box};
+@use super::{footer, head_canon, header, me_box};
 @use crate::models::{Comment, Post, PostLink, Tag};
 
 @(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], bad_comment: bool, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
@@ -11,11 +11,7 @@
     @:head_canon()
   </head>
   <body>
-    <header>
-      <p><a href="/@post.lang">@fl!(fluent, "sitename")</a></p>
-      @for other in other_langs {<p>@Html(other)</p>}
-    </header>
-
+    @:header(fluent, other_langs)
     <main>
       <h1>@Html(&post.title)</h1>
       <p class="publine">@Html(post.publine(tags))</p>

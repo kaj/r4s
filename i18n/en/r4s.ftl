@@ -29,6 +29,10 @@ posts-tagged = Posts tagged “{ $tag }”
 meb-h1 = Rasmus & this site
 meb-about = About Rasmus​.krats​.se
 
+feed-h = Atom feed
+feed-pre = There is an
+feed-link = atom feed for this tag
+
 comments = Comments
 write-comments = Write a comment
 recent-comments = Recent comments

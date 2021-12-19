@@ -198,7 +198,7 @@ impl Post {
         if let Some((first, rest)) = tags.split_first() {
             write!(
                 line,
-                " {} <a href='/tag/{slug}.{lang}'>{name}</a>",
+                " {} <a href='/tag/{slug}.{lang}' rel='tag'>{name}</a>",
                 fl!(lang, "tagged"),
                 slug = first.slug,
                 name = first.name,
@@ -208,7 +208,7 @@ impl Post {
             for tag in rest {
                 write!(
                     line,
-                    ", <a href='/tag/{slug}.{lang}'>{name}</a>",
+                    ", <a href='/tag/{slug}.{lang}' rel='tag'>{name}</a>",
                     slug = tag.slug,
                     name = tag.name,
                     lang = self.lang,

@@ -32,10 +32,6 @@ body {
         > header, > footer {
             grid-column: 1 / 3;
         }
-        aside#me_box {
-            position: sticky;
-            top: 0;
-        }
     }
     @media screen and (min-width: 100em) {
         grid-template-columns: 3fr 2fr;

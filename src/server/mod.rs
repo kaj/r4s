@@ -301,7 +301,15 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
 
     Ok(Builder::new()
         .html(|o| {
-            templates::posts(o, &fluent, &h1, &posts, &years, &other_langs)
+            templates::posts(
+                o,
+                &fluent,
+                &h1,
+                None,
+                &posts,
+                &years,
+                &other_langs,
+            )
         })
         .unwrap())
 }
@@ -420,7 +428,7 @@ async fn page(
 
     Ok(Builder::new()
         .html(|o| {
-            templates::page(
+            templates::post(
                 o,
                 &fluent,
                 &post,

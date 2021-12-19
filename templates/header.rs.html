@@ -1,0 +1,8 @@
+@use super::super::prelude::*;
+
+@(fluent: &FluentLanguageLoader, other_langs: &[String])
+
+<header>
+  <p><a href="/@fluent.current_language()">@fl!(fluent, "sitename")</a></p>
+  @for other in other_langs {<p>@Html(other)</p>}
+</header>

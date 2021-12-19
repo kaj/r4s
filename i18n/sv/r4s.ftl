@@ -29,6 +29,10 @@ posts-tagged = Inlägg taggade ”{ $tag }”
 meb-h1 = Rasmus & siten
 meb-about = Om Rasmus​.krats​.se
 
+feed-h = Atom feed
+feed-pre = Det finns en
+feed-link = atom feed för denna tagg
+
 comments = Kommentarer
 write-comments = Skriv en kommentar
 recent-comments = Senaste kommentarer
