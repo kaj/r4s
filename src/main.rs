@@ -8,6 +8,7 @@ mod imgcli;
 mod listposts;
 mod modcomments;
 mod models;
+mod readcomments;
 mod readfiles;
 mod schema;
 mod server;
@@ -39,6 +40,8 @@ enum R4s {
     ModerateComments(modcomments::Args),
     /// Read content from markdown files
     ReadFiles(readfiles::Args),
+    /// Read comments from a json dump.
+    ReadComments(readcomments::Args),
     /// Run the web server
     RunServer(server::Args),
 }
@@ -49,6 +52,7 @@ impl R4s {
             R4s::List(args) => args.run(),
             R4s::ModerateComments(args) => args.run(),
             R4s::ReadFiles(args) => args.run().await,
+            R4s::ReadComments(args) => args.run().await,
             R4s::RunServer(args) => args.run().await,
         }
     }
