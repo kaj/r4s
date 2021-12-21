@@ -66,7 +66,7 @@
     <aside>
       <h2>@fl!(fluent, "related")</h2>
       <ul>@for link in similar {
-        <li><a href="@link.url()">@link.title</a> (@link.year)</li>
+        <li><a href="@link.url()">@Html(&link.title)</a> (@link.year)</li>
         }</ul>
     </aside>
     }
