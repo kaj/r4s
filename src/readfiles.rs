@@ -14,7 +14,7 @@ use i18n_embed_fl::fl;
 use lazy_regex::{regex_captures, regex_find, regex_replace_all};
 use pulldown_cmark::escape::{escape_href, escape_html};
 use pulldown_cmark::{
-    BrokenLink, CodeBlockKind, Event, Options, Parser, Tag,
+    BrokenLink, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag,
 };
 use slug::slugify;
 use std::collections::BTreeMap;
@@ -352,7 +352,7 @@ async fn extract_parts(
 /// Returns the title and full content html markup separately.
 async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
     let mut fixlink = |broken_link: BrokenLink| {
-        Some(if let Some(url) = fa_link(broken_link.reference) {
+        Some(if let Some(url) = fa_link(&broken_link.reference) {
             (url.into(), String::new().into())
         } else {
             link_ext(&broken_link, markdown, lang)
@@ -372,12 +372,18 @@ async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
     )
     .collect::<Vec<_>>();
 
-    let prefix = items_until(&mut items, &Event::Start(Tag::Heading(1)))
-        .ok_or_else(|| anyhow!("No start of h1"))?;
+    let prefix = items_until(
+        &mut items,
+        &Event::Start(Tag::Heading(HeadingLevel::H1, None, vec![])),
+    )
+    .ok_or_else(|| anyhow!("No start of h1"))?;
     anyhow::ensure!(prefix.is_empty(), "Unexpected prefix: {:?}", prefix);
 
-    let title = items_until(&mut items, &Event::End(Tag::Heading(1)))
-        .ok_or_else(|| anyhow!("No end of h1"))?;
+    let title = items_until(
+        &mut items,
+        &Event::End(Tag::Heading(HeadingLevel::H1, None, vec![])),
+    )
+    .ok_or_else(|| anyhow!("No end of h1"))?;
     let title = collect_html(title).await?;
 
     let body = collect_html(items.into_iter()).await?;
@@ -519,20 +525,38 @@ async fn collect_html<'a>(
             Event::Text(text) => {
                 escape_html(&mut result, &text)?;
             }
-            Event::Start(Tag::Heading(level)) => {
-                while section_level >= level {
-                    result.push_str("</section>");
-                    section_level -= 1;
+            Event::Start(Tag::Heading(level, id, classes)) => {
+                {
+                    let level = level as u32;
+                    while section_level >= level {
+                        result.push_str("</section>");
+                        section_level -= 1;
+                    }
+                    result.push('\n');
+                    while section_level + 1 < level {
+                        result.push_str("<section>");
+                        section_level += 1;
+                    }
                 }
-                result.push('\n');
-                while section_level < level {
-                    result.push_str("<section>");
-                    section_level += 1;
+                result.push_str("<section");
+                if let Some(id) = id {
+                    result.push_str(" id=\"");
+                    escape_html(&mut result, id)?;
+                    result.push('"');
                 }
-                result.push_str(&format!("<h{}>", level));
+                if !classes.is_empty() {
+                    result.push_str(" class=\"");
+                    escape_html(&mut result, &classes.join(" "))?;
+                    result.push('"');
+                }
+                result.push('>');
+                section_level += 1;
+                result.push_str(&format!("<{}>", level));
             }
-            Event::End(Tag::Heading(level)) => {
-                result.push_str(&format!("</h{}>\n", level));
+            Event::End(Tag::Heading(level, _, _)) => {
+                if !remove_end(&mut result, &format!("<{}>", level)) {
+                    result.push_str(&format!("</{}>\n", level));
+                }
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
                 result.push_str("<pre");
@@ -569,13 +593,9 @@ async fn collect_html<'a>(
                 result.push_str("</code></pre>\n");
             }
             Event::Start(Tag::Image(imgtype, imgref, title)) => {
-                if result.ends_with("<p>") {
-                    result.truncate(result.len() - 3);
-                } else if result.ends_with("<p><!--no-p-->") {
-                    result.truncate(result.len() - 14);
-                } else if result.ends_with("<p><!--no-p-->\n") {
-                    result.truncate(result.len() - 15);
-                }
+                let _ = remove_end(&mut result, "<p>")
+                    || remove_end(&mut result, "<p><!--no-p-->")
+                    || remove_end(&mut result, "<p><!--no-p-->\n");
                 let mut inner = String::new();
                 for tag in &mut data {
                     match tag {
@@ -717,6 +737,14 @@ async fn collect_html<'a>(
     Ok(result)
 }
 
+fn remove_end(s: &mut String, tail: &str) -> bool {
+    if s.ends_with(tail) {
+        s.truncate(s.len() - tail.len());
+        true
+    } else {
+        false
+    }
+}
 fn tag_name(tag: &Tag) -> &'static str {
     match tag {
         Tag::Paragraph => "p",

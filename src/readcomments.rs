@@ -1,11 +1,10 @@
 //! Read comments from a json dump.  This is kind of a one-time operation.
 use crate::dbopt::DbOpt;
-use crate::models::year_of_date;
+use crate::models::{safe_md2html, year_of_date};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use anyhow::{anyhow, Context, Result};
 use diesel::prelude::*;
-use pulldown_cmark::{html::push_html, Event, Parser, Tag};
 use serde::{self, Deserialize, Deserializer};
 use std::fs::File;
 use std::path::PathBuf;
@@ -77,21 +76,7 @@ struct Dumped {
 
 impl Dumped {
     fn html(&self) -> String {
-        let mut hdiff = 0;
-        let markdown = Parser::new(&self.comment).map(|e| match e {
-            Event::Html(s) => Event::Text(s),
-            Event::Start(Tag::Heading(h)) => {
-                hdiff = std::cmp::max(hdiff, 4 - h);
-                Event::Start(Tag::Heading(h + hdiff))
-            }
-            Event::End(Tag::Heading(h)) => {
-                Event::End(Tag::Heading(h + hdiff))
-            }
-            e => e,
-        });
-        let mut html = String::new();
-        push_html(&mut html, markdown);
-        html
+        safe_md2html(&self.comment)
     }
 }
 
