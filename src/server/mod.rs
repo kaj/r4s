@@ -5,7 +5,7 @@ pub mod language;
 mod prelude;
 mod tag;
 
-use self::error::ViewError;
+use self::error::{ViewError, ViewResult};
 use self::language::MyLang;
 use self::prelude::*;
 use self::templates::RenderRucte;
@@ -15,6 +15,7 @@ use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::PubBaseOpt;
+use csrf::{AesGcmCsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
 use deadpool_diesel::PoolError;
 use diesel::prelude::*;
 use serde::Deserialize;
@@ -42,6 +43,10 @@ pub struct Args {
 
     #[structopt(flatten)]
     base: PubBaseOpt,
+
+    /// A 32-byte secret key for csrf generation and verification.
+    #[structopt(long, env = "CSRF_SECRET", hide_env_values = true)]
+    csrf_secret: CsrfSecret,
 }
 
 impl Args {
@@ -119,6 +124,7 @@ impl Args {
 pub struct AppData {
     pool: Pool,
     base: String,
+    csrf_secret: [u8; 32],
 }
 type App = Arc<AppData>;
 
@@ -127,10 +133,35 @@ impl AppData {
         Ok(Arc::new(AppData {
             pool: args.db.build_pool()?,
             base: args.base.public_base.clone(),
+            csrf_secret: args.csrf_secret.secret,
         }))
     }
     async fn db(&self) -> Result<Connection, PoolError> {
         self.pool.get().await
+    }
+    fn verify_csrf(&self, token: &str, cookie: &str) -> Result<()> {
+        use base64::decode;
+        fn fail<E: std::error::Error>(e: E) -> ViewError {
+            eprintln!("Csrf verification error: {}", e);
+            ViewError::BadRequest("CSRF Verification Failed".into())
+        }
+        let token = decode(token.as_bytes()).map_err(fail)?;
+        let cookie = decode(cookie.as_bytes()).map_err(fail)?;
+        let protect = self.csrf_protection();
+        let token = protect.parse_token(&token).map_err(fail)?;
+        let cookie = protect.parse_cookie(&cookie).map_err(fail)?;
+        if protect.verify_token_pair(&token, &cookie) {
+            Ok(())
+        } else {
+            Err(ViewError::BadRequest("CSRF Verification Failed".into()))
+        }
+    }
+    fn generate_csrf_pair(&self) -> Result<(CsrfToken, CsrfCookie)> {
+        let ttl = 4 * 3600;
+        self.csrf_protection().generate_token_pair(None, ttl).ise()
+    }
+    fn csrf_protection(&self) -> impl CsrfProtection {
+        AesGcmCsrfProtection::from_key(self.csrf_secret)
     }
 }
 
@@ -426,7 +457,17 @@ async fn page(
         })
         .await??;
 
+    let (token, cookie) = app.generate_csrf_pair()?;
+
+    use warp::http::header::SET_COOKIE;
     Ok(Builder::new()
+        .header(
+            SET_COOKIE,
+            format!(
+                "CSRF={}; SameSite=Strict; Path=/; HttpOnly",
+                cookie.b64_string()
+            ),
+        )
         .html(|o| {
             templates::post(
                 o,
@@ -434,6 +475,7 @@ async fn page(
                 &post,
                 &tags,
                 bad_comment,
+                &token.b64_string(),
                 &comments,
                 &other_langs,
                 &related,
@@ -451,6 +493,21 @@ fn found(url: &str) -> impl Reply {
 #[derive(Debug, Deserialize)]
 struct PageQuery {
     c: Option<i32>,
+}
+
+struct CsrfSecret {
+    secret: [u8; 32],
+}
+
+impl FromStr for CsrfSecret {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(CsrfSecret {
+            secret: s.as_bytes().try_into().map_err(|_| {
+                anyhow::anyhow!("Got {} bytes, expected 32", s.len())
+            })?,
+        })
+    }
 }
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));

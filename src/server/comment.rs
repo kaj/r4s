@@ -7,13 +7,14 @@ use diesel::dsl::sql;
 use diesel::prelude::*;
 use pulldown_cmark::{html::push_html, Event, Parser, Tag};
 use serde::Deserialize;
-use warp::filters::BoxedFilter;
+use warp::filters::{cookie, BoxedFilter};
 use warp::path::end;
 use warp::{self, body, post, Filter, Reply};
 
 pub fn route(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
     end()
         .and(post())
+        .and(cookie::cookie("CSRF"))
         .and(body::form())
         .and(s)
         .then(postcomment)
@@ -21,8 +22,14 @@ pub fn route(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
         .boxed()
 }
 
-async fn postcomment(form: CommentForm, app: App) -> Result<impl Reply> {
+async fn postcomment(
+    csrf_cookie: String,
+    form: CommentForm,
+    app: App,
+) -> Result<impl Reply> {
+    app.verify_csrf(&form.csrftoken, &csrf_cookie)?;
     let db = app.db().await?;
+
     let post = form.post;
     let post = db
         .interact(move |db| {
@@ -105,6 +112,7 @@ struct CommentForm {
     name: String,
     email: String,
     url: Option<String>,
+    csrftoken: String,
 }
 
 impl CommentForm {

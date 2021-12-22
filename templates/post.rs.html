@@ -2,7 +2,7 @@
 @use super::{footer, head_canon, header, me_box};
 @use crate::models::{Comment, Post, PostLink, Tag};
 
-@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], bad_comment: bool, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
+@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang">
@@ -55,7 +55,7 @@
             </p>
 	    <p class="submit">
               <input type="hidden" name="post" value="@post.id" id="id_post">
-	      <input type="hidden" name="csrftoken" value="FIXME">
+	      <input type="hidden" name="csrftoken" value="@csrf">
 	      <input type="submit" value="Post the comment">
             </p>
           </form>
