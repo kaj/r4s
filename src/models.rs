@@ -417,5 +417,50 @@ mod markdown {
             _ => panic!("Bad heading level: {}", i + 1),
         }
     }
+
+    #[test]
+    fn markdown_no_html() {
+        assert_eq!(
+            safe_md2html(
+                "Hej!\
+                 \r\n\r\nHär är <em>en</em> _kommentar_.\
+                 \r\n\r\n<script>evil</script>"
+            ),
+            "<p>Hej!</p>\
+             \n<p>Här är &lt;em&gt;en&lt;/em&gt; <em>kommentar</em>.</p>\
+             \n&lt;script&gt;evil&lt;/script&gt;",
+        );
+    }
+
+    #[test]
+    fn heading_level() {
+        assert_eq!(
+            safe_md2html(
+                "# Rubrik\
+                 \r\n\r\nRubriken ska hamna på rätt nivå.\
+                 \r\n\r\n## Underrubrik\
+                 \r\n\r\nOch underrubriken på nivån under."
+            ),
+            "<h4>Rubrik</h4>\
+             \n<p>Rubriken ska hamna på rätt nivå.</p>\
+             \n<h5>Underrubrik</h5>\
+             \n<p>Och underrubriken på nivån under.</p>\n",
+        );
+    }
+    #[test]
+    fn heading_level_2() {
+        assert_eq!(
+            safe_md2html(
+                "### Rubrik\
+                 \r\n\r\nRubriken ska hamna på rätt nivå.\
+                 \r\n\r\n#### Underrubrik\
+                 \r\n\r\nOch underrubriken på nivån under."
+            ),
+            "<h4>Rubrik</h4>\
+             \n<p>Rubriken ska hamna på rätt nivå.</p>\
+             \n<h5>Underrubrik</h5>\
+             \n<p>Och underrubriken på nivån under.</p>\n",
+        );
+    }
 }
 pub use markdown::safe_md2html;
