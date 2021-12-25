@@ -2,7 +2,7 @@ use crate::schema::comments::dsl as c;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
-use diesel::dsl::sql;
+use diesel::dsl::{not, sql};
 use diesel::helper_types::Select;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
@@ -160,13 +160,14 @@ pub struct Teaser {
 impl Teaser {
     pub fn recent(
         lang: &str,
-        limit: usize,
+        limit: u32,
         db: &PgConnection,
     ) -> Result<Vec<Self>, diesel::result::Error> {
         p::posts
-            .left_join(c::comments.on(
-                c::post_id.eq(p::id).and(c::is_public.eq(true))
-            ))
+            .left_join(
+                c::comments
+                    .on(c::post_id.eq(p::id).and(c::is_public.eq(true))),
+            )
             .select((
                 (
                     p::id,
@@ -178,26 +179,25 @@ impl Teaser {
                     p::updated_at,
                     p::teaser,
                 ),
-                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posts.posted_at), slug)", lang)),
                 p::teaser.ne(p::content),
                 sql::<BigInt>("count(distinct comments.id)"),
             ))
+            .filter(p::lang.eq(&lang).or(not(has_lang(
+                year_of_date(p::posted_at),
+                p::slug,
+                &lang,
+            ))))
             .group_by(p::posts::all_columns())
             .order(p::updated_at.desc())
-            .limit(2 * limit as i64)
-            .load::<(Post, bool, bool, i64)>(db)?
+            .limit(limit.into())
+            .load::<(Post, bool, i64)>(db)?
             .into_iter()
-            .filter_map(|(post, langq, is_teaser, ncomments)| {
-                if post.lang == lang || !langq {
-                    Some((post, is_teaser, ncomments as i32))
-                } else {
-                    None
-                }
-            })
-            .take(limit)
             .map(|(post, is_more, n_comments)| {
-                Tag::for_post(post.id, db).map(|tags| {
-                    Teaser { post, tags, is_more, n_comments}
+                Tag::for_post(post.id, db).map(|tags| Teaser {
+                    post,
+                    tags,
+                    is_more,
+                    n_comments: n_comments as _,
                 })
             })
             .collect()
@@ -208,9 +208,10 @@ impl Teaser {
         db: &PgConnection,
     ) -> Result<Vec<Teaser>, diesel::result::Error> {
         p::posts
-            .left_join(c::comments.on(
-                c::post_id.eq(p::id).and(c::is_public.eq(true))
-            ))
+            .left_join(
+                c::comments
+                    .on(c::post_id.eq(p::id).and(c::is_public.eq(true))),
+            )
             .select((
                 (
                     p::id,
@@ -222,25 +223,29 @@ impl Teaser {
                     p::updated_at,
                     p::teaser,
                 ),
-                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posts.posted_at), slug)", lang)),
                 p::teaser.ne(p::content),
                 sql::<BigInt>("count(distinct comments.id)"),
             ))
-            .filter(year_of_date(p::posted_at).eq(year).or(year_of_date(p::updated_at).eq(year)))
+            .filter(
+                year_of_date(p::posted_at)
+                    .eq(year)
+                    .or(year_of_date(p::updated_at).eq(year)),
+            )
+            .filter(p::lang.eq(&lang).or(not(has_lang(
+                year_of_date(p::posted_at),
+                p::slug,
+                &lang,
+            ))))
             .group_by(p::posts::all_columns())
             .order(p::updated_at.asc())
-            .load::<(Post, bool, bool, i64)>(db)?
+            .load::<(Post, bool, i64)>(db)?
             .into_iter()
-            .filter_map(|(post, langq, is_teaser, n_comments)| {
-                if post.lang == lang || !langq {
-                    Some((post, is_teaser, n_comments as i32))
-                } else {
-                    None
-                }
-            })
             .map(|(post, is_more, n_comments)| {
-                Tag::for_post(post.id, db).map(|tags| {
-                    Teaser { post, tags, is_more, n_comments }
+                Tag::for_post(post.id, db).map(|tags| Teaser {
+                    post,
+                    tags,
+                    is_more,
+                    n_comments: n_comments as _,
                 })
             })
             .collect()
@@ -248,13 +253,14 @@ impl Teaser {
     pub fn tagged(
         tag_id: i32,
         lang: &str,
-        limit: i64,
+        limit: u32,
         db: &PgConnection,
     ) -> Result<Vec<Teaser>, diesel::result::Error> {
         p::posts
-            .left_join(c::comments.on(
-                c::post_id.eq(p::id).and(c::is_public.eq(true))
-            ))
+            .left_join(
+                c::comments
+                    .on(c::post_id.eq(p::id).and(c::is_public.eq(true))),
+            )
             .select((
                 (
                     p::id,
@@ -266,26 +272,32 @@ impl Teaser {
                     p::updated_at,
                     p::teaser,
                 ),
-                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posts.posted_at), slug)", lang)),
                 p::teaser.ne(p::content),
                 sql::<BigInt>("count(distinct comments.id)"),
             ))
-            .filter(p::id.eq_any(pt::post_tags.select(pt::post_id).filter(pt::tag_id.eq(tag_id))))
+            .filter(
+                p::id.eq_any(
+                    pt::post_tags
+                        .select(pt::post_id)
+                        .filter(pt::tag_id.eq(tag_id)),
+                ),
+            )
+            .filter(p::lang.eq(&lang).or(not(has_lang(
+                year_of_date(p::posted_at),
+                p::slug,
+                &lang,
+            ))))
             .group_by(p::posts::all_columns())
             .order(p::updated_at.desc())
-            .limit(limit)
-            .load::<(Post, bool, bool, i64)>(db)?
+            .limit(limit.into())
+            .load::<(Post, bool, i64)>(db)?
             .into_iter()
-            .filter_map(|(post, langq, is_more, n_comments)| {
-                if post.lang == lang || !langq {
-                    Some((post, is_more, n_comments as i32))
-                } else {
-                    None
-                }
-            })
             .map(|(post, is_more, n_comments)| {
-                Tag::for_post(post.id, db).map(|tags| {
-                    Teaser { post, tags, is_more, n_comments }
+                Tag::for_post(post.id, db).map(|tags| Teaser {
+                    post,
+                    tags,
+                    is_more,
+                    n_comments: n_comments as _,
                 })
             })
             .collect()
