@@ -350,6 +350,11 @@ article {
     &:nth-child(3n):after {
         background: url(static_name("deco3.svg"));
     }
+    .readmore {
+        text-align: right;
+        font-family: cocanut;
+        font-style: italic;
+    }
 }
 
 pre {

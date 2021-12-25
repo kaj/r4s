@@ -39,3 +39,8 @@ recent-comments = Senaste kommentarer
 on = på
 byon = { $by }, { $date }
 c-mod = Din kommentar väntar på manuellt godkännande.  Tack för ditt tålamod.
+
+read-more-comments = Läs hela <q>{ $title }</q> med { $n } kommentarer.
+read-more = Läs hela <q>{ $title }</q>.
+read-comments = Läs { $n } kommentarer.
+comment-first = Bli först att kommentera.

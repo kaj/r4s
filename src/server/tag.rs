@@ -1,6 +1,6 @@
 use super::templates::{self, RenderRucte};
 use super::{goh, wrap, App, MyLang, Result, SlugAndLang, ViewError};
-use crate::models::{Post, Tag};
+use crate::models::{Tag, Teaser};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
@@ -67,7 +67,7 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
 
     let tag_id = tag.id;
     let posts = db
-        .interact(move |db| Post::tagged(tag_id, &lang, 50, db))
+        .interact(move |db| Teaser::tagged(tag_id, &lang, 50, db))
         .await??;
 
     let fluent = langc.fluent()?;

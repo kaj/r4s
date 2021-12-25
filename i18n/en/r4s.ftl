@@ -39,3 +39,8 @@ recent-comments = Recent comments
 on = on
 byon = { $by }, { $date }
 c-mod = Your comment awaits manual moderation.  Please be patient.
+
+read-more-comments = Read whole <q>{ $title }</q> with { $n } comments.
+read-more = Read whole <q>{ $title }</q>.
+read-comments = Read { $n } comments.
+comment-first = Be the first to comment.

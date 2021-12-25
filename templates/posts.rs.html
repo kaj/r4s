@@ -1,8 +1,8 @@
 @use super::super::prelude::*;
 @use super::{footer, head_canon, header, me_box};
-@use crate::models::{Post, Tag};
+@use crate::models::Teaser;
 
-@(fluent: &FluentLanguageLoader, h1: &str, feed: Option<&str>, posts: &[(Post, Vec<Tag>)], years: &[i16], other_langs: &[String])
+@(fluent: &FluentLanguageLoader, h1: &str, feed: Option<&str>, posts: &[Teaser], years: &[i16], other_langs: &[String])
 
 <!doctype html>
 <html lang="@fluent.current_language()">
@@ -16,11 +16,12 @@
       <h1>@h1</h1>
       <p class="tagline">@fl!(fluent, "tagline")</p>
 
-      @for (post, tags) in posts {
+      @for post in posts {
       <article id="post_@(post.year)_@post.slug" lang="@post.lang">
         <h2><a href="@post.url()">@Html(&post.title)</a></h2>
-        <p class="publine">@Html(post.publine(tags))</p>
+        <p class="publine">@Html(post.publine())</p>
         @Html(&post.content)
+        <p class="readmore"><a href="@post.url()" rel="bookmark">@Html(post.readmore())</a></p>
       </article>
       }
 

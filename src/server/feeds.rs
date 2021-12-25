@@ -1,6 +1,6 @@
 use super::error::{ViewError, ViewResult};
 use super::{fl, wrap, App, MyLang, Result};
-use crate::models::{Post, Tag};
+use crate::models::{Tag, Teaser};
 use atom_syndication::*;
 use std::str::FromStr;
 use warp::filters::BoxedFilter;
@@ -32,9 +32,9 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
     let posts = db
         .interact(move |db| {
             if let Some(tag_id) = tag_id {
-                Post::tagged(tag_id, &lang, 10, db)
+                Teaser::tagged(tag_id, &lang, 10, db)
             } else {
-                Post::recent(&lang, 10, db)
+                Teaser::recent(&lang, 10, db)
             }
         })
         .await??;
@@ -54,19 +54,21 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
         .updated(
             posts
                 .iter()
-                .map(|p| p.0.updated_at.raw())
+                .map(|p| p.updated_at.raw())
                 .max()
                 .ok_or(ViewError::NotFound)?,
         )
         .entries(
             posts
                 .iter()
-                .map(|(post, tags)| {
+                .map(|post| {
                     let url = format!("{}{}", app.base, post.url());
                     EntryBuilder::default()
                         .title(post.title.clone())
                         .id(url.clone())
-                        .link(LinkBuilder::default().href(url).build())
+                        .link(
+                            LinkBuilder::default().href(url.clone()).build(),
+                        )
                         .author(
                             PersonBuilder::default()
                                 .name("Rasmus Kaj")
@@ -78,7 +80,8 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
                         )
                         .updated(post.updated_at.raw())
                         .categories(
-                            tags.iter()
+                            post.tags()
+                                .iter()
                                 .map(|tag| {
                                     CategoryBuilder::default()
                                         .term(tag.slug.clone())
@@ -87,7 +90,12 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
                                 })
                                 .collect::<Vec<_>>(),
                         )
-                        .summary(Text::html(post.content.clone()))
+                        .summary(Text::html(format!(
+                            "{}\n<p class='readmore'><a href='{}'>{}</a></p>",
+                            post.content,
+                            url,
+                            post.readmore(),
+                        )))
                         .published(Some(FixedDateTime::from(
                             post.posted_at.raw(),
                         )))

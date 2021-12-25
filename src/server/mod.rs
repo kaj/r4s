@@ -10,7 +10,7 @@ use self::language::MyLang;
 use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{Connection, DbOpt, Pool};
-use crate::models::{year_of_date, Comment, Post, PostComment, Tag};
+use crate::models::{year_of_date, Comment, Post, PostComment, Tag, Teaser};
 use crate::schema::assets::dsl as a;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
@@ -222,7 +222,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     let limit = 5;
     let langc = lang.clone();
     let posts = db
-        .interact(move |db| Post::recent(&lang.0, limit, db))
+        .interact(move |db| Teaser::recent(&lang.0, limit, db))
         .await??;
 
     let comments = db.interact(move |db| PostComment::recent(db)).await??;
@@ -277,39 +277,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
     let db = app.db().await?;
     let langc = lang.clone();
     let posts = db
-        .interact(move |db| {
-            use diesel::dsl::sql;
-            use diesel::sql_types::Bool;
-            p::posts
-                .select((
-                    (
-                        p::id,
-                        year_of_date(p::posted_at),
-                        p::slug,
-                        p::lang,
-                        p::title,
-                        p::posted_at,
-                        p::updated_at,
-                        p::teaser,
-                    ),
-                    sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang.0))
-                ))
-                .filter(year_of_date(p::posted_at).eq(year).or(year_of_date(p::updated_at).eq(year)))
-                .order(p::updated_at.asc())
-                .load::<(Post, bool)>(db)
-                .and_then(|data| data.into_iter()
-                .filter_map(|(post, langq)| {
-                    if post.lang == lang.0 || !langq {
-                        Some(post)
-                    } else {
-                        None
-                    }
-                })
-                .map(|post| {
-                    Tag::for_post(post.id, db).map(|tags| (post, tags))
-                })
-                .collect::<Result<Vec<_>, _>>())
-        })
+        .interact(move |db| Teaser::for_year(year, &lang.0, db))
         .await??;
     if posts.is_empty() {
         return Err(ViewError::NotFound);

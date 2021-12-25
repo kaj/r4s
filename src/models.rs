@@ -6,7 +6,7 @@ use diesel::dsl::sql;
 use diesel::helper_types::Select;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use diesel::sql_types::{Bool, Smallint, Timestamptz, Varchar};
+use diesel::sql_types::{BigInt, Bool, Smallint, Timestamptz, Varchar};
 use fluent::types::FluentType;
 use fluent::FluentValue;
 use i18n_embed_fl::fl;
@@ -106,84 +106,12 @@ pub struct Post {
 }
 
 impl Post {
-    pub fn recent(
-        lang: &str,
-        limit: usize,
-        db: &PgConnection,
-    ) -> Result<Vec<(Post, Vec<Tag>)>, diesel::result::Error> {
-        p::posts
-            .select((
-                (
-                    p::id,
-                    year_of_date(p::posted_at),
-                    p::slug,
-                    p::lang,
-                    p::title,
-                    p::posted_at,
-                    p::updated_at,
-                    p::teaser,
-                ),
-                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
-            ))
-            .order(p::updated_at.desc())
-            .limit(2 * limit as i64)
-            .load::<(Post, bool)>(db)?
-            .into_iter()
-            .filter_map(|(post, langq)| {
-                if post.lang == lang || !langq {
-                    Some(post)
-                } else {
-                    None
-                }
-            })
-            .take(limit)
-            .map(|post| {
-                Tag::for_post(post.id, db).map(|tags| (post, tags))
-            })
-            .collect::<Result<Vec<_>, _>>()
-    }
-    pub fn tagged(
-        tag_id: i32,
-        lang: &str,
-        limit: i64,
-        db: &PgConnection,
-    ) -> Result<Vec<(Post, Vec<Tag>)>, diesel::result::Error> {
-        p::posts
-            .select((
-                (
-                    p::id,
-                    year_of_date(p::posted_at),
-                    p::slug,
-                    p::lang,
-                    p::title,
-                    p::posted_at,
-                    p::updated_at,
-                    p::teaser,
-                ),
-                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posted_at), slug)", lang))
-            ))
-            .filter(p::id.eq_any(pt::post_tags.select(pt::post_id).filter(pt::tag_id.eq(tag_id))))
-            .order(p::updated_at.desc())
-            .limit(limit)
-            .load::<(Post, bool)>(db)?
-            .into_iter()
-            .filter_map(|(post, langq)| {
-                if post.lang == lang || !langq {
-                    Some(post)
-                } else {
-                    None
-                }
-            })
-            .map(|post| {
-                Tag::for_post(post.id, db).map(|tags| (post, tags))
-            })
-            .collect::<Result<Vec<_>, _>>()
-    }
     pub fn url(&self) -> String {
         format!("/{}/{}.{}", self.year, self.slug, self.lang)
     }
     pub fn publine(&self, tags: &[Tag]) -> String {
         use std::fmt::Write;
+        // TODO: Take the fluent as an argument instead?
         let lang = crate::server::language::load(&self.lang).unwrap();
         let mut line = fl!(lang, "posted-at", date = (&self.posted_at));
 
@@ -218,6 +146,184 @@ impl Post {
             line.push('.');
         }
         line
+    }
+}
+
+pub struct Teaser {
+    post: Post,
+    tags: Vec<Tag>,
+    /// True if the full text of the post is more than this teaser.
+    is_more: bool,
+    n_comments: i32,
+}
+
+impl Teaser {
+    pub fn recent(
+        lang: &str,
+        limit: usize,
+        db: &PgConnection,
+    ) -> Result<Vec<Self>, diesel::result::Error> {
+        p::posts
+            .left_join(c::comments.on(
+                c::post_id.eq(p::id).and(c::is_public.eq(true))
+            ))
+            .select((
+                (
+                    p::id,
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    p::lang,
+                    p::title,
+                    p::posted_at,
+                    p::updated_at,
+                    p::teaser,
+                ),
+                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posts.posted_at), slug)", lang)),
+                p::teaser.ne(p::content),
+                sql::<BigInt>("count(distinct comments.id)"),
+            ))
+            .group_by(p::posts::all_columns())
+            .order(p::updated_at.desc())
+            .limit(2 * limit as i64)
+            .load::<(Post, bool, bool, i64)>(db)?
+            .into_iter()
+            .filter_map(|(post, langq, is_teaser, ncomments)| {
+                if post.lang == lang || !langq {
+                    Some((post, is_teaser, ncomments as i32))
+                } else {
+                    None
+                }
+            })
+            .take(limit)
+            .map(|(post, is_more, n_comments)| {
+                Tag::for_post(post.id, db).map(|tags| {
+                    Teaser { post, tags, is_more, n_comments}
+                })
+            })
+            .collect()
+    }
+    pub fn for_year(
+        year: i16,
+        lang: &str,
+        db: &PgConnection,
+    ) -> Result<Vec<Teaser>, diesel::result::Error> {
+        p::posts
+            .left_join(c::comments.on(
+                c::post_id.eq(p::id).and(c::is_public.eq(true))
+            ))
+            .select((
+                (
+                    p::id,
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    p::lang,
+                    p::title,
+                    p::posted_at,
+                    p::updated_at,
+                    p::teaser,
+                ),
+                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posts.posted_at), slug)", lang)),
+                p::teaser.ne(p::content),
+                sql::<BigInt>("count(distinct comments.id)"),
+            ))
+            .filter(year_of_date(p::posted_at).eq(year).or(year_of_date(p::updated_at).eq(year)))
+            .group_by(p::posts::all_columns())
+            .order(p::updated_at.asc())
+            .load::<(Post, bool, bool, i64)>(db)?
+            .into_iter()
+            .filter_map(|(post, langq, is_teaser, n_comments)| {
+                if post.lang == lang || !langq {
+                    Some((post, is_teaser, n_comments as i32))
+                } else {
+                    None
+                }
+            })
+            .map(|(post, is_more, n_comments)| {
+                Tag::for_post(post.id, db).map(|tags| {
+                    Teaser { post, tags, is_more, n_comments }
+                })
+            })
+            .collect()
+    }
+    pub fn tagged(
+        tag_id: i32,
+        lang: &str,
+        limit: i64,
+        db: &PgConnection,
+    ) -> Result<Vec<Teaser>, diesel::result::Error> {
+        p::posts
+            .left_join(c::comments.on(
+                c::post_id.eq(p::id).and(c::is_public.eq(true))
+            ))
+            .select((
+                (
+                    p::id,
+                    year_of_date(p::posted_at),
+                    p::slug,
+                    p::lang,
+                    p::title,
+                    p::posted_at,
+                    p::updated_at,
+                    p::teaser,
+                ),
+                sql::<Bool>(&format!("bool_or(lang='{}') over (partition by year_of_date(posts.posted_at), slug)", lang)),
+                p::teaser.ne(p::content),
+                sql::<BigInt>("count(distinct comments.id)"),
+            ))
+            .filter(p::id.eq_any(pt::post_tags.select(pt::post_id).filter(pt::tag_id.eq(tag_id))))
+            .group_by(p::posts::all_columns())
+            .order(p::updated_at.desc())
+            .limit(limit)
+            .load::<(Post, bool, bool, i64)>(db)?
+            .into_iter()
+            .filter_map(|(post, langq, is_more, n_comments)| {
+                if post.lang == lang || !langq {
+                    Some((post, is_more, n_comments as i32))
+                } else {
+                    None
+                }
+            })
+            .map(|(post, is_more, n_comments)| {
+                Tag::for_post(post.id, db).map(|tags| {
+                    Teaser { post, tags, is_more, n_comments }
+                })
+            })
+            .collect()
+    }
+    pub fn publine(&self) -> String {
+        self.post.publine(&self.tags)
+    }
+    pub fn readmore(&self) -> String {
+        // TODO: Take the fluent as an argument instead?
+        let lang = crate::server::language::load(&self.lang).unwrap();
+        if self.is_more {
+            if self.n_comments > 0 {
+                fl!(
+                    lang,
+                    "read-more-comments",
+                    title = self.title.as_str(),
+                    n = self.n_comments
+                )
+            } else {
+                fl!(lang, "read-more", title = self.title.as_str())
+            }
+        } else {
+            if self.n_comments > 0 {
+                fl!(lang, "read-comments", n = self.n_comments)
+            } else {
+                fl!(lang, "comment-first")
+            }
+        }
+    }
+    pub fn tags(&self) -> &[Tag] {
+        &self.tags
+    }
+}
+
+impl std::ops::Deref for Teaser {
+    type Target = Post;
+    fn deref(&self) -> &Post {
+        &self.post
     }
 }
 
