@@ -44,7 +44,7 @@ create unique index idx_tags_slug ON tags (slug);
 
 create table post_tags (
   id serial primary key,
-  post_id integer not null references posts (id),
+  post_id integer not null references posts (id) on delete cascade,
   tag_id integer not null references tags (id)
 );
 create unique index idx_post_tags_rel on post_tags (post_id, tag_id);
@@ -70,7 +70,7 @@ select diesel_manage_updated_at('assets');
 
 create table comments (
   id serial primary key,
-  post_id integer not null references posts (id),
+  post_id integer not null references posts (id) on delete cascade,
   posted_at timestamp with time zone not null default now(),
   content text not null,
   name varchar not null,

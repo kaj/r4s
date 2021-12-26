@@ -27,6 +27,9 @@ sql_function! {
 pub struct DateTime(chrono::DateTime<chrono::Utc>);
 
 impl DateTime {
+    pub fn wrap(v: chrono::DateTime<chrono::Utc>) -> Self {
+        DateTime(v)
+    }
     pub fn raw(&self) -> chrono::DateTime<chrono::Utc> {
         self.0
     }

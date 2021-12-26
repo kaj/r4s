@@ -39,43 +39,173 @@ pub struct Args {
     /// Mainly usefull while developing r4s itself.
     #[structopt(long)]
     force: bool,
+
+    /// Include drafts.
+    ///
+    /// Posts without a publication date are drafts, and normally
+    /// ignored.  With this flag, they are included.
+    /// Not for use on the production server.
+    #[structopt(long)]
+    include_drafts: bool,
 }
 
 impl Args {
     pub async fn run(self) -> Result<()> {
         let db = self.db.get_db()?;
-        for path in self.files {
+        for path in &self.files {
             if path.is_file() {
-                read_file(&path, self.force, &db)
+                self.read_file(path, &db)
                     .await
                     .with_context(|| format!("Reading file {:?}", path))?;
             } else {
-                read_dir(&path, &db)
+                self.read_dir(path, &db)
                     .await
                     .with_context(|| format!("Reading dir {:?}", path))?;
             }
         }
         Ok(())
     }
-}
 
-#[async_recursion(?Send)]
-async fn read_dir(path: &Path, db: &PgConnection) -> Result<()> {
-    for entry in path.read_dir()? {
-        let entry = entry?;
-        let path = entry.path();
-        if is_dotfile(&path) {
-            continue;
+    #[async_recursion(?Send)]
+    async fn read_dir(&self, path: &Path, db: &PgConnection) -> Result<()> {
+        for entry in path.read_dir()? {
+            let entry = entry?;
+            let path = entry.path();
+            if is_dotfile(&path) {
+                continue;
+            }
+            if entry.file_type()?.is_dir() {
+                self.read_dir(&path, db).await?;
+            } else if path.extension().unwrap_or_default() == "md" {
+                self.read_file(&path, db)
+                    .await
+                    .with_context(|| format!("Reading file {:?}", path))?;
+            }
         }
-        if entry.file_type()?.is_dir() {
-            read_dir(&path, db).await?;
-        } else if path.extension().unwrap_or_default() == "md" {
-            read_file(&path, false, db)
-                .await
-                .with_context(|| format!("Reading file {:?}", path))?;
-        }
+        Ok(())
     }
-    Ok(())
+
+    async fn read_file(&self, path: &Path, db: &PgConnection) -> Result<()> {
+        let (slug, lang) = path
+            .file_stem()
+            .and_then(std::ffi::OsStr::to_str)
+            .ok_or_else(|| anyhow!("Bad name"))?
+            .split_once('.')
+            .ok_or_else(|| anyhow!("No language in file name"))?;
+        let contents = read_to_string(path)?;
+        let (metadata, contents_md) = extract_metadata(&contents);
+
+        let pubdate = metadata
+            .get("pubdate")
+            .map(|v| v.parse::<DateTime>().context("pubdate"))
+            .transpose()?;
+
+        if pubdate.is_none() && !self.include_drafts {
+            eprintln!("Skipping draft {:?}", path);
+            return Ok(());
+        }
+
+        let current_year: i16 = Local::now().year().try_into()?;
+        let year: i16 = pubdate
+            .and_then(|d| d.year().try_into().ok())
+            .unwrap_or(current_year);
+
+        if year == current_year {
+            // Recent or draft
+            diesel::delete(
+                p::posts
+                    .filter(p::slug.eq(slug))
+                    .filter(p::title.like("% \u{1f58b}")),
+            )
+            .execute(db)?;
+        }
+
+        let update = metadata
+            .get("update")
+            .map(|v| v.parse::<UpdateInfo>().context("update"))
+            .transpose()?;
+
+        if let Some(res) = metadata.get("res") {
+            for spec in res.split(',').map(|s| s.trim()) {
+                handle_assets(path, spec, year, db)
+                    .with_context(|| format!("Asset {:?}", spec))?;
+            }
+        }
+
+        if let Some((id, old_md)) = p::posts
+            .select((p::id, p::orig_md))
+            .filter(year_of_date(p::posted_at).eq(&year))
+            .filter(p::slug.eq(slug))
+            .filter(p::lang.eq(lang))
+            .first::<(i32, String)>(db)
+            .optional()?
+        {
+            if old_md != contents || self.force {
+                println!(
+                    "Post #{} /{}/{}.{} exists, but should be updated.\n   {:?}",
+                    id, year, slug, lang, metadata
+                );
+                let (mut title, teaser, body) = extract_parts(
+                    year,
+                    slug,
+                    lang,
+                    contents_md,
+                    update.as_ref(),
+                )
+                .await?;
+                if pubdate.is_none() {
+                    title.push_str(" \u{1f58b}");
+                }
+                diesel::update(p::posts)
+                    .filter(p::id.eq(id))
+                    .set((
+                        update.as_ref().map(|u| p::updated_at.eq(&u.date)),
+                        p::title.eq(&title),
+                        p::teaser.eq(&teaser),
+                        p::content.eq(&body),
+                        p::orig_md.eq(&contents),
+                    ))
+                    .execute(db)
+                    .with_context(|| format!("Update #{}", id))?;
+                if let Some(tags) = metadata.get("tags") {
+                    tag_post(id, tags, db)?;
+                }
+            }
+        } else {
+            println!(
+                "New post /{}/{}.{}\n   {:?}",
+                year, slug, lang, metadata
+            );
+            let (mut title, teaser, body) =
+                extract_parts(year, slug, lang, contents_md, update.as_ref())
+                    .await?;
+            if pubdate.is_none() {
+                title.push_str(" \u{1f58b}");
+            }
+            let post_id = diesel::insert_into(p::posts)
+                .values((
+                    pubdate.map(|date| p::posted_at.eq(date)),
+                    update
+                        .as_ref()
+                        .map(|u| &u.date)
+                        .or_else(|| pubdate.as_ref())
+                        .map(|date| p::updated_at.eq(date)),
+                    p::slug.eq(slug),
+                    p::lang.eq(lang),
+                    p::title.eq(&title),
+                    p::teaser.eq(&teaser),
+                    p::content.eq(&body),
+                    p::orig_md.eq(&contents),
+                ))
+                .returning(p::id)
+                .get_result::<i32>(db)
+                .context("Insert post")?;
+            if let Some(tags) = metadata.get("tags") {
+                tag_post(post_id, tags, db)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn is_dotfile(path: &Path) -> bool {
@@ -100,104 +230,6 @@ impl FromStr for UpdateInfo {
         let info = info.trim().to_string();
         Ok(UpdateInfo { date, info })
     }
-}
-
-async fn read_file(
-    path: &Path,
-    force: bool,
-    db: &PgConnection,
-) -> Result<()> {
-    let (slug, lang) = path
-        .file_stem()
-        .and_then(std::ffi::OsStr::to_str)
-        .ok_or_else(|| anyhow!("Bad name"))?
-        .split_once('.')
-        .ok_or_else(|| anyhow!("No language in file name"))?;
-    let contents = read_to_string(path)?;
-    let (metadata, contents_md) = extract_metadata(&contents);
-
-    let pubdate = metadata
-        .get("pubdate")
-        .map(|v| v.parse::<DateTime>().context("pubdate"))
-        .transpose()?;
-    let year: i16 = pubdate
-        .unwrap_or_else(|| Local::now().into())
-        .year()
-        .try_into()?;
-
-    let update = metadata
-        .get("update")
-        .map(|v| v.parse::<UpdateInfo>().context("update"))
-        .transpose()?;
-
-    if let Some(res) = metadata.get("res") {
-        for spec in res.split(',').map(|s| s.trim()) {
-            handle_assets(path, spec, year, db)
-                .with_context(|| format!("Asset {:?}", spec))?;
-        }
-    }
-
-    if let Some((id, old_md)) = p::posts
-        .select((p::id, p::orig_md))
-        .filter(year_of_date(p::posted_at).eq(&year))
-        .filter(p::slug.eq(slug))
-        .filter(p::lang.eq(lang))
-        .first::<(i32, String)>(db)
-        .optional()?
-    {
-        if old_md == contents && !force {
-            println!("Post #{} /{}/{}.{} exists", id, year, slug, lang);
-        } else {
-            println!(
-                "Post #{} /{}/{}.{} exists, but should be updated.\n   {:?}",
-                id, year, slug, lang, metadata
-            );
-            let (title, teaser, body) =
-                extract_parts(year, slug, lang, contents_md, update.as_ref())
-                    .await?;
-            diesel::update(p::posts)
-                .filter(p::id.eq(id))
-                .set((
-                    update.as_ref().map(|u| p::updated_at.eq(&u.date)),
-                    p::title.eq(&title),
-                    p::teaser.eq(&teaser),
-                    p::content.eq(&body),
-                    p::orig_md.eq(&contents),
-                ))
-                .execute(db)
-                .with_context(|| format!("Update #{}", id))?;
-            if let Some(tags) = metadata.get("tags") {
-                tag_post(id, tags, db)?;
-            }
-        }
-    } else {
-        println!("New post /{}/{}.{}\n   {:?}", year, slug, lang, metadata);
-        let (title, teaser, body) =
-            extract_parts(year, slug, lang, contents_md, update.as_ref())
-                .await?;
-        let post_id = diesel::insert_into(p::posts)
-            .values((
-                pubdate.map(|date| p::posted_at.eq(date)),
-                update
-                    .as_ref()
-                    .map(|u| &u.date)
-                    .or_else(|| pubdate.as_ref())
-                    .map(|date| p::updated_at.eq(date)),
-                p::slug.eq(slug),
-                p::lang.eq(lang),
-                p::title.eq(&title),
-                p::teaser.eq(&teaser),
-                p::content.eq(&body),
-                p::orig_md.eq(&contents),
-            ))
-            .returning(p::id)
-            .get_result::<i32>(db)
-            .context("Insert post")?;
-        if let Some(tags) = metadata.get("tags") {
-            tag_post(post_id, tags, db)?;
-        }
-    }
-    Ok(())
 }
 
 fn handle_assets(
@@ -329,7 +361,8 @@ async fn extract_parts(
                 teaser.push_str(&fl!(
                     fluent,
                     "update-at",
-                    date = update.date.to_string()
+                    date =
+                        (&crate::models::DateTime::wrap(update.date.into()))
                 ));
                 teaser.push_str("** ");
                 teaser.push_str(&update.info);
