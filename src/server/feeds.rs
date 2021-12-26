@@ -27,7 +27,7 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
     };
 
     let fluent = args.lang.fluent()?;
-    let lang = args.lang.0.clone();
+    let lang = args.lang.to_string();
     let tag_id = tag.as_ref().map(|t| t.id);
     let posts = db
         .interact(move |db| {
@@ -47,7 +47,7 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
         }))
         .subtitle(Text::plain(&fl!(fluent, "tagline")))
         .id(if let Some(ref tag) = tag {
-            format!("{}/tag/{}.{}", app.base, tag.slug, args.lang.0)
+            format!("{}/tag/{}.{}", app.base, tag.slug, args.lang)
         } else {
             format!("{}/", app.base)
         })

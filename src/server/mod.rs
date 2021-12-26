@@ -6,7 +6,7 @@ mod prelude;
 mod tag;
 
 use self::error::{ViewError, ViewResult};
-use self::language::MyLang;
+use self::language::{AcceptLang, MyLang};
 use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{Connection, DbOpt, Pool};
@@ -56,8 +56,9 @@ impl Args {
         let app = AppData::new(&self)?;
         let s = warp::any().map(move || app.clone()).boxed();
         let s = move || s.clone();
-        let lang_filt = header::optional("accept-language")
-            .map(Option::unwrap_or_default);
+        let lang_filt = header::optional("accept-language").map(
+            |l: Option<AcceptLang>| l.map(|l| l.lang()).unwrap_or_default(),
+        );
         let asset_routes = goh()
             .and(param())
             .and(param())
@@ -72,20 +73,20 @@ impl Args {
         let routes = warp::any()
             .and(path("s").and(asset_routes))
             .or(path("comment").and(comment::route(s())))
-            .or(end().and(goh()).and(lang_filt).map(|lang: MyLang| {
+            .or(end().and(goh()).and(lang_filt).map(|lang| {
                 redirect::see_other(
                     Uri::builder()
-                        .path_and_query(&format!("/{}", lang.0))
+                        .path_and_query(&format!("/{}", lang))
                         .build()
                         .unwrap(),
                 )
             }))
             .or(path("tag").and(tag::routes(s())))
             .or(param().and(end()).and(goh()).and(lang_filt).map(
-                |year: i16, lang: MyLang| {
+                |year: i16, lang| {
                     redirect::see_other(
                         Uri::builder()
-                            .path_and_query(&format!("/{}/{}", year, lang.0))
+                            .path_and_query(&format!("/{}/{}", year, lang))
                             .build()
                             .unwrap(),
                     )
@@ -222,7 +223,8 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     let limit = 5;
     let langc = lang.clone();
     let posts = db
-        .interact(move |db| Teaser::recent(&lang.0, limit, db))
+        // TODO: Maybe recent should take a MyLang?
+        .interact(move |db| Teaser::recent(&lang.to_string(), limit, db))
         .await??;
 
     let comments = db.interact(move |db| PostComment::recent(db)).await??;
@@ -258,7 +260,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
 #[derive(Debug, Clone)]
 struct SlugAndLang {
     slug: String,
-    lang: String,
+    lang: MyLang,
 }
 
 impl FromStr for SlugAndLang {
@@ -268,7 +270,7 @@ impl FromStr for SlugAndLang {
         // TODO: check "slug rules"
         Ok(SlugAndLang {
             slug: slug.into(),
-            lang: lang.into(),
+            lang: lang.parse()?,
         })
     }
 }
@@ -277,7 +279,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
     let db = app.db().await?;
     let langc = lang.clone();
     let posts = db
-        .interact(move |db| Teaser::for_year(year, &lang.0, db))
+        .interact(move |db| Teaser::for_year(year, lang.as_ref(), db))
         .await??;
     if posts.is_empty() {
         return Err(ViewError::NotFound);
@@ -322,7 +324,7 @@ async fn page(
     use crate::models::{has_lang, PostLink};
     use diesel::dsl::not;
     let db = app.db().await?;
-    let fluent = language::load(&slug.lang)?;
+    let fluent = slug.lang.fluent()?;
     let s1 = slug.clone();
     let other_langs = db
         .interact(move |db| {
@@ -330,7 +332,7 @@ async fn page(
                 .select((p::lang, p::title))
                 .filter(year_of_date(p::posted_at).eq(&year))
                 .filter(p::slug.eq(s1.slug))
-                .filter(p::lang.ne(s1.lang))
+                .filter(p::lang.ne(s1.lang.as_ref()))
                 .load::<(String, String)>(db)
         })
         .await??
@@ -363,7 +365,7 @@ async fn page(
                 ))
                 .filter(year_of_date(p::posted_at).eq(&year))
                 .filter(p::slug.eq(slug.slug))
-                .filter(p::lang.eq(slug.lang))
+                .filter(p::lang.eq(slug.lang.as_ref()))
                 .first::<Post>(db)
                 .optional()
         })

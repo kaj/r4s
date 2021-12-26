@@ -59,7 +59,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
 async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
     let db = app.db().await?;
     let lang = tag.lang;
-    let langc = MyLang(lang.clone());
+    let langc = lang.clone();
     let tag = db
         .interact(move |db| Tag::by_slug(&tag.slug, db))
         .await??
@@ -67,7 +67,7 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
 
     let tag_id = tag.id;
     let posts = db
-        .interact(move |db| Teaser::tagged(tag_id, &lang, 50, db))
+        .interact(move |db| Teaser::tagged(tag_id, lang.as_ref(), 50, db))
         .await??;
 
     let fluent = langc.fluent()?;
@@ -78,7 +78,7 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
             tag=tag.slug, lang=lang, name=name,
         )});
 
-    let feed = format!("{}/atom-{}-{}.xml", app.base, langc.0, tag.slug);
+    let feed = format!("{}/atom-{}-{}.xml", app.base, langc, tag.slug);
     Ok(Builder::new()
         .html(|o| {
             templates::posts(

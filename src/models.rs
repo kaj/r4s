@@ -9,6 +9,7 @@ use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Bool, Smallint, Timestamptz, Varchar};
 use fluent::types::FluentType;
 use fluent::FluentValue;
+use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
 use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
 use intl_memoizer::IntlLangMemoizer;
@@ -109,10 +110,12 @@ impl Post {
     pub fn url(&self) -> String {
         format!("/{}/{}.{}", self.year, self.slug, self.lang)
     }
-    pub fn publine(&self, tags: &[Tag]) -> String {
+    pub fn publine(
+        &self,
+        lang: &FluentLanguageLoader,
+        tags: &[Tag],
+    ) -> String {
         use std::fmt::Write;
-        // TODO: Take the fluent as an argument instead?
-        let lang = crate::server::language::load(&self.lang).unwrap();
         let mut line = fl!(lang, "posted-at", date = (&self.posted_at));
 
         if self.updated_at > self.posted_at {
@@ -154,7 +157,7 @@ pub struct Teaser {
     tags: Vec<Tag>,
     /// True if the full text of the post is more than this teaser.
     is_more: bool,
-    n_comments: i32,
+    n_comments: u32,
 }
 
 impl Teaser {
@@ -303,28 +306,25 @@ impl Teaser {
             .collect()
     }
     pub fn publine(&self) -> String {
-        self.post.publine(&self.tags)
+        // TODO: Take the fluent as an argument instead?
+        let lang = crate::server::language::load(&self.lang).unwrap();
+        self.post.publine(&lang, &self.tags)
     }
     pub fn readmore(&self) -> String {
         // TODO: Take the fluent as an argument instead?
         let lang = crate::server::language::load(&self.lang).unwrap();
-        if self.is_more {
-            if self.n_comments > 0 {
-                fl!(
-                    lang,
-                    "read-more-comments",
-                    title = self.title.as_str(),
-                    n = self.n_comments
-                )
-            } else {
+        match (self.is_more, self.n_comments > 0) {
+            (true, true) => fl!(
+                lang,
+                "read-more-comments",
+                title = self.title.as_str(),
+                n = self.n_comments
+            ),
+            (true, false) => {
                 fl!(lang, "read-more", title = self.title.as_str())
             }
-        } else {
-            if self.n_comments > 0 {
-                fl!(lang, "read-comments", n = self.n_comments)
-            } else {
-                fl!(lang, "comment-first")
-            }
+            (false, true) => fl!(lang, "read-comments", n = self.n_comments),
+            (false, false) => fl!(lang, "comment-first"),
         }
     }
     pub fn tags(&self) -> &[Tag] {

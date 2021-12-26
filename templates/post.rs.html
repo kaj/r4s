@@ -14,7 +14,7 @@
     @:header(fluent, other_langs)
     <main>
       <h1>@Html(&post.title)</h1>
-      <p class="publine">@Html(post.publine(tags))</p>
+      <p class="publine">@Html(post.publine(fluent, tags))</p>
       @Html(&post.content)
 
       <section id="comments">

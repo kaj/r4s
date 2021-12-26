@@ -6,6 +6,7 @@ use i18n_embed::LanguageLoader;
 use i18n_embed_fl::fl;
 use rust_embed::RustEmbed;
 use rust_icu_ucol::UCollator;
+use std::fmt::{self, Display};
 use std::str::FromStr;
 
 #[derive(RustEmbed)]
@@ -30,7 +31,7 @@ pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
 
 /// Either "sv" or "en".
 #[derive(Clone, Debug)]
-pub struct MyLang(pub String);
+pub struct MyLang(String);
 
 impl MyLang {
     pub fn fluent(&self) -> Result<FluentLanguageLoader> {
@@ -54,20 +55,48 @@ impl MyLang {
         UCollator::try_from(self.0.as_str()).ise()
     }
 }
-
 impl FromStr for MyLang {
     type Err = ();
     fn from_str(value: &str) -> Result<Self, ()> {
-        Ok(MyLang(
-            intersection(value, vec!["en", "sv"])
-                .drain(..)
-                .next()
-                .ok_or(())?,
-        ))
+        ["en", "sv"]
+            .iter()
+            .find(|&l| *l == value)
+            .map(|&l| MyLang(l.into()))
+            .ok_or(())
     }
 }
 impl Default for MyLang {
     fn default() -> Self {
         MyLang("en".into())
+    }
+}
+impl AsRef<str> for MyLang {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+impl Display for MyLang {
+    fn fmt(&self, out: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(out)
+    }
+}
+
+/// Wrapper type to get a MyLang from an accept-language header.
+pub struct AcceptLang(MyLang);
+impl AcceptLang {
+    pub fn lang(self) -> MyLang {
+        self.0
+    }
+}
+
+impl FromStr for AcceptLang {
+    type Err = ();
+    fn from_str(value: &str) -> Result<Self, ()> {
+        Ok(AcceptLang(MyLang(
+            intersection(value, vec!["en", "sv"])
+                .drain(..)
+                .next()
+                .ok_or(())?,
+        )))
     }
 }
