@@ -23,6 +23,7 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 use structopt::StructOpt;
+use tracing::{event, Level};
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::http::Uri;
@@ -142,8 +143,8 @@ impl AppData {
     }
     fn verify_csrf(&self, token: &str, cookie: &str) -> Result<()> {
         use base64::decode;
-        fn fail<E: std::error::Error>(e: E) -> ViewError {
-            eprintln!("Csrf verification error: {}", e);
+        fn fail<E: std::fmt::Display>(e: E) -> ViewError {
+            event!(Level::INFO, "Csrf verification error: {}", e);
             ViewError::BadRequest("CSRF Verification Failed".into())
         }
         let token = decode(token.as_bytes()).map_err(fail)?;
@@ -154,7 +155,7 @@ impl AppData {
         if protect.verify_token_pair(&token, &cookie) {
             Ok(())
         } else {
-            Err(ViewError::BadRequest("CSRF Verification Failed".into()))
+            Err(fail("invalid pair"))
         }
     }
     fn generate_csrf_pair(&self) -> Result<(CsrfToken, CsrfCookie)> {

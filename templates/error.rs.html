@@ -1,8 +1,8 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon, header};
+@use super::{footer, head_canon, header, me_box};
 @use warp::http::StatusCode;
 
-@(fluent: &FluentLanguageLoader, code: StatusCode, message: &str)
+@(fluent: &FluentLanguageLoader, code: StatusCode, message: &str, detail: &str)
 
 <!doctype html>
 <html lang="sv" class="error">
@@ -13,13 +13,13 @@
   <body>
     @:header(fluent, &[])
     <main>
-      <h1>@code.canonical_reason().unwrap_or("error")</h1>
+      <h1>@message</h1>
 
-      <p>@message</p>
-      <p>We are sorry about this.
-	In a real application, this would mention the incident having
-	been logged, and giving contact details for further reporting.</p>
+      <p>Error @code.as_u16(): @code.canonical_reason().unwrap_or("error")</p>
+
+      <p>@detail</p>
     </main>
+    @:me_box(fluent)
     @:footer(fluent)
   </body>
 </html>
