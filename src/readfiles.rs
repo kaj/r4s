@@ -115,7 +115,8 @@ impl Args {
             diesel::delete(
                 p::posts
                     .filter(p::slug.eq(slug))
-                    .filter(p::title.like("% \u{1f58b}")),
+                    .filter(p::title.like("% \u{1f58b}"))
+                    .filter(p::orig_md.ne(&contents)),
             )
             .execute(db)?;
         }
