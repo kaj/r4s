@@ -234,7 +234,6 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     let limit = 5;
     let langc = lang.clone();
     let posts = db
-        // TODO: Maybe recent should take a MyLang?
         .interact(move |db| Teaser::recent(lang.as_ref(), limit, db))
         .await??;
 

@@ -188,10 +188,10 @@ impl Teaser {
                 p::teaser.ne(p::content),
                 sql::<BigInt>("count(distinct comments.id)"),
             ))
-            .filter(p::lang.eq(&lang).or(not(has_lang(
+            .filter(p::lang.eq(lang).or(not(has_lang(
                 year_of_date(p::posted_at),
                 p::slug,
-                &lang,
+                lang,
             ))))
             .group_by(p::posts::all_columns())
             .order(p::updated_at.desc())
@@ -237,10 +237,10 @@ impl Teaser {
                     .eq(year)
                     .or(year_of_date(p::updated_at).eq(year)),
             )
-            .filter(p::lang.eq(&lang).or(not(has_lang(
+            .filter(p::lang.eq(lang).or(not(has_lang(
                 year_of_date(p::posted_at),
                 p::slug,
-                &lang,
+                lang,
             ))))
             .group_by(p::posts::all_columns())
             .order(p::updated_at.asc())
@@ -288,10 +288,10 @@ impl Teaser {
                         .filter(pt::tag_id.eq(tag_id)),
                 ),
             )
-            .filter(p::lang.eq(&lang).or(not(has_lang(
+            .filter(p::lang.eq(lang).or(not(has_lang(
                 year_of_date(p::posted_at),
                 p::slug,
-                &lang,
+                lang,
             ))))
             .group_by(p::posts::all_columns())
             .order(p::updated_at.desc())
