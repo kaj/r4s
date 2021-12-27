@@ -443,6 +443,7 @@ impl PostComment {
                 ),
             ))
             .filter(c::is_public.eq(true))
+            .filter(sql("now() - comments.posted_at < '10 weeks'"))
             .order_by(c::posted_at.desc())
             .limit(5)
             .load(db)

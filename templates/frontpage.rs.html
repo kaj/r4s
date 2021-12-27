@@ -34,6 +34,7 @@
       }
     </main>
     @:me_box(fluent)
+    @if !comments.is_empty() {
     <aside id="recentcomments">
       <h2>@fl!(fluent, "recent-comments")</h2>
       @for c in comments {<p>
@@ -45,6 +46,7 @@
       </p>
       }
     </aside>
+    }
     @:footer(fluent)
   </body>
 </html>

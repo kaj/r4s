@@ -35,7 +35,7 @@ feed-link = atom feed for this tag
 
 comments = Comments
 write-comments = Write a comment
-recent-comments = Recent comments
+recent-comments = New comments
 on = on
 byon = { $by }, { $date }
 c-mod = Your comment awaits manual moderation.  Please be patient.
