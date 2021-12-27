@@ -3,6 +3,7 @@ use super::{fl, wrap, App, MyLang, Result};
 use crate::models::{Tag, Teaser};
 use atom_syndication::*;
 use std::str::FromStr;
+use tracing::instrument;
 use warp::filters::BoxedFilter;
 use warp::http::header::CONTENT_TYPE;
 use warp::http::response::Builder;
@@ -13,6 +14,7 @@ pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
     param().and(end()).and(s).then(do_feed).map(wrap).boxed()
 }
 
+#[instrument]
 async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
     let db = app.db().await?;
 

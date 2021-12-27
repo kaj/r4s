@@ -26,7 +26,14 @@ async fn main() -> Result<()> {
         Err(ref err) if err.not_found() => (),
         Err(e) => return Err(e).context("Failed to read .env"),
     }
-    env_logger::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            std::env::var("RUST_LOG")
+                .as_deref()
+                .unwrap_or_else(|_| "info"),
+        )
+        .init();
+
     R4s::from_args().run().await
 }
 

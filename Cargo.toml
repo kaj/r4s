@@ -23,7 +23,6 @@ csrf = "0.4.1"
 deadpool-diesel = { version = "0.3.0", features = ["postgres"] }
 diesel = { version = "1.4.0", features = ["chrono", "postgres"] }
 dotenv = "0.15.0"
-env_logger = "0.9.0"
 gravatar = "0.2.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
 i18n-embed-fl = "0.6.0"
@@ -44,4 +43,5 @@ structopt = "0.3.23"
 syntect = { version = "4.2", default-features = false, features = ["default-fancy"]}
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.29"
+tracing-subscriber = { version = "0.3.4", features = ["env-filter"] }
 warp = "0.3.2"

@@ -23,7 +23,7 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 use structopt::StructOpt;
-use tracing::{event, Level};
+use tracing::{event, instrument, Level};
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::http::Uri;
@@ -130,6 +130,13 @@ pub struct AppData {
 }
 type App = Arc<AppData>;
 
+impl std::fmt::Debug for AppData {
+    fn fmt(&self, out: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = self.pool.status();
+        write!(out, "App(pool {}/{}({}))", s.available, s.size, s.max_size)
+    }
+}
+
 impl AppData {
     fn new(args: &Args) -> Result<App, anyhow::Error> {
         Ok(Arc::new(AppData {
@@ -183,6 +190,7 @@ fn goh() -> BoxedFilter<()> {
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
+#[instrument]
 fn static_file(name: Tail) -> Result<impl Reply> {
     use chrono::{Duration, Utc};
     use templates::statics::StaticFile;
@@ -196,6 +204,7 @@ fn static_file(name: Tail) -> Result<impl Reply> {
         .unwrap())
 }
 
+#[instrument]
 async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
     use warp::http::header::CONTENT_TYPE;
     let db = app.db().await?;
@@ -219,13 +228,14 @@ async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
         .unwrap())
 }
 
+#[instrument]
 async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     let db = app.db().await?;
     let limit = 5;
     let langc = lang.clone();
     let posts = db
         // TODO: Maybe recent should take a MyLang?
-        .interact(move |db| Teaser::recent(&lang.to_string(), limit, db))
+        .interact(move |db| Teaser::recent(lang.as_ref(), limit, db))
         .await??;
 
     let comments = db.interact(move |db| PostComment::recent(db)).await??;
@@ -276,6 +286,7 @@ impl FromStr for SlugAndLang {
     }
 }
 
+#[instrument]
 async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
     let db = app.db().await?;
     let langc = lang.clone();
@@ -316,6 +327,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
         .unwrap())
 }
 
+#[instrument]
 async fn page(
     year: i16,
     slug: SlugAndLang,

@@ -6,6 +6,7 @@ use crate::schema::posts::dsl as p;
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use serde::Deserialize;
+use tracing::instrument;
 use warp::filters::{cookie, BoxedFilter};
 use warp::path::end;
 use warp::{self, body, post, Filter, Reply};
@@ -21,6 +22,7 @@ pub fn route(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
         .boxed()
 }
 
+#[instrument]
 async fn postcomment(
     csrf_cookie: String,
     form: CommentForm,

@@ -5,6 +5,7 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
 use diesel::prelude::*;
 use i18n_embed_fl::fl;
+use tracing::instrument;
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::path::{end, param};
@@ -17,6 +18,7 @@ pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
     cloud.or(page).unify().map(wrap).boxed()
 }
 
+#[instrument]
 async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
     let db = app.db().await?;
     let tags = db
@@ -56,6 +58,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
         .unwrap())
 }
 
+#[instrument]
 async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
     let db = app.db().await?;
     let lang = tag.lang;

@@ -13,16 +13,17 @@ use std::str::FromStr;
 #[folder = "i18n/"]
 struct Localizations;
 
+#[tracing::instrument]
 pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
     let lang = lang.parse().map_err(|e| {
-        dbg!(e, lang);
+        tracing::error!("Bad language: {}", e);
         ViewError::BadRequest("bad language".into())
     })?;
     let loader: FluentLanguageLoader = fluent_language_loader!();
     loader
         .load_languages(&Localizations, &[&lang, loader.fallback_language()])
         .map_err(|e| {
-            dbg!(e, lang);
+            tracing::error!("Missing language: {}", e);
             ViewError::BadRequest("unknown language".into())
         })?;
     loader.set_use_isolating(false);
@@ -34,6 +35,7 @@ pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
 pub struct MyLang(String);
 
 impl MyLang {
+    #[tracing::instrument]
     pub fn fluent(&self) -> Result<FluentLanguageLoader> {
         load(&self.0)
     }
