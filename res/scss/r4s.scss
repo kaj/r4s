@@ -394,6 +394,51 @@ pre {
     }
 }
 
+menu.social {
+    margin: 1em 0 0 0;
+    padding: 0;
+    li {
+        display: inline-block;
+        margin: 0 1em 1em 0;
+        padding: 0;
+        a.twitter:before {
+            background: url(static_name("twitter.svg"));
+            content: ' ';
+            display: inline-block;
+            height: 1em;
+            margin-right: .4em;
+            vertical-align: -.15em;
+            width: 1.216em;
+        }
+        a.fb:before {
+            background: url(static_name("fb.svg"));
+            content: ' ';
+            display: inline-block;
+            height: 1.2em;
+            margin: -.1em .4em -.1em 0;
+            vertical-align: -.15em;
+            width: 1.2em;
+        }
+    }
+}
+
+menu.social a,
+button {
+    background: linear-gradient(white, $paper);
+    border-radius: .3em;
+    border: solid .7px color.mix($purple, black);
+    color: black;
+    display: inline-block;
+    font-family: cocanut;
+    font-size: inherit;
+    padding: .3em .8em;
+    text-decoration: none;
+
+    &:focus, &:hover {
+        background: linear-gradient(color.mix($paper, black, 97%), $paper 40%, $paper 87%, color.mix($paper, black, 92%));
+        border: solid .7px color.mix($purple, black, 25%);
+    }
+}
 
 #recentcomments {
     p {

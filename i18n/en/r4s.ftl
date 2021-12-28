@@ -33,6 +33,8 @@ feed-h = Atom feed
 feed-pre = There is an
 feed-link = atom feed for this tag
 
+tweet = Tweet
+fbshare = Share on facebook
 comments = Comments
 write-comments = Write a comment
 recent-comments = New comments

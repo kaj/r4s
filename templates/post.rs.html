@@ -2,7 +2,7 @@
 @use super::{footer, head_canon, header, me_box};
 @use crate::models::{Comment, Post, PostLink, Tag};
 
-@(fluent: &FluentLanguageLoader, post: &Post, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
+@(fluent: &FluentLanguageLoader, canonical_url: &str, post: &Post, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang">
@@ -17,6 +17,12 @@
       <p class="publine">@Html(post.publine(fluent, tags))</p>
       @Html(&post.content)
 
+      <menu class="social">
+        <li><a href="https://twitter.com/share?text=@post.title&url=@canonical_url&via=rasmus_kaj"
+               class="twitter" rel="noopener" target="_blank">@fl!(fluent, "tweet")</a></li>
+        <li><a href="https://www.facebook.com/sharer/sharer.php?u=@canonical_url&display=popup"
+               class="fb" rel="noopener" target="_blank">@fl!(fluent, "fbshare")</a></li>
+      </menu>
       <section id="comments">
         <h2>@fl!(fluent, "comments")</h2>
         @if bad_comment {
@@ -38,7 +44,7 @@
               <i class="helptext">Basic markdown is accepted.</i>
               <textarea name="comment" cols="40" rows="10" required id="cmt_md"></textarea>
             </p>
-	    <p>
+            <p>
               <label for="cmt_name">Name:</label>
               <input name="name" type="text" maxlength="100" required id="cmt_name">
               <i class="helptext">Your name (or pseudonym).</i>
@@ -53,10 +59,10 @@
               <input type="url" name="url" maxlength="200" id="cmt_url">
               <i class="helptext">Your homepage / presentation.</i>
             </p>
-	    <p class="submit">
+            <p class="submit">
               <input type="hidden" name="post" value="@post.id" id="id_post">
-	      <input type="hidden" name="csrftoken" value="@csrf">
-	      <input type="submit" value="Post the comment">
+              <input type="hidden" name="csrftoken" value="@csrf">
+              <button type="submit">Post the comment</button>
             </p>
           </form>
         </section>

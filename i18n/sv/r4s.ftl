@@ -33,6 +33,8 @@ feed-h = Atom feed
 feed-pre = Det finns en
 feed-link = atom feed för denna tagg
 
+tweet = Twittra
+fbshare = Dela på facebook
 comments = Kommentarer
 write-comments = Skriv en kommentar
 recent-comments = Nya kommentarer

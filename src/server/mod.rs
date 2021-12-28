@@ -384,6 +384,8 @@ async fn page(
         .await??
         .ok_or(ViewError::NotFound)?;
 
+    let url = format!("{}{}", app.base, post.url());
+
     let post_id = post.id;
     let comments = db
         .interact(move |db| Comment::for_post(post_id, db))
@@ -454,6 +456,7 @@ async fn page(
             templates::post(
                 o,
                 &fluent,
+                &url,
                 &post,
                 &tags,
                 bad_comment,
