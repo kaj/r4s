@@ -39,30 +39,22 @@
         <section id="writecomment">
           <h3>@fl!(fluent, "write-comments")</h3>
           <form action="/comment" method="post">
-            <p>
-              <label for="cmt_md">Comment:</label>
-              <i class="helptext">Basic markdown is accepted.</i>
-              <textarea name="comment" cols="40" rows="10" required id="cmt_md"></textarea>
-            </p>
-            <p>
-              <label for="cmt_name">Name:</label>
+            <p><label for="cmt_md">@fl!(fluent, "c-cmt")</label>
+              <i class="helptext">@fl!(fluent, "c-cmt-h")</i>
+              <textarea name="comment" cols="40" rows="10" required id="cmt_md"></textarea></p>
+            <p><label for="cmt_name">@fl!(fluent, "c-name")</label>
               <input name="name" type="text" maxlength="100" required id="cmt_name">
-              <i class="helptext">Your name (or pseudonym).</i>
-            </p>
-            <p>
-              <label for="cmt_mail">Email:</label>
+              <i class="helptext">@fl!(fluent, "c-name-h")</i></p>
+            <p><label for="cmt_mail">@fl!(fluent, "c-mail")</label>
               <input type="email" name="email" maxlength="254" required id="cmt_mail">
-              <i class="helptext">Not published, except as gravatar.</i>
-            </p>
-            <p>
-              <label for="cmt_url">URL:</label>
+              <i class="helptext">@fl!(fluent, "c-mail-h")</i></p>
+            <p><label for="cmt_url">@fl!(fluent, "c-url")</label>
               <input type="url" name="url" maxlength="200" id="cmt_url">
-              <i class="helptext">Your homepage / presentation.</i>
-            </p>
+              <i class="helptext">@fl!(fluent, "c-url-h")</i></p>
             <p class="submit">
               <input type="hidden" name="post" value="@post.id" id="id_post">
               <input type="hidden" name="csrftoken" value="@csrf">
-              <button type="submit">Post the comment</button>
+              <button type="submit">@fl!(fluent, "c-post")</button>
             </p>
           </form>
         </section>

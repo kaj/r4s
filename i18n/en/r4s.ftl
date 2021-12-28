@@ -40,6 +40,15 @@ write-comments = Write a comment
 recent-comments = New comments
 on = on
 byon = { $by }, { $date }
+c-cmt = Comment:
+c-cmt-h = Basic markdown is accepted.
+c-name = Name:
+c-name-h = Your name (or pseudonym).
+c-mail = Email:
+c-mail-h = Not published, except as gravatar.
+c-url = URL:
+c-url-h = Your homepage / presentation.
+c-post = Post the comment
 c-mod = Your comment awaits manual moderation.  Please be patient.
 
 read-more-comments = Read whole <q>{ $title }</q> with { $n } comments.

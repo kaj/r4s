@@ -40,6 +40,15 @@ write-comments = Skriv en kommentar
 recent-comments = Nya kommentarer
 on = på
 byon = { $by }, { $date }
+c-cmt = Kommentar
+c-cmt-h = Enkel markdown tillåts.
+c-name = Namn:
+c-name-h = Ditt namn (eller pseudonym).
+c-mail = Epost:
+c-mail-h = Publiceras inte, utom som gravatar.
+c-url = URL:
+c-url-h = Din hemsida / presentation.
+c-post = Posta kommentaren
 c-mod = Din kommentar väntar på manuellt godkännande.  Tack för ditt tålamod.
 
 read-more-comments = Läs hela <q>{ $title }</q> med { $n } kommentarer.
