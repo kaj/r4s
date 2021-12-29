@@ -2,6 +2,7 @@ use crate::dbopt::DbOpt;
 use crate::imgcli::ImageInfo;
 use crate::models::year_of_date;
 use crate::schema::assets::dsl as a;
+use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
@@ -95,13 +96,16 @@ impl Args {
         let contents = read_to_string(path)?;
         let (metadata, contents_md) = extract_metadata(&contents);
 
+        if metadata.get("meta").is_some() {
+            return self.read_meta_page(slug, lang, contents_md, db).await;
+        }
         let pubdate = metadata
             .get("pubdate")
             .map(|v| v.parse::<DateTime>().context("pubdate"))
             .transpose()?;
 
         if pubdate.is_none() && !self.include_drafts {
-            eprintln!("Skipping draft {:?}", path);
+            println!("Skipping draft {:?}", path);
             return Ok(());
         }
 
@@ -204,6 +208,50 @@ impl Args {
             if let Some(tags) = metadata.get("tags") {
                 tag_post(post_id, tags, db)?;
             }
+        }
+        Ok(())
+    }
+
+    async fn read_meta_page(
+        &self,
+        slug: &str,
+        lang: &str,
+        contents: &str,
+        db: &PgConnection,
+    ) -> Result<()> {
+        if let Some((id, old_md)) = m::metapages
+            .select((m::id, m::orig_md))
+            .filter(m::slug.eq(slug))
+            .filter(m::lang.eq(lang))
+            .first::<(i32, String)>(db)
+            .optional()?
+        {
+            if old_md != contents || self.force {
+                let (title, body) = md_to_html(contents, lang).await?;
+                diesel::update(m::metapages)
+                    .set((
+                        m::title.eq(&title),
+                        m::content.eq(&body),
+                        m::orig_md.eq(&contents),
+                    ))
+                    .filter(m::id.eq(id))
+                    .execute(db)
+                    .context("Upadte metapage")?;
+                println!("Updated metadata page /{}.{}", slug, lang);
+            }
+        } else {
+            let (title, body) = md_to_html(contents, lang).await?;
+            diesel::insert_into(m::metapages)
+                .values((
+                    m::slug.eq(slug),
+                    m::lang.eq(lang),
+                    m::title.eq(&title),
+                    m::content.eq(&body),
+                    m::orig_md.eq(&contents),
+                ))
+                .execute(db)
+                .context("Insert metapage")?;
+            println!("Created metapage /{}.{}: {}", slug, lang, title);
         }
         Ok(())
     }

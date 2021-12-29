@@ -17,8 +17,21 @@ create table posts (
   orig_md text not null
 );
 
-create unique index idx_post_year_slug on posts (slug, year_of_date(posted_at), lang);
+create unique index idx_post_year_slug_l on posts (slug, year_of_date(posted_at), lang);
 select diesel_manage_updated_at('posts');
+
+create table metapages (
+  id serial primary key,
+  updated_at timestamp with time zone not null default now(),
+  slug varchar not null,
+  title varchar not null,
+  lang varchar(2) not null, -- TODO enum?
+  content text not null,
+  orig_md text not null
+);
+
+create unique index idx_page_slug_l on metapages (slug, lang);
+select diesel_manage_updated_at('metapages');
 
 create function recent_posts(langarg varchar, limitarg smallint)
   returns table (id integer, year smallint, slug varchar, lang varchar, title varchar,

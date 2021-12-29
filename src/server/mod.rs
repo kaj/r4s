@@ -12,6 +12,7 @@ use self::templates::RenderRucte;
 use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{year_of_date, Comment, Post, PostComment, Tag, Teaser};
 use crate::schema::assets::dsl as a;
+use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::PubBaseOpt;
@@ -113,6 +114,12 @@ impl Args {
                 .and(goh())
                 .and(s())
                 .then(page)
+                .map(wrap))
+            .or(param()
+                .and(end())
+                .and(goh())
+                .and(s())
+                .then(metapage)
                 .map(wrap))
             .or(feeds::routes(s()));
 
@@ -466,6 +473,50 @@ async fn page(
                 &related,
             )
         })
+        .unwrap())
+}
+
+#[instrument]
+async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
+    let db = app.db().await?;
+    let fluent = slug.lang.fluent()?;
+    let s1 = slug.clone();
+    let other_langs = db
+        .interact(move |db| {
+            m::metapages
+                .select((m::lang, m::title))
+                .filter(m::slug.eq(s1.slug))
+                .filter(m::lang.ne(s1.lang.as_ref()))
+                .load::<(String, String)>(db)
+        })
+        .await??
+        .into_iter()
+        .map(|(lang, title): (String, String)| {
+            let fluent = language::load(&lang).unwrap();
+            let name = fl!(fluent, "lang-name");
+            let title = fl!(fluent, "in-lang", title=title);
+
+            format!(
+                "<a href='/{}.{lang}' hreflang='{lang}' lang='{lang}' title='{title}' rel='alternate'>{name}</a>",
+                slug.slug, lang=lang, title=title, name=name,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let (title, content) = db
+        .interact(move |db| {
+            m::metapages
+                .select((m::title, m::content))
+                .filter(m::slug.eq(slug.slug))
+                .filter(m::lang.eq(slug.lang.as_ref()))
+                .first::<(String, String)>(db)
+                .optional()
+        })
+        .await??
+        .ok_or(ViewError::NotFound)?;
+
+    Ok(Builder::new()
+        .html(|o| templates::page(o, &fluent, &title, &content, &other_langs))
         .unwrap())
 }
 

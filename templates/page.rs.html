@@ -1,0 +1,21 @@
+@use super::super::prelude::*;
+@use super::{footer, head_canon, header, me_box};
+
+@(fluent: &FluentLanguageLoader, title: &str, content: &str, other_langs: &[String])
+
+<!doctype html>
+<html lang="@fluent.current_language()">
+  <head>
+    <title>@title — @fl!(fluent, "sitename")</title>
+    @:head_canon()
+  </head>
+  <body>
+    @:header(fluent, other_langs)
+    <main>
+      <h1>@Html(title)</h1>
+      @Html(content)
+    </main>
+    @:me_box(fluent)
+    @:footer(fluent)
+  </body>
+</html>

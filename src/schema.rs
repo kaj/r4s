@@ -25,6 +25,18 @@ table! {
 }
 
 table! {
+    metapages (id) {
+        id -> Int4,
+        updated_at -> Timestamptz,
+        slug -> Varchar,
+        title -> Varchar,
+        lang -> Varchar,
+        content -> Text,
+        orig_md -> Text,
+    }
+}
+
+table! {
     post_tags (id) {
         id -> Int4,
         post_id -> Int4,
@@ -59,5 +71,5 @@ joinable!(post_tags -> posts (post_id));
 joinable!(post_tags -> tags (tag_id));
 
 allow_tables_to_appear_in_same_query!(
-    assets, comments, post_tags, posts, tags,
+    assets, comments, metapages, post_tags, posts, tags,
 );
