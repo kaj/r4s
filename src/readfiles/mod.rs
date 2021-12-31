@@ -1,5 +1,7 @@
+mod codeblocks;
+mod html;
+
 use crate::dbopt::DbOpt;
-use crate::imgcli::ImageInfo;
 use crate::models::year_of_date;
 use crate::schema::assets::dsl as a;
 use crate::schema::metapages::dsl as m;
@@ -7,19 +9,15 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use crate::server::language;
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_recursion::async_recursion;
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
 use i18n_embed_fl::fl;
 use lazy_regex::{regex_captures, regex_find, regex_replace_all};
-use pulldown_cmark::escape::{escape_href, escape_html};
-use pulldown_cmark::{
-    BrokenLink, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag,
-};
+use pulldown_cmark::{BrokenLink, Event, HeadingLevel, Options, Parser, Tag};
 use slug::slugify;
 use std::collections::BTreeMap;
-use std::fmt::Write;
 use std::fs::{read, read_to_string};
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
@@ -466,9 +464,9 @@ async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
         &Event::End(Tag::Heading(HeadingLevel::H1, None, vec![])),
     )
     .ok_or_else(|| anyhow!("No end of h1"))?;
-    let title = collect_html(title).await?;
+    let title = html::collect(title).await?;
 
-    let body = collect_html(items.into_iter()).await?;
+    let body = html::collect(items.into_iter()).await?;
 
     Ok((title, body))
 }
@@ -594,359 +592,6 @@ fn wikilink(text: &str, lang: &str, xyzzy: &str) -> (String, String) {
         ),
         format!("Se {} på wikipedia", t),
     )
-}
-
-async fn collect_html<'a>(
-    data: impl IntoIterator<Item = Event<'a>>,
-) -> Result<String> {
-    let mut result = String::new();
-    let mut data = data.into_iter();
-    let mut section_level = 1;
-    while let Some(event) = data.next() {
-        match event {
-            Event::Text(text) => {
-                escape_html(&mut result, &text)?;
-            }
-            Event::Start(Tag::Heading(level, id, classes)) => {
-                {
-                    let level = level as u32;
-                    while section_level >= level {
-                        result.push_str("</section>");
-                        section_level -= 1;
-                    }
-                    result.push('\n');
-                    while section_level + 1 < level {
-                        result.push_str("<section>");
-                        section_level += 1;
-                    }
-                }
-                result.push_str("<section");
-                if let Some(id) = id {
-                    result.push_str(" id=\"");
-                    escape_html(&mut result, id)?;
-                    result.push('"');
-                }
-                if !classes.is_empty() {
-                    result.push_str(" class=\"");
-                    escape_html(&mut result, &classes.join(" "))?;
-                    result.push('"');
-                }
-                result.push('>');
-                section_level += 1;
-                result.push_str(&format!("<{}>", level));
-            }
-            Event::End(Tag::Heading(level, _, _)) => {
-                if !remove_end(&mut result, &format!("<{}>", level)) {
-                    result.push_str(&format!("</{}>\n", level));
-                }
-            }
-            Event::Start(Tag::CodeBlock(blocktype)) => {
-                let lang = match blocktype {
-                    CodeBlockKind::Fenced(ref f) => {
-                        (!f.is_empty()).then(|| f.as_ref())
-                    }
-                    CodeBlockKind::Indented => None,
-                };
-                let mut handler = DynBlock::for_kind(&mut result, lang)?;
-                for event in &mut data {
-                    match event {
-                        Event::End(Tag::CodeBlock(_blocktype)) => break,
-                        Event::Text(code) => handler.push(&code)?,
-                        x => bail!("Unexpeted in code: {:?}", x),
-                    }
-                }
-                handler.end();
-            }
-            Event::End(Tag::CodeBlock(_blocktype)) => {
-                unreachable!();
-            }
-            Event::Start(Tag::Image(imgtype, imgref, title)) => {
-                let _ = remove_end(&mut result, "<p>")
-                    || remove_end(&mut result, "<p><!--no-p-->")
-                    || remove_end(&mut result, "<p><!--no-p-->\n");
-                let mut inner = String::new();
-                for tag in &mut data {
-                    match tag {
-                        Event::End(Tag::Image(..)) => break,
-                        Event::Text(text) => inner.push_str(&text),
-                        Event::SoftBreak => inner.push(' '),
-                        _ => inner.push_str(&format!("\n{:?}", tag)),
-                    }
-                }
-                let (_all, imgref, _, classes, attrs, caption) = regex_captures!(
-                    r#"^([A-Za-z0-9/._-]*)\s*(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*([^{]*)$"#m,
-                    &imgref,
-                )
-                .with_context(|| {
-                    format!("Bad image ref: {:?}", imgref.as_ref())
-                })?;
-                if imgref == "cover" {
-                    let url = inner.parse::<FaRef>().unwrap().cover();
-                    write!(
-                        &mut result,
-                        "<figure class='fa-cover {}'>\
-                         <a href='{url}'><img alt='Omslagsbild {}' src='{url}' width='150'/></a>\
-                         <figcaption>{} {} {}</figcaption></figure>\n<p><!--no-p-->",
-                        classes, inner, inner, caption, title,
-                        url = url,
-                    )
-                        .unwrap();
-                } else {
-                    let imgdata = ImageInfo::fetch(imgref)
-                        .await
-                        .context("Image api")?;
-                    if !imgdata.is_public() {
-                        println!("WARNING: Image {} is not public", imgref)
-                    }
-                    let alt = inner.trim();
-                    let imgtag = if classes
-                        .split_ascii_whitespace()
-                        .any(|w| w == "scaled")
-                    {
-                        imgdata.markup_large(alt)
-                    } else {
-                        imgdata.markup(alt)
-                    };
-                    let class2 = if imgdata.is_portrait() {
-                        " portrait"
-                    } else {
-                        ""
-                    };
-                    write!(
-                        &mut result,
-                        "<figure class='{}{}'{} data-type='{:?}'>{}\
-                     <figcaption>{} {}</figcaption></figure>\n<p><!--no-p-->",
-                        classes,
-                        class2,
-                        attrs,
-                        imgtype,
-                        imgtag,
-                        caption,
-                        title,
-                    )
-                    .unwrap();
-                }
-            }
-            Event::End(Tag::Paragraph)
-                if result.ends_with("<p><!--no-p-->") =>
-            {
-                result.truncate(result.len() - 14);
-            }
-            Event::Start(Tag::TableHead) => {
-                result.push_str("<thead><tr>");
-            }
-            Event::End(Tag::TableHead) => {
-                result.push_str("</tr></thead>\n");
-            }
-            Event::TaskListMarker(done) => {
-                result.push_str("<input disabled type='checkbox'");
-                if done {
-                    result.push_str(" checked=''");
-                }
-                result.push_str("/>\n");
-            }
-            Event::Start(tag) => {
-                result.push('<');
-                result.push_str(tag_name(&tag));
-                match tag {
-                    Tag::Paragraph | Tag::Emphasis => (),
-                    Tag::TableCell | Tag::TableRow => (),
-                    Tag::List(None) => (),
-                    Tag::List(Some(start)) => {
-                        result.push_str(&format!(" start='{}'", start));
-                    }
-                    Tag::Item => (),
-                    Tag::Link(linktype, href, title) => {
-                        if !href.is_empty() {
-                            result.push_str(" href=\"");
-                            escape_href(&mut result, &href)?;
-                            result.push('"');
-                        }
-                        if !title.is_empty() {
-                            result.push_str(" title=\"");
-                            escape_html(&mut result, &title)?;
-                            result.push('"');
-                        }
-                        result.push_str(&format!(
-                            " data-type='{:?}'",
-                            linktype
-                        ));
-                    }
-                    t => result.push_str(&format!("><!-- {:?} --", t)),
-                }
-                // TODO: Link attributes!
-                result.push('>');
-            }
-            Event::End(tag) => {
-                result.push_str("</");
-                result.push_str(tag_name(&tag));
-                result.push('>');
-                if matches!(
-                    tag,
-                    Tag::Paragraph
-                        | Tag::Table(..)
-                        | Tag::Item
-                        | Tag::List(_)
-                ) {
-                    // Maybe more?
-                    result.push('\n');
-                }
-            }
-            Event::SoftBreak => result.push('\n'),
-            Event::Html(code) => result.push_str(&code),
-            Event::Code(code) => {
-                result.push_str("<code>");
-                escape_html(&mut result, &code)?;
-                result.push_str("</code>");
-            }
-            Event::HardBreak => {
-                result.push_str("<br/>\n");
-            }
-            e => bail!("Unhandled: {:?}", e),
-        }
-    }
-    for _ in 2..=section_level {
-        result.push_str("</section>");
-    }
-    Ok(result)
-}
-
-trait BlockHandler {
-    fn push(&mut self, content: &str) -> Result<()>;
-    fn end(self);
-}
-
-enum DynBlock<'a> {
-    Leaflet(LeafletHandler<'a>),
-    Code(CodeBlock<'a>),
-}
-impl<'a> DynBlock<'a> {
-    fn for_kind(
-        out: &'a mut String,
-        lang: Option<&'a str>,
-    ) -> Result<DynBlock<'a>> {
-        match lang.and_then(|l| l.strip_prefix('!')) {
-            Some("leaflet") => {
-                Ok(DynBlock::Leaflet(LeafletHandler::open(out)))
-            }
-            Some(bang) => {
-                bail!("Magic for !{:?} not implemented", bang);
-            }
-            None => Ok(DynBlock::Code(CodeBlock::open(out, lang)?)),
-        }
-    }
-}
-
-impl<'a> BlockHandler for DynBlock<'a> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        match self {
-            DynBlock::Leaflet(x) => x.push(content),
-            DynBlock::Code(x) => x.push(content),
-        }
-    }
-    fn end(self) {
-        match self {
-            DynBlock::Leaflet(x) => x.end(),
-            DynBlock::Code(x) => x.end(),
-        }
-    }
-}
-
-struct LeafletHandler<'a> {
-    out: &'a mut String,
-}
-
-impl<'a> LeafletHandler<'a> {
-    fn open(out: &mut String) -> LeafletHandler {
-        out.push_str(r#"
-<div id="llmap">
-<p>There should be a map here.</p>
-</div>
-<script type="text/javascript">
-  function initmap() {
-  var map = L.map('llmap', {scrollWheelZoom: false})
-  .addLayer(L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&#xA9; <a href="http://osm.org/copyright">OpenStreetMaps bidragsgivare</a>',
-  }));
-"#);
-        LeafletHandler { out }
-    }
-}
-impl<'a> BlockHandler for LeafletHandler<'a> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        self.out.push_str(content);
-        Ok(())
-    }
-
-    fn end(self) {
-        self.out.push_str("}\n</script>\n");
-    }
-}
-
-use crate::syntax_hl::ClassedHTMLGenerator;
-struct CodeBlock<'a> {
-    out: &'a mut String,
-    gen: Option<ClassedHTMLGenerator<'a>>,
-}
-impl<'a> CodeBlock<'a> {
-    fn open(
-        out: &'a mut String,
-        lang: Option<&'a str>,
-    ) -> Result<CodeBlock<'a>> {
-        out.push_str("<pre");
-        if let Some(lang) = lang {
-            out.push_str(" data-lang=\"");
-            escape_html(&mut *out, &lang)?;
-            out.push('"');
-        }
-        out.push('>');
-        Ok(CodeBlock {
-            out,
-            gen: lang.and_then(crate::syntax_hl::for_lang),
-        })
-    }
-}
-impl<'a> BlockHandler for CodeBlock<'a> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        use crate::syntax_hl::LinesWithEndings;
-        if let Some(gen) = &mut self.gen {
-            for line in LinesWithEndings::from(content) {
-                gen.parse_html_for_line_which_includes_newline(line);
-            }
-        } else {
-            escape_html(&mut *self.out, &content)?;
-        }
-        Ok(())
-    }
-    fn end(self) {
-        self.out.push_str("</pre>\n");
-    }
-}
-
-fn remove_end(s: &mut String, tail: &str) -> bool {
-    if s.ends_with(tail) {
-        s.truncate(s.len() - tail.len());
-        true
-    } else {
-        false
-    }
-}
-fn tag_name(tag: &Tag) -> &'static str {
-    match tag {
-        Tag::Paragraph => "p",
-        Tag::Emphasis => "em",
-        Tag::Strong => "strong",
-        //Tag::Image(..) => "a", // no, not really!
-        Tag::Link(..) => "a",
-        Tag::Table(..) => "table",
-        Tag::TableRow => "tr",
-        Tag::TableCell => "td",
-        Tag::List(Some(_)) => "ol",
-        Tag::List(None) => "ul",
-        Tag::Item => "li",
-        Tag::BlockQuote => "blockquote",
-        tag => panic!("Not a simple tag: {:?}", tag),
-    }
 }
 
 fn extract_metadata(src: &str) -> (BTreeMap<&str, &str>, &str) {
