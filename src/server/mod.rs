@@ -73,40 +73,49 @@ impl Args {
             .unify();
 
         let routes = warp::any()
-            .and(path("s").and(asset_routes))
-            .or(path("comment").and(comment::route(s())))
-            .or(end().and(goh()).and(lang_filt).map(|lang| {
-                redirect::see_other(
-                    Uri::builder()
-                        .path_and_query(&format!("/{}", lang))
-                        .build()
-                        .unwrap(),
-                )
-            }))
-            .or(path("tag").and(tag::routes(s())))
-            .or(param().and(end()).and(goh()).and(lang_filt).map(
-                |year: i16, lang| {
+            .and(path("s").and(asset_routes).boxed())
+            .or(path("comment").and(comment::route(s())).boxed())
+            .or(end()
+                .and(goh())
+                .and(lang_filt)
+                .map(|lang| {
+                    redirect::see_other(
+                        Uri::builder()
+                            .path_and_query(&format!("/{}", lang))
+                            .build()
+                            .unwrap(),
+                    )
+                })
+                .boxed())
+            .or(path("tag").and(tag::routes(s())).boxed())
+            .or(param()
+                .and(end())
+                .and(goh())
+                .and(lang_filt)
+                .map(|year: i16, lang| {
                     redirect::see_other(
                         Uri::builder()
                             .path_and_query(&format!("/{}/{}", year, lang))
                             .build()
                             .unwrap(),
                     )
-                },
-            ))
+                })
+                .boxed())
             .or(param()
                 .and(param())
                 .and(end())
                 .and(goh())
                 .and(s())
                 .then(yearpage)
-                .map(wrap))
+                .map(wrap)
+                .boxed())
             .or(param()
                 .and(end())
                 .and(goh())
                 .and(s())
                 .then(frontpage)
-                .map(wrap))
+                .map(wrap)
+                .boxed())
             .or(param()
                 .and(param())
                 .and(end())
@@ -114,16 +123,18 @@ impl Args {
                 .and(goh())
                 .and(s())
                 .then(page)
-                .map(wrap))
+                .map(wrap)
+                .boxed())
             .or(param()
                 .and(end())
                 .and(goh())
                 .and(s())
                 .then(metapage)
-                .map(wrap))
+                .map(wrap)
+                .boxed())
             .or(feeds::routes(s()));
 
-        warp::serve(routes.recover(error::for_rejection))
+        warp::serve(routes.recover(error::for_rejection).boxed())
             .run(self.bind)
             .await;
         Ok(())
