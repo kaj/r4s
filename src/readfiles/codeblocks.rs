@@ -109,6 +109,9 @@ impl<'a> BlockHandler for CodeBlock<'a> {
         Ok(())
     }
     fn end(self) {
+        if let Some(gen) = self.gen {
+            self.out.push_str(&gen.finalize())
+        }
         self.out.push_str("</pre>\n");
     }
 }
