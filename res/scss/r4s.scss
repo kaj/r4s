@@ -1,9 +1,10 @@
 @use "sass:color";
 
 $paper: #fdfbf9;
-$purple: purple;
+$paper2: color.mix($paper, wheat, 75%);
+$purple: mix(rebeccapurple, purple);
 $dark: color.mix($purple, black);
-$darker: color.mix($purple, black, 25%);
+$darker: color.mix($purple, black, 33%);
 
 @use "kratsbox";
 
@@ -11,17 +12,18 @@ html, body {
     margin: 0;
     padding: 0;
 }
+
 body {
-    background-color: $paper;
     background:
-        linear-gradient(176deg, transparent, white 12em, transparent 40em),
-        linear-gradient(90deg, color.mix($paper, black, 97%), $paper 40%, $paper 87%, color.mix($paper, black, 92%));
+        linear-gradient(166deg, transparent 10em, white 17em, transparent 40em),
+        linear-gradient(90deg, $paper2, $paper 40%, $paper 87%, color.mix($paper2, black, 95%));
+    background-color: $paper;
     color: black;
     min-height: 100vh;
     line-height: 1.4;
 
     > main, > aside {
-        padding: 1em 2vw;
+        padding: 5vmin 2vw 2vmin;
     }
     > header, > footer {
         padding: 1ex 2vw;
@@ -39,12 +41,13 @@ body {
         grid-template-columns: 60% 40%;
 
         > header, > footer, > main, > aside {
-            padding: 1em 7vw;
+            padding-left: 7vw;
+            padding-right: 7vw;
         }
     }
 
     > header {
-        border-bottom: .1em solid black;
+        border-bottom: .1em solid $purple;
         min-height: 42px;
         text-align: right;
         h1 {
@@ -54,7 +57,8 @@ body {
             margin: 0;
         }
         &::after {
-            background: url(static_name("bike-1.svg"));
+            mask: url(static_name("bike-1.svg"));
+            background: $purple;
             content: "";
             display: block;
             height: 50px;
@@ -80,7 +84,7 @@ body {
         }
     }
     > footer {
-        background: black;
+        background: $darker;
         color: $paper;
         margin: 0;
         display: flex;
@@ -95,18 +99,26 @@ body {
             color: color.mix($paper, $purple, 80%);
         }
         hr {
+            background: inherit;
             border: 0;
-            content: url(static_name("tree.svg"));
             display: block;
             height: 30vmin;
-            width: 27vmin;
             margin: 0;
+            mask: url(static_name("tree.svg"));
             padding: 0;
             position: absolute;
             right: 4%;
-            top: -30vmin;
+            top: -29vmin;
+            width: 27vmin;
         }
     }
+}
+
+:link {
+    color: color.mix($purple, blue);
+}
+:visited {
+    color: $purple;
 }
 
 html:lang(en) a:not(:lang(en)),
@@ -191,7 +203,10 @@ header {
     font-size: 120%;
 }
 section {
-    margin-top: 1.6em;
+    margin-top: 8vmin;
+}
+section section {
+    margin-top: 4vmin;
 }
 h1, h2, h3, h4, h5, h6 {
     margin: 1em 0 0 0;
@@ -341,7 +356,8 @@ article {
     &:after {
         $size: 12em;
         clear: both;
-        background: url(static_name("deco1.svg"));
+        mask: url(static_name("deco1.svg"));
+        background: $purple;
         content: "";
         display: block;
         height: $size * 640 / 1280;
@@ -349,10 +365,10 @@ article {
         width: $size;
     }
     &:nth-child(2n):after {
-        background: url(static_name("deco2.svg"));
+        mask: url(static_name("deco2.svg"));
     }
     &:nth-child(3n):after {
-        background: url(static_name("deco3.svg"));
+        mask: url(static_name("deco3.svg"));
     }
     .readmore {
         text-align: right;
@@ -362,13 +378,15 @@ article {
 }
 
 pre {
+    $bcol: burlywood;
+    background: color.mix($paper, white);
+    border: solid 1px $bcol;
+    color: black;
     margin: 1em 1ex;
+    overflow: auto;
     padding: 1ex;
 
     &[data-lang] {
-        $bcol: burlywood;
-        background: color.mix($paper, white);
-        border: solid 1px $bcol;
         position: relative;
 
         &::before {
@@ -447,6 +465,7 @@ button {
     &:focus, &:hover {
         background: linear-gradient(color.mix($paper, black, 97%), $paper 40%, $paper 87%, color.mix($paper, black, 92%));
         border: solid .7px $darker;
+        box-shadow: 0 0 1em $darker;
     }
 }
 
@@ -516,5 +535,62 @@ img.gravatar {
         p.submit {
             grid-column: 1/3;
         }
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background:
+            linear-gradient(166deg, transparent 10em, rgba(black,0.5) 17em, transparent 40em),
+            linear-gradient(90deg, color.mix(black, $darker), $darker 40%, $darker 87%, color.mix(black, $darker));
+        background-color: $darker;
+        color: $paper;
+        > footer {
+            background: wheat;
+            color: black;
+            :link {
+                color: color.mix($dark, blue, 65%);
+            }
+            :visited {
+                color: $dark;
+            }
+        }
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: wheat;
+    }
+    :link {
+        color: color.mix($paper, $purple, 65%);
+    }
+    :visited {
+        color: color.mix($paper, $purple, 80%);
+    }
+
+    pre {
+        $bcol: $dark;
+        background: color.mix($darker, black);
+        border: solid 1px $bcol;
+        color: $paper;
+        &[data-lang]::before {
+            background: linear-gradient(60deg, rgba($bcol, 0) 1em, $bcol 2em);
+        }
+    }
+
+    menu.social a,
+    button {
+        background: linear-gradient(black, $dark);
+        border-color: $purple;
+        color: wheat;
+
+        &:focus, &:hover {
+            background: linear-gradient(black, $dark 40%, $dark 80%, black);
+            border: solid .7px $purple;
+            box-shadow: 0 0 1em lightgreen;
+        }
+    }
+    textarea, input[type=text], input[type=email], input[type=url] {
+        background: $darker;
+        color: wheat;
+        border: .7px inset $purple;
     }
 }
