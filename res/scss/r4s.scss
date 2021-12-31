@@ -2,6 +2,8 @@
 
 $paper: #fdfbf9;
 $purple: purple;
+$dark: color.mix($purple, black);
+$darker: color.mix($purple, black, 25%);
 
 @use "kratsbox";
 
@@ -381,6 +383,12 @@ pre {
     }
 }
 
+#llmap {
+    border: solid 1px $dark;
+    height: 60vmin;
+    margin: 2em 0;
+}
+
 :target {
     position: relative;
     &::before {
@@ -426,7 +434,7 @@ menu.social a,
 button {
     background: linear-gradient(white, $paper);
     border-radius: .3em;
-    border: solid .7px color.mix($purple, black);
+    border: solid .7px $dark;
     color: black;
     display: inline-block;
     font-family: cocanut;
@@ -436,7 +444,7 @@ button {
 
     &:focus, &:hover {
         background: linear-gradient(color.mix($paper, black, 97%), $paper 40%, $paper 87%, color.mix($paper, black, 92%));
-        border: solid .7px color.mix($purple, black, 25%);
+        border: solid .7px $darker;
     }
 }
 

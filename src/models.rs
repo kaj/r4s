@@ -113,6 +113,10 @@ impl Post {
     pub fn url(&self) -> String {
         format!("/{}/{}.{}", self.year, self.slug, self.lang)
     }
+    pub fn use_leaflet(&self) -> bool {
+        // TODO: This should be a separately saved flag?
+        self.content.contains("function initmap()")
+    }
     pub fn publine(
         &self,
         lang: &FluentLanguageLoader,

@@ -4,9 +4,9 @@ use lazy_static::lazy_static;
 use syntect::highlighting::ThemeSet;
 use syntect::html::css_for_theme_with_class_style;
 use syntect::html::ClassStyle;
-use syntect::html::ClassedHTMLGenerator;
+pub use syntect::html::ClassedHTMLGenerator;
 use syntect::parsing::SyntaxSet;
-use syntect::util::LinesWithEndings;
+pub use syntect::util::LinesWithEndings;
 
 const STYLE: ClassStyle = ClassStyle::SpacedPrefixed { prefix: "syh" };
 lazy_static! {
@@ -14,7 +14,7 @@ lazy_static! {
 }
 
 #[allow(unused)]
-pub fn highlight(lang: &str, code: &str) -> Option<String> {
+pub fn for_lang(lang: &str) -> Option<ClassedHTMLGenerator> {
     let sr = if let Some(sr) = SYNSET.find_syntax_by_token(lang) {
         sr
     } else {
@@ -22,12 +22,9 @@ pub fn highlight(lang: &str, code: &str) -> Option<String> {
         return None;
     };
 
-    let mut html_generator =
-        ClassedHTMLGenerator::new_with_class_style(sr, &SYNSET, STYLE);
-    for line in LinesWithEndings::from(code) {
-        html_generator.parse_html_for_line_which_includes_newline(line);
-    }
-    Some(html_generator.finalize())
+    Some(ClassedHTMLGenerator::new_with_class_style(
+        sr, &SYNSET, STYLE,
+    ))
 }
 
 #[allow(unused)]

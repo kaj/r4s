@@ -7,7 +7,7 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use crate::server::language;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
@@ -641,38 +641,24 @@ async fn collect_html<'a>(
                 }
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
-                result.push_str("<pre");
                 let lang = match blocktype {
-                    CodeBlockKind::Fenced(lang) if !lang.is_empty() => {
-                        result.push_str(" data-lang=\"");
-                        escape_html(&mut result, &lang)?;
-                        result.push('"');
-                        Some(lang.to_string())
+                    CodeBlockKind::Fenced(ref f) => {
+                        (!f.is_empty()).then(|| f.as_ref())
                     }
-                    _ => None,
+                    CodeBlockKind::Indented => None,
                 };
-                result.push('>');
+                let mut handler = DynBlock::for_kind(&mut result, lang)?;
                 for event in &mut data {
                     match event {
                         Event::End(Tag::CodeBlock(_blocktype)) => break,
-                        Event::Text(code) => {
-                            use crate::syntax_hl::highlight;
-                            if let Some(code) = lang
-                                .as_ref()
-                                .and_then(|lang| highlight(lang, &code))
-                            {
-                                result.push_str(&code);
-                            } else {
-                                escape_html(&mut result, &code)?;
-                            }
-                        }
-                        x => panic!("Unexpeted in code: {:?}", x),
+                        Event::Text(code) => handler.push(&code)?,
+                        x => bail!("Unexpeted in code: {:?}", x),
                     }
                 }
-                result.push_str("</pre>\n");
+                handler.end();
             }
             Event::End(Tag::CodeBlock(_blocktype)) => {
-                result.push_str("</code></pre>\n");
+                unreachable!();
             }
             Event::Start(Tag::Image(imgtype, imgref, title)) => {
                 let _ = remove_end(&mut result, "<p>")
@@ -687,8 +673,8 @@ async fn collect_html<'a>(
                         _ => inner.push_str(&format!("\n{:?}", tag)),
                     }
                 }
-                let (_all, imgref, _, classes, caption) = regex_captures!(
-                    r"^([A-Za-z0-9/._-]*)\s*(\{([^}]*)\})?\s*(.*)$"m,
+                let (_all, imgref, _, classes, attrs, caption) = regex_captures!(
+                    r#"^([A-Za-z0-9/._-]*)\s*(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*([^{]*)$"#m,
                     &imgref,
                 )
                 .with_context(|| {
@@ -728,9 +714,15 @@ async fn collect_html<'a>(
                     };
                     write!(
                         &mut result,
-                        "<figure class='{}{}' data-type='{:?}'>{}\
+                        "<figure class='{}{}'{} data-type='{:?}'>{}\
                      <figcaption>{} {}</figcaption></figure>\n<p><!--no-p-->",
-                        classes, class2, imgtype, imgtag, caption, title,
+                        classes,
+                        class2,
+                        attrs,
+                        imgtype,
+                        imgtag,
+                        caption,
+                        title,
                     )
                     .unwrap();
                 }
@@ -810,13 +802,125 @@ async fn collect_html<'a>(
             Event::HardBreak => {
                 result.push_str("<br/>\n");
             }
-            e => anyhow::bail!("Unhandled: {:?}", e),
+            e => bail!("Unhandled: {:?}", e),
         }
     }
     for _ in 2..=section_level {
         result.push_str("</section>");
     }
     Ok(result)
+}
+
+trait BlockHandler {
+    fn push(&mut self, content: &str) -> Result<()>;
+    fn end(self);
+}
+
+enum DynBlock<'a> {
+    Leaflet(LeafletHandler<'a>),
+    Code(CodeBlock<'a>),
+}
+impl<'a> DynBlock<'a> {
+    fn for_kind(
+        out: &'a mut String,
+        lang: Option<&'a str>,
+    ) -> Result<DynBlock<'a>> {
+        match lang.and_then(|l| l.strip_prefix('!')) {
+            Some("leaflet") => {
+                Ok(DynBlock::Leaflet(LeafletHandler::open(out)))
+            }
+            Some(bang) => {
+                bail!("Magic for !{:?} not implemented", bang);
+            }
+            None => Ok(DynBlock::Code(CodeBlock::open(out, lang)?)),
+        }
+    }
+}
+
+impl<'a> BlockHandler for DynBlock<'a> {
+    fn push(&mut self, content: &str) -> Result<()> {
+        match self {
+            DynBlock::Leaflet(x) => x.push(content),
+            DynBlock::Code(x) => x.push(content),
+        }
+    }
+    fn end(self) {
+        match self {
+            DynBlock::Leaflet(x) => x.end(),
+            DynBlock::Code(x) => x.end(),
+        }
+    }
+}
+
+struct LeafletHandler<'a> {
+    out: &'a mut String,
+}
+
+impl<'a> LeafletHandler<'a> {
+    fn open(out: &mut String) -> LeafletHandler {
+        out.push_str(r#"
+<div id="llmap">
+<p>There should be a map here.</p>
+</div>
+<script type="text/javascript">
+  function initmap() {
+  var map = L.map('llmap', {scrollWheelZoom: false})
+  .addLayer(L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&#xA9; <a href="http://osm.org/copyright">OpenStreetMaps bidragsgivare</a>',
+  }));
+"#);
+        LeafletHandler { out }
+    }
+}
+impl<'a> BlockHandler for LeafletHandler<'a> {
+    fn push(&mut self, content: &str) -> Result<()> {
+        self.out.push_str(content);
+        Ok(())
+    }
+
+    fn end(self) {
+        self.out.push_str("}\n</script>\n");
+    }
+}
+
+use crate::syntax_hl::ClassedHTMLGenerator;
+struct CodeBlock<'a> {
+    out: &'a mut String,
+    gen: Option<ClassedHTMLGenerator<'a>>,
+}
+impl<'a> CodeBlock<'a> {
+    fn open(
+        out: &'a mut String,
+        lang: Option<&'a str>,
+    ) -> Result<CodeBlock<'a>> {
+        out.push_str("<pre");
+        if let Some(lang) = lang {
+            out.push_str(" data-lang=\"");
+            escape_html(&mut *out, &lang)?;
+            out.push('"');
+        }
+        out.push('>');
+        Ok(CodeBlock {
+            out,
+            gen: lang.and_then(crate::syntax_hl::for_lang),
+        })
+    }
+}
+impl<'a> BlockHandler for CodeBlock<'a> {
+    fn push(&mut self, content: &str) -> Result<()> {
+        use crate::syntax_hl::LinesWithEndings;
+        if let Some(gen) = &mut self.gen {
+            for line in LinesWithEndings::from(content) {
+                gen.parse_html_for_line_which_includes_newline(line);
+            }
+        } else {
+            escape_html(&mut *self.out, &content)?;
+        }
+        Ok(())
+    }
+    fn end(self) {
+        self.out.push_str("</pre>\n");
+    }
 }
 
 fn remove_end(s: &mut String, tail: &str) -> bool {

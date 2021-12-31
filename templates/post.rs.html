@@ -9,6 +9,8 @@
   <head>
     <title>@post.title — @fl!(fluent, "sitename")</title>
     @:head_canon()
+    @if post.use_leaflet() {<link rel="stylesheet" href="/s/ll171/leaflet.css"/>
+    <script src="/s/ll171/leaflet.js" async onload="initmap()"></script>}
   </head>
   <body>
     @:header(fluent, other_langs)
