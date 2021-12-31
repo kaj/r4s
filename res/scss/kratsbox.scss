@@ -92,6 +92,9 @@ $shade: rgba(40, 40, 40, .5);
 }
 #kratsbox.loading div {
     position: relative;
+    img {
+        filter: sepia(50%) blur(1ex);
+    }
     &::after {
         background: $shade;
         content: "⏳";

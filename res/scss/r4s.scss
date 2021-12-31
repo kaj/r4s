@@ -336,6 +336,8 @@ figure {
 }
 
 article {
+    margin: 5vmin 0;
+
     &:after {
         $size: 12em;
         clear: both;
@@ -343,7 +345,7 @@ article {
         content: "";
         display: block;
         height: $size * 640 / 1280;
-        margin: 0 auto 1em;
+        margin: 0 auto;
         width: $size;
     }
     &:nth-child(2n):after {
