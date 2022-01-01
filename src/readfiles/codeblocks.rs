@@ -87,7 +87,7 @@ impl<'a> CodeBlock<'a> {
         out.push_str("<pre");
         if let Some(lang) = lang {
             out.push_str(" data-lang=\"");
-            escape_html(&mut *out, &lang)?;
+            escape_html(&mut *out, lang)?;
             out.push('"');
         }
         out.push('>');
@@ -104,7 +104,7 @@ impl<'a> BlockHandler for CodeBlock<'a> {
                 gen.parse_html_for_line_which_includes_newline(line);
             }
         } else {
-            escape_html(&mut *self.out, &content)?;
+            escape_html(&mut *self.out, content)?;
         }
         Ok(())
     }

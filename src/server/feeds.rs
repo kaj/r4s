@@ -107,10 +107,10 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
         )
         .build();
 
-    Ok(Builder::new()
+    Builder::new()
         .header(CONTENT_TYPE, "application/atom+xml")
         .body(feed.to_string())
-        .ise()?)
+        .ise()
 }
 
 #[derive(Debug)]

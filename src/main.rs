@@ -28,9 +28,7 @@ async fn main() -> Result<()> {
     }
     tracing_subscriber::fmt()
         .with_env_filter(
-            std::env::var("RUST_LOG")
-                .as_deref()
-                .unwrap_or_else(|_| "info"),
+            std::env::var("RUST_LOG").as_deref().unwrap_or("info"),
         )
         .init();
 
