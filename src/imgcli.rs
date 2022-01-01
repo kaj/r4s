@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use reqwest::Client;
 use serde::Deserialize;
 
@@ -11,14 +11,23 @@ pub struct ImageInfo {
 
 impl ImageInfo {
     pub async fn fetch(imgref: &str) -> Result<ImageInfo> {
-        Ok(Client::new()
+        Self::do_fetch(imgref).await.with_context(|| {
+            format!("Query for image {:?} failed on server", imgref)
+        })
+    }
+    async fn do_fetch(imgref: &str) -> Result<ImageInfo> {
+        let response = Client::new()
             .get("https://img.krats.se/api/image")
             .query(&[("path", imgref)])
             .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?)
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let err: ImgErr = response.json().await?;
+            Err(anyhow!("{}: {}", status, err.err))
+        }
     }
 
     pub fn is_portrait(&self) -> bool {
@@ -57,4 +66,9 @@ struct ImgLink {
     url: String,
     width: u32,
     height: u32,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImgErr {
+    err: String,
 }

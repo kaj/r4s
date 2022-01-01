@@ -104,9 +104,7 @@ pub async fn collect<'a>(
                     )
                         .unwrap();
                 } else {
-                    let imgdata = ImageInfo::fetch(imgref)
-                        .await
-                        .context("Image api")?;
+                    let imgdata = ImageInfo::fetch(imgref).await?;
                     if !imgdata.is_public() {
                         println!("WARNING: Image {} is not public", imgref)
                     }
