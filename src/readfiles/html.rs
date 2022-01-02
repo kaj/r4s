@@ -1,7 +1,7 @@
 //! How to serialize parsed markdown into my kind of html
 use super::codeblocks::{BlockHandler, DynBlock};
 use super::FaRef;
-use crate::imgcli::ImageInfo;
+use super::ImgClient;
 use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
 use pulldown_cmark::escape::{escape_href, escape_html};
@@ -10,6 +10,7 @@ use std::fmt::Write;
 
 pub async fn collect<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
+    img_client: &mut ImgClient,
 ) -> Result<String> {
     let mut result = String::new();
     let mut data = data.into_iter();
@@ -104,9 +105,9 @@ pub async fn collect<'a>(
                     )
                         .unwrap();
                 } else {
-                    let imgdata = ImageInfo::fetch(imgref).await?;
+                    let imgdata = img_client.fetch(imgref).await?;
                     if !imgdata.is_public() {
-                        println!("WARNING: Image {} is not public", imgref)
+                        tracing::warn!("Image {:?} is not public", imgref);
                     }
                     let alt = inner.trim();
                     let imgtag = if classes

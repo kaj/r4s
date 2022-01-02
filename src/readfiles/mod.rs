@@ -29,6 +29,9 @@ pub struct Args {
     #[structopt(flatten)]
     db: DbOpt,
 
+    #[structopt(flatten)]
+    img: ImgClientOpt,
+
     /// The paths to read content from.
     #[structopt(parse(from_os_str))]
     files: Vec<PathBuf>,
@@ -51,13 +54,14 @@ pub struct Args {
 impl Args {
     pub async fn run(self) -> Result<()> {
         let db = self.db.get_db()?;
+        let mut images = self.img.client();
         for path in &self.files {
             if path.is_file() {
-                self.read_file(path, &db)
+                self.read_file(path, &db, &mut images)
                     .await
                     .with_context(|| format!("Reading file {:?}", path))?;
             } else {
-                self.read_dir(path, &db)
+                self.read_dir(path, &db, &mut images)
                     .await
                     .with_context(|| format!("Reading dir {:?}", path))?;
             }
@@ -66,7 +70,12 @@ impl Args {
     }
 
     #[async_recursion(?Send)]
-    async fn read_dir(&self, path: &Path, db: &PgConnection) -> Result<()> {
+    async fn read_dir(
+        &self,
+        path: &Path,
+        db: &PgConnection,
+        images: &mut ImgClient,
+    ) -> Result<()> {
         for entry in path.read_dir()? {
             let entry = entry?;
             let path = entry.path();
@@ -74,9 +83,9 @@ impl Args {
                 continue;
             }
             if entry.file_type()?.is_dir() {
-                self.read_dir(&path, db).await?;
+                self.read_dir(&path, db, images).await?;
             } else if path.extension().unwrap_or_default() == "md" {
-                self.read_file(&path, db)
+                self.read_file(&path, db, images)
                     .await
                     .with_context(|| format!("Reading file {:?}", path))?;
             }
@@ -84,7 +93,13 @@ impl Args {
         Ok(())
     }
 
-    async fn read_file(&self, path: &Path, db: &PgConnection) -> Result<()> {
+    #[tracing::instrument(skip(self, db, img_client))]
+    async fn read_file(
+        &self,
+        path: &Path,
+        db: &PgConnection,
+        img_client: &mut ImgClient,
+    ) -> Result<()> {
         let (slug, lang) = path
             .file_stem()
             .and_then(std::ffi::OsStr::to_str)
@@ -95,7 +110,9 @@ impl Args {
         let (metadata, contents_md) = extract_metadata(&contents);
 
         if metadata.get("meta").is_some() {
-            return self.read_meta_page(slug, lang, contents_md, db).await;
+            return self
+                .read_meta_page(slug, lang, contents_md, db, img_client)
+                .await;
         }
         let pubdate = metadata
             .get("pubdate")
@@ -154,6 +171,7 @@ impl Args {
                     lang,
                     contents_md,
                     update.as_ref(),
+                    img_client,
                 )
                 .await?;
                 if pubdate.is_none() {
@@ -179,9 +197,15 @@ impl Args {
                 "New post /{}/{}.{}\n   {:?}",
                 year, slug, lang, metadata
             );
-            let (mut title, teaser, body) =
-                extract_parts(year, slug, lang, contents_md, update.as_ref())
-                    .await?;
+            let (mut title, teaser, body) = extract_parts(
+                year,
+                slug,
+                lang,
+                contents_md,
+                update.as_ref(),
+                img_client,
+            )
+            .await?;
             if pubdate.is_none() {
                 title.push_str(" \u{1f58b}");
             }
@@ -216,6 +240,7 @@ impl Args {
         lang: &str,
         contents: &str,
         db: &PgConnection,
+        img_client: &mut ImgClient,
     ) -> Result<()> {
         if let Some((id, old_md)) = m::metapages
             .select((m::id, m::orig_md))
@@ -225,7 +250,8 @@ impl Args {
             .optional()?
         {
             if old_md != contents || self.force {
-                let (title, body) = md_to_html(contents, lang).await?;
+                let (title, body) =
+                    md_to_html(contents, lang, img_client).await?;
                 diesel::update(m::metapages)
                     .set((
                         m::title.eq(&title),
@@ -238,7 +264,8 @@ impl Args {
                 println!("Updated metadata page /{}.{}", slug, lang);
             }
         } else {
-            let (title, body) = md_to_html(contents, lang).await?;
+            let (title, body) =
+                md_to_html(contents, lang, img_client).await?;
             diesel::insert_into(m::metapages)
                 .values((
                     m::slug.eq(slug),
@@ -357,8 +384,9 @@ async fn extract_parts(
     lang: &str,
     markdown: &str,
     update: Option<&UpdateInfo>,
+    img_client: &mut ImgClient,
 ) -> Result<(String, String, String)> {
-    let (title, body) = md_to_html(markdown, lang).await?;
+    let (title, body) = md_to_html(markdown, lang, img_client).await?;
     // Split at "more" marker, or try to find a good place if the text is long.
     let end = markdown.find("<!-- more -->").or_else(|| {
         if markdown.len() < 900 {
@@ -420,7 +448,9 @@ async fn extract_parts(
             &teaser,
             |_, target| format!("](/{}/{}.{}#{})", year, slug, lang, target),
         );
-        md_to_html(&teaser, lang).await.map(|(_, teaser)| teaser)?
+        md_to_html(&teaser, lang, img_client)
+            .await
+            .map(|(_, teaser)| teaser)?
     } else {
         body.clone()
     };
@@ -430,7 +460,11 @@ async fn extract_parts(
 /// Convert my flavour of markdown to my preferred html.
 ///
 /// Returns the title and full content html markup separately.
-async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
+async fn md_to_html(
+    markdown: &str,
+    lang: &str,
+    img_client: &mut ImgClient,
+) -> Result<(String, String)> {
     let mut fixlink = |broken_link: BrokenLink| {
         Some(if let Some(url) = fa_link(&broken_link.reference) {
             (url.into(), String::new().into())
@@ -464,9 +498,9 @@ async fn md_to_html(markdown: &str, lang: &str) -> Result<(String, String)> {
         &Event::End(Tag::Heading(HeadingLevel::H1, None, vec![])),
     )
     .ok_or_else(|| anyhow!("No end of h1"))?;
-    let title = html::collect(title).await?;
+    let title = html::collect(title, img_client).await?;
 
-    let body = html::collect(items.into_iter()).await?;
+    let body = html::collect(items.into_iter(), img_client).await?;
 
     Ok((title, body))
 }
@@ -606,4 +640,65 @@ fn extract_metadata(src: &str) -> (BTreeMap<&str, &str>, &str) {
         src = reminder;
     }
     (meta, src.trim())
+}
+
+#[derive(Clone, StructOpt)]
+struct ImgClientOpt {
+    /// Base url for rphotos image api client.
+    #[structopt(long = "image-base", env = "IMG_URL")]
+    base: String,
+    /// User for rphotos api.
+    #[structopt(long = "image-user", env = "IMG_USER")]
+    user: String,
+    /// Password for rphotos api.
+    #[structopt(
+        long = "image-password",
+        env = "IMG_PASSWORD",
+        hide_env_values = true
+    )]
+    password: String,
+    /// Make referenced images public (otherwise a warning is issued
+    /// when private images are referenced).
+    #[structopt(long)]
+    make_images_public: bool,
+}
+impl ImgClientOpt {
+    fn client(&self) -> ImgClient {
+        ImgClient {
+            options: self.clone(),
+            client: None,
+        }
+    }
+}
+
+pub struct ImgClient {
+    options: ImgClientOpt,
+    client: Option<crate::imgcli::ImgClient>,
+}
+impl ImgClient {
+    async fn fetch(
+        &mut self,
+        imgref: &str,
+    ) -> Result<crate::imgcli::ImageInfo> {
+        if self.client.is_none() {
+            self.client = Some(
+                crate::imgcli::ImgClient::login(
+                    &self.options.base,
+                    &self.options.user,
+                    &self.options.password,
+                )
+                .await?,
+            );
+        }
+        let cli = self.client.as_ref().unwrap();
+        if self.options.make_images_public {
+            cli.make_image_public(imgref).await.map_err(|e| {
+                anyhow!("Failed to make image {:?} public: {}", imgref, e)
+            })
+        } else {
+            cli.fetch_image(imgref).await.map_err(|e| {
+                anyhow!("Failed to fetch image {:?}: {}", imgref, e)
+            })
+        }
+    }
 }
