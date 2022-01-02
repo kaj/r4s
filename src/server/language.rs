@@ -1,6 +1,5 @@
 use super::error::{ViewError, ViewResult};
 use super::Result;
-use accept_language::intersection;
 use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
 use i18n_embed::LanguageLoader;
 use i18n_embed_fl::fl;
@@ -12,6 +11,8 @@ use std::str::FromStr;
 #[derive(RustEmbed)]
 #[folder = "i18n/"]
 struct Localizations;
+
+static MYLANGS: [&str; 2] = ["en", "sv"];
 
 #[tracing::instrument]
 pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
@@ -31,7 +32,7 @@ pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
 }
 
 /// Either "sv" or "en".
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MyLang(String);
 
 impl MyLang {
@@ -43,7 +44,7 @@ impl MyLang {
         &self,
         fmt: impl Fn(FluentLanguageLoader, &str, &str) -> String,
     ) -> Vec<String> {
-        ["sv", "en"]
+        MYLANGS
             .iter()
             .filter(|&lang| lang != &self.0)
             .map(|lang| {
@@ -60,7 +61,7 @@ impl MyLang {
 impl FromStr for MyLang {
     type Err = ();
     fn from_str(value: &str) -> Result<Self, ()> {
-        ["en", "sv"]
+        MYLANGS
             .iter()
             .find(|&l| *l == value)
             .map(|&l| MyLang(l.into()))
@@ -69,7 +70,7 @@ impl FromStr for MyLang {
 }
 impl Default for MyLang {
     fn default() -> Self {
-        MyLang("en".into())
+        MyLang(MYLANGS[0].into())
     }
 }
 impl AsRef<str> for MyLang {
@@ -95,10 +96,57 @@ impl FromStr for AcceptLang {
     type Err = ();
     fn from_str(value: &str) -> Result<Self, ()> {
         Ok(AcceptLang(MyLang(
-            intersection(value, vec!["en", "sv"])
+            accept_language::parse(value)
                 .drain(..)
-                .next()
-                .ok_or(())?,
+                .map(|lang| {
+                    lang.split_once('-')
+                        .map(|(l, _r)| l.to_string())
+                        .unwrap_or(lang)
+                })
+                .find(|lang| MYLANGS.iter().any(|l| l == lang))
+                .unwrap_or_else(|| MYLANGS[0].into()),
         )))
     }
+}
+
+#[test]
+fn accept_1() {
+    assert_eq!(
+        "sv,en;q=0.7,en-US;q=0.3"
+            .parse::<AcceptLang>()
+            .unwrap()
+            .lang(),
+        "sv".parse().unwrap(),
+    );
+}
+#[test]
+fn accept_2() {
+    assert_eq!(
+        "fi,en;q=0.7,en-US;q=0.3"
+            .parse::<AcceptLang>()
+            .unwrap()
+            .lang(),
+        "en".parse().unwrap(),
+    );
+}
+#[test]
+fn accept_3() {
+    assert_eq!(
+        "sv-SE".parse::<AcceptLang>().unwrap().lang(),
+        "sv".parse().unwrap(),
+    );
+}
+#[test]
+fn accept_4() {
+    assert_eq!(
+        "en-GB".parse::<AcceptLang>().unwrap().lang(),
+        "en".parse().unwrap(),
+    );
+}
+#[test]
+fn accept_5() {
+    assert_eq!(
+        "fi-FI".parse::<AcceptLang>().unwrap().lang(),
+        "en".parse().unwrap(),
+    );
 }
