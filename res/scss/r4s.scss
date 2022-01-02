@@ -1,7 +1,7 @@
 @use "sass:color";
 
 $paper: #fdfbf9;
-$paper2: color.mix($paper, wheat, 75%);
+$paper2: color.mix($paper, wheat, 90%);
 $purple: mix(rebeccapurple, purple);
 $dark: color.mix($purple, black);
 $darker: color.mix($purple, black, 33%);
@@ -478,7 +478,52 @@ button {
     section {
         clear: both;
     }
+
+    p.signed {
+        text-align: right;
+        margin-right: 12%;
+        font-family: cocanut;
+        font-style: italic;
+        &:first-line {
+            font-weight: bold;
+        }
+    }
+
+    hr {
+        background-color: $purple;
+        border: 0;
+        height: 2px;
+        border-radius: 50%;
+        position: relative;
+        margin: 2em min(20%, 7em) 1em 0;
+        &::after {
+            color: $purple;
+            content: "☙";
+            display: block;
+            font-size: 3em;
+            margin: 0 auto;
+            position: relative;
+            text-align: center;
+            text-shadow: .04em 0 0 $paper, -.04em 0 0 $paper;
+            top: -.75em;
+            width: 3em;
+        }
+    }
+    section:nth-child(2n) hr::after {
+        content: "❧";
+    }
+    section:nth-child(3n) hr::after {
+        content: "☘";
+    }
+    section:nth-child(5n - 1) hr::after {
+        content: "«∘»";
+    }
+
+    img.gravatar {
+        margin-top: -2em;
+    }
 }
+
 img.gravatar {
     border-radius: 1em;
     float: right;
@@ -573,6 +618,16 @@ img.gravatar {
         color: $paper;
         &[data-lang]::before {
             background: linear-gradient(60deg, rgba($bcol, 0) 1em, $bcol 2em);
+        }
+    }
+
+    #comments {
+        hr {
+            background-color: $purple;
+            &::after {
+                color: $purple;
+                text-shadow: .04em 0 0 $darker, -.04em 0 0 $darker;
+            }
         }
     }
 

@@ -515,15 +515,17 @@ mod markdown {
     use pulldown_cmark::{html::push_html, Event, HeadingLevel, Parser, Tag};
 
     pub fn safe_md2html(raw: &str) -> String {
+        let below_level = lh(HeadingLevel::H3);
         let mut hdiff = 0;
         let markdown = Parser::new(raw).map(|e| match e {
             Event::Html(s) => Event::Text(s),
             Event::Start(Tag::Heading(h, id, cls)) => {
-                hdiff = std::cmp::max(hdiff, 3 - h as i8);
-                Event::Start(Tag::Heading(hl(h as i8 + hdiff), id, cls))
+                let level = lh(h);
+                hdiff = std::cmp::max(hdiff, below_level - level);
+                Event::Start(Tag::Heading(hl(level + hdiff), id, cls))
             }
             Event::End(Tag::Heading(h, id, cls)) => {
-                Event::End(Tag::Heading(hl(h as i8 + hdiff), id, cls))
+                Event::End(Tag::Heading(hl(lh(h) + hdiff), id, cls))
             }
             e => e,
         });
@@ -532,15 +534,24 @@ mod markdown {
         html
     }
 
+    fn lh(h: HeadingLevel) -> i8 {
+        match h {
+            HeadingLevel::H1 => 1,
+            HeadingLevel::H2 => 2,
+            HeadingLevel::H3 => 3,
+            HeadingLevel::H4 => 4,
+            HeadingLevel::H5 => 5,
+            HeadingLevel::H6 => 6,
+        }
+    }
     pub fn hl(i: i8) -> HeadingLevel {
         match i {
-            0 => HeadingLevel::H1,
-            1 => HeadingLevel::H2,
-            2 => HeadingLevel::H3,
-            3 => HeadingLevel::H4,
-            4 => HeadingLevel::H5,
-            5 => HeadingLevel::H6,
-            _ => panic!("Bad heading level: {}", i + 1),
+            i if i <= 1 => HeadingLevel::H1,
+            2 => HeadingLevel::H2,
+            3 => HeadingLevel::H3,
+            4 => HeadingLevel::H4,
+            5 => HeadingLevel::H5,
+            _ => HeadingLevel::H6,
         }
     }
 
@@ -567,9 +578,9 @@ mod markdown {
                  \r\n\r\n## Underrubrik\
                  \r\n\r\nOch underrubriken på nivån under."
             ),
-            "<h4>Rubrik</h4>\
+            "<h3>Rubrik</h3>\
              \n<p>Rubriken ska hamna på rätt nivå.</p>\
-             \n<h5>Underrubrik</h5>\
+             \n<h4>Underrubrik</h4>\
              \n<p>Och underrubriken på nivån under.</p>\n",
         );
     }
@@ -582,9 +593,9 @@ mod markdown {
                  \r\n\r\n#### Underrubrik\
                  \r\n\r\nOch underrubriken på nivån under."
             ),
-            "<h4>Rubrik</h4>\
+            "<h3>Rubrik</h3>\
              \n<p>Rubriken ska hamna på rätt nivå.</p>\
-             \n<h5>Underrubrik</h5>\
+             \n<h4>Underrubrik</h4>\
              \n<p>Och underrubriken på nivån under.</p>\n",
         );
     }

@@ -40,6 +40,7 @@ write-comments = Skriv en kommentar
 recent-comments = Nya kommentarer
 on = på
 byon = { $by }, { $date }
+signed = Undertecknat,
 c-cmt = Kommentar
 c-cmt-h = Enkel markdown tillåts.
 c-name = Namn:
