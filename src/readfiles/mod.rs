@@ -162,8 +162,8 @@ impl Args {
         {
             if old_md != contents || self.force {
                 println!(
-                    "Post #{} /{}/{}.{} exists, but should be updated.\n   {:?}",
-                    id, year, slug, lang, metadata
+                    "Post #{} /{}/{}.{} exists, but should be updated.",
+                    id, year, slug, lang
                 );
                 let (mut title, teaser, body) = extract_parts(
                     year,
@@ -193,10 +193,7 @@ impl Args {
                 }
             }
         } else {
-            println!(
-                "New post /{}/{}.{}\n   {:?}",
-                year, slug, lang, metadata
-            );
+            println!("New post /{}/{}.{}", year, slug, lang);
             let (mut title, teaser, body) = extract_parts(
                 year,
                 slug,
@@ -454,7 +451,7 @@ async fn extract_parts(
     } else {
         body.clone()
     };
-    Ok((dbg!(title), teaser, body))
+    Ok((title, teaser, body))
 }
 
 /// Convert my flavour of markdown to my preferred html.
