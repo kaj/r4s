@@ -515,8 +515,11 @@ button {
     section:nth-child(3n) hr::after {
         content: "☘";
     }
-    section:nth-child(5n - 1) hr::after {
-        content: "«∘»";
+    section:nth-child(5n) hr::after {
+        content: "«»";
+    }
+    section:nth-child(7n - 5) hr::after {
+        content: "» «";
     }
 
     img.gravatar {
