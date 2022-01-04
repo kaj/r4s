@@ -18,14 +18,14 @@ static MYLANGS: [&str; 2] = ["en", "sv"];
 pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
     let lang = lang.parse().map_err(|e| {
         tracing::error!("Bad language: {}", e);
-        ViewError::BadRequest("bad language".into())
+        ViewError::BadRequest("Bad language".into())
     })?;
     let loader: FluentLanguageLoader = fluent_language_loader!();
     loader
         .load_languages(&Localizations, &[&lang, loader.fallback_language()])
         .map_err(|e| {
             tracing::error!("Missing language: {}", e);
-            ViewError::BadRequest("unknown language".into())
+            ViewError::BadRequest("Unknown language".into())
         })?;
     loader.set_use_isolating(false);
     Ok(loader)

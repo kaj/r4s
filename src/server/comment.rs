@@ -73,9 +73,7 @@ async fn postcomment(
             (public, spam)
         })?;
     if spam > 0 {
-        return Err(ViewError::BadRequest(
-            "This seems like spam.  Sorry.".into(),
-        ));
+        return Err(ViewError::BadRequest("This seems like spam".into()));
     }
     let public = public > 0;
 

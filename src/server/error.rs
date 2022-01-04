@@ -46,7 +46,7 @@ impl Reply for ViewError {
                  correcly – or maybe you corrected a spelling error of mine?",
             ),
             ViewError::BadRequest(msg) => {
-                error_response(StatusCode::BAD_REQUEST, &msg, "")
+                error_response(StatusCode::BAD_REQUEST, &msg, "Sorry.")
             }
             ViewError::ServiceUnavailable => error_response(
                 StatusCode::SERVICE_UNAVAILABLE,
