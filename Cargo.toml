@@ -21,13 +21,14 @@ base64 = "0.13.0"
 chrono = "0.4.19"
 csrf = "0.4.1"
 deadpool-diesel = { version = "0.3.0", features = ["postgres"] }
-diesel = { version = "1.4.0", features = ["chrono", "postgres"] }
+diesel = { version = "1.4.0", features = ["chrono", "postgres", "network-address"] }
 dotenv = "0.15.0"
 gravatar = "0.2.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
 i18n-embed-fl = "0.6.0"
 fluent = "0.16.0"
 intl-memoizer =  "0.5.1"
+ipnetwork = "0.18.0"
 lazy-regex = "2.2.2"
 lazy_static = "1.4.0"
 log = "0.4.6"

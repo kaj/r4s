@@ -18,6 +18,7 @@ table! {
         name -> Varchar,
         email -> Varchar,
         url -> Nullable<Varchar>,
+        from_host -> Inet,
         raw_md -> Text,
         is_public -> Bool,
         is_spam -> Bool,

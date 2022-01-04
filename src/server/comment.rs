@@ -5,15 +5,22 @@ use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use diesel::dsl::sql;
 use diesel::prelude::*;
+use ipnetwork::IpNetwork;
 use serde::Deserialize;
+use std::net::{IpAddr, SocketAddr};
 use tracing::instrument;
-use warp::filters::{cookie, BoxedFilter};
+use warp::filters::{addr, cookie, header, BoxedFilter};
 use warp::path::end;
+use warp::reject::{reject, Rejection};
 use warp::{self, body, post, Filter, Reply};
 
-pub fn route(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
+pub fn route(
+    proxied: bool,
+    s: BoxedFilter<(App,)>,
+) -> BoxedFilter<(impl Reply,)> {
     end()
         .and(post())
+        .and(remote_addr_filter(proxied))
         .and(cookie::cookie("CSRF"))
         .and(body::form())
         .and(s)
@@ -24,6 +31,7 @@ pub fn route(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
 
 #[instrument]
 async fn postcomment(
+    ip: IpAddr,
     csrf_cookie: String,
     form: CommentForm,
     app: App,
@@ -80,6 +88,7 @@ async fn postcomment(
                     c::name.eq(&form.name),
                     c::email.eq(&form.email),
                     form.url.as_ref().map(|u| c::url.eq(u)),
+                    c::from_host.eq(IpNetwork::from(ip)),
                     c::raw_md.eq(&form.comment),
                     c::is_public.eq(public),
                 ))
@@ -120,4 +129,16 @@ impl CommentForm {
     fn html(&self) -> String {
         safe_md2html(&self.comment)
     }
+}
+
+fn remote_addr_filter(proxied: bool) -> BoxedFilter<(IpAddr,)> {
+    if proxied {
+        header::header("x-forwarded-for").boxed()
+    } else {
+        addr::remote().and_then(sa2ip).boxed()
+    }
+}
+
+async fn sa2ip(sockaddr: Option<SocketAddr>) -> Result<IpAddr, Rejection> {
+    sockaddr.map(|s| s.ip()).ok_or_else(reject)
 }

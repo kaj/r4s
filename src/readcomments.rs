@@ -5,8 +5,10 @@ use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use anyhow::{anyhow, Context, Result};
 use diesel::prelude::*;
+use ipnetwork::IpNetwork;
 use serde::{self, Deserialize, Deserializer};
 use std::fs::File;
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -33,6 +35,9 @@ impl Args {
                 .filter(p::lang.eq(&post.lang))
                 .first(&db)?;
 
+            let ip: IpAddr =
+                comment.by_ip.as_deref().unwrap_or("127.0.0.17").parse()?;
+
             diesel::insert_into(c::comments)
                 .values((
                     c::post_id.eq(post),
@@ -41,6 +46,7 @@ impl Args {
                     c::name.eq(&comment.by_name),
                     c::email.eq(&comment.by_email),
                     comment.by_url.as_ref().map(|u| c::url.eq(u)),
+                    c::from_host.eq(IpNetwork::from(ip)),
                     c::raw_md.eq(&comment.comment),
                     c::is_public.eq(true),
                 ))
@@ -68,6 +74,7 @@ struct Dumped {
     by_name: String,
     by_email: String,
     by_url: Option<String>,
+    by_ip: Option<String>,
     comment: String,
     date: String,
     #[serde(deserialize_with = "deserialize_post")]

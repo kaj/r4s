@@ -49,6 +49,13 @@ pub struct Args {
     /// A 32-byte secret key for csrf generation and verification.
     #[structopt(long, env = "CSRF_SECRET", hide_env_values = true)]
     csrf_secret: CsrfSecret,
+
+    /// Use this flag if the server runs behind a proxy.
+    ///
+    /// Comments will then take their source ip address from the
+    /// `x-forwarded-for` header instead of the connected remote addr.
+    #[structopt(long)]
+    is_proxied: bool,
 }
 
 impl Args {
@@ -74,7 +81,7 @@ impl Args {
 
         let routes = warp::any()
             .and(path("s").and(asset_routes).boxed())
-            .or(path("comment").and(comment::route(s())).boxed())
+            .or(path("comment").and(comment::route(self.is_proxied, s())))
             .or(end()
                 .and(goh())
                 .and(lang_filt)
