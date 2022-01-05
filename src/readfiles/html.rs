@@ -202,6 +202,7 @@ pub async fn collect<'a>(
                     result.push('\n');
                 }
             }
+            Event::Rule => result.push_str("<hr>\n"),
             Event::SoftBreak => result.push('\n'),
             Event::Html(code) => result.push_str(&code),
             Event::Code(code) => {
@@ -232,18 +233,17 @@ fn remove_end(s: &mut String, tail: &str) -> bool {
 
 fn tag_name(tag: &Tag) -> &'static str {
     match tag {
-        Tag::Paragraph => "p",
-        Tag::Emphasis => "em",
-        Tag::Strong => "strong",
-        //Tag::Image(..) => "a", // no, not really!
-        Tag::Link(..) => "a",
-        Tag::Table(..) => "table",
-        Tag::TableRow => "tr",
-        Tag::TableCell => "td",
-        Tag::List(Some(_)) => "ol",
-        Tag::List(None) => "ul",
-        Tag::Item => "li",
         Tag::BlockQuote => "blockquote",
+        Tag::Emphasis => "em",
+        Tag::Item => "li",
+        Tag::Link(..) => "a",
+        Tag::List(None) => "ul",
+        Tag::List(Some(_)) => "ol",
+        Tag::Paragraph => "p",
+        Tag::Strong => "strong",
+        Tag::Table(..) => "table",
+        Tag::TableCell => "td",
+        Tag::TableRow => "tr",
         tag => panic!("Not a simple tag: {:?}", tag),
     }
 }

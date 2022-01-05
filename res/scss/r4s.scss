@@ -203,10 +203,11 @@ header {
     font-size: 120%;
 }
 section {
-    margin-top: 8vmin;
-}
-section section {
     margin-top: 4vmin;
+    main > & {
+        clear: both;
+        margin-top: 8vmin;
+    }
 }
 h1, h2, h3, h4, h5, h6 {
     margin: 1em 0 0 0;

@@ -394,7 +394,7 @@ async fn extract_parts(
                 end -= 1;
             }
             let end = markdown[..end].rfind("\n\n").unwrap_or(0);
-            let end = markdown[..end].rfind("\n## ").unwrap_or_else(|| {
+            let end = markdown[..end].rfind("\n##").unwrap_or_else(|| {
                 if end > 50 {
                     end
                 } else {
