@@ -19,12 +19,16 @@
       <p class="publine">@Html(post.publine(fluent, tags))</p>
       @Html(&post.content)
 
-      <menu class="social">
-        <li><a href="https://twitter.com/share?text=@post.title&url=@canonical_url&via=rasmus_kaj"
-               class="twitter" rel="noopener" target="_blank">@fl!(fluent, "tweet")</a></li>
-        <li><a href="https://www.facebook.com/sharer/sharer.php?u=@canonical_url&display=popup"
-               class="fb" rel="noopener" target="_blank">@fl!(fluent, "fbshare")</a></li>
-      </menu>
+      <footer>
+        <address>@fl!(fluent, "signed")
+          <a href="/rkaj.@post.lang" rel="author">Rasmus Kaj</a></address>
+        <menu class="social">
+          <li><a href="https://twitter.com/share?text=@post.title&url=@canonical_url&via=rasmus_kaj"
+                 class="twitter" rel="noopener" target="_blank">@fl!(fluent, "tweet")</a></li>
+          <li><a href="https://www.facebook.com/sharer/sharer.php?u=@canonical_url&display=popup"
+                 class="fb" rel="noopener" target="_blank">@fl!(fluent, "fbshare")</a></li>
+        </menu>
+      </footer>
       <section id="comments">
         <h2>@fl!(fluent, "comments")</h2>
         @if bad_comment {
@@ -69,7 +73,7 @@
     <aside>
       <h2>@fl!(fluent, "related")</h2>
       <ul>@for link in similar {
-        <li><a href="@link.url()">@Html(&link.title)</a> (@link.year)</li>
+        <li><a href="@link.url()" hreflang="@link.lang" lang="@link.lang">@Html(&link.title)</a> (@link.year)</li>
         }</ul>
     </aside>
     }
