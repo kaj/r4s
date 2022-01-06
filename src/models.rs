@@ -15,6 +15,8 @@ use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
 use intl_memoizer::IntlLangMemoizer;
 use std::borrow::Cow;
 
+type Result<T> = std::result::Result<T, diesel::result::Error>;
+
 sql_function! {
     fn year_of_date(arg: Timestamptz) -> Smallint;
 }
@@ -172,7 +174,7 @@ impl Teaser {
         lang: &str,
         limit: u32,
         db: &PgConnection,
-    ) -> Result<Vec<Self>, diesel::result::Error> {
+    ) -> Result<Vec<Self>> {
         p::posts
             .left_join(
                 c::comments
@@ -216,7 +218,7 @@ impl Teaser {
         year: i16,
         lang: &str,
         db: &PgConnection,
-    ) -> Result<Vec<Teaser>, diesel::result::Error> {
+    ) -> Result<Vec<Teaser>> {
         p::posts
             .left_join(
                 c::comments
@@ -265,7 +267,7 @@ impl Teaser {
         lang: &str,
         limit: u32,
         db: &PgConnection,
-    ) -> Result<Vec<Teaser>, diesel::result::Error> {
+    ) -> Result<Vec<Teaser>> {
         p::posts
             .left_join(
                 c::comments
@@ -354,16 +356,10 @@ pub struct Tag {
 }
 
 impl Tag {
-    pub fn by_slug(
-        slug: &str,
-        db: &PgConnection,
-    ) -> Result<Option<Tag>, diesel::result::Error> {
+    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Option<Tag>> {
         t::tags.filter(t::slug.eq(slug)).first::<Tag>(db).optional()
     }
-    pub fn for_post(
-        post_id: i32,
-        db: &PgConnection,
-    ) -> Result<Vec<Tag>, diesel::result::Error> {
+    pub fn for_post(post_id: i32, db: &PgConnection) -> Result<Vec<Tag>> {
         t::tags
             .filter(
                 t::id.eq_any(
@@ -387,10 +383,7 @@ pub struct Comment {
 }
 
 impl Comment {
-    pub fn for_post(
-        post_id: i32,
-        db: &PgConnection,
-    ) -> Result<Vec<Comment>, diesel::result::Error> {
+    pub fn for_post(post_id: i32, db: &PgConnection) -> Result<Vec<Comment>> {
         c::comments
             .select((
                 c::id,
@@ -431,9 +424,7 @@ pub struct PostComment {
 }
 
 impl PostComment {
-    pub fn recent(
-        db: &PgConnection,
-    ) -> Result<Vec<PostComment>, diesel::result::Error> {
+    pub fn recent(db: &PgConnection) -> Result<Vec<PostComment>> {
         c::comments
             .inner_join(p::posts.on(p::id.eq(c::post_id)))
             .select((
@@ -453,9 +444,7 @@ impl PostComment {
             .load(db)
     }
 
-    pub fn mod_queue(
-        db: &PgConnection,
-    ) -> Result<Vec<PostComment>, diesel::result::Error> {
+    pub fn mod_queue(db: &PgConnection) -> Result<Vec<PostComment>> {
         c::comments
             .inner_join(p::posts.on(p::id.eq(c::post_id)))
             .select((
