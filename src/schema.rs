@@ -55,6 +55,9 @@ table! {
         lang -> Varchar,
         content -> Text,
         teaser -> Text,
+        front_image -> Nullable<Varchar>,
+        description -> Varchar,
+        use_leaflet -> Bool,
         orig_md -> Text,
     }
 }

@@ -1,5 +1,6 @@
 mod codeblocks;
 mod html;
+mod summary;
 
 use crate::dbopt::DbOpt;
 use crate::models::year_of_date;
@@ -164,7 +165,14 @@ impl Args {
                     "Post #{} /{}/{}.{} exists, but should be updated.",
                     id, year, slug, lang
                 );
-                let (mut title, teaser, body) = extract_parts(
+                let (
+                    mut title,
+                    teaser,
+                    body,
+                    front_image,
+                    description,
+                    use_leaflet,
+                ) = extract_parts(
                     year,
                     slug,
                     lang,
@@ -182,6 +190,9 @@ impl Args {
                         p::title.eq(&title),
                         p::teaser.eq(&teaser),
                         p::content.eq(&body),
+                        p::front_image.eq(front_image),
+                        p::description.eq(description),
+                        p::use_leaflet.eq(use_leaflet),
                         p::orig_md.eq(&contents),
                     ))
                     .execute(db)
@@ -192,7 +203,14 @@ impl Args {
             }
         } else {
             println!("New post /{}/{}.{}", year, slug, lang);
-            let (mut title, teaser, body) = extract_parts(
+            let (
+                mut title,
+                teaser,
+                body,
+                front_image,
+                description,
+                use_leaflet,
+            ) = extract_parts(
                 year,
                 slug,
                 lang,
@@ -216,6 +234,9 @@ impl Args {
                     p::title.eq(&title),
                     p::teaser.eq(&teaser),
                     p::content.eq(&body),
+                    p::front_image.eq(front_image),
+                    p::description.eq(description),
+                    p::use_leaflet.eq(use_leaflet),
                     p::orig_md.eq(&contents),
                 ))
                 .returning(p::id)
@@ -244,7 +265,8 @@ impl Args {
             .optional()?
         {
             if old_md != contents || self.force {
-                let (title, body) = md_to_html(contents, lang, img_client)?;
+                let (title, body, _) =
+                    md_to_html(contents, lang, img_client)?;
                 diesel::update(m::metapages)
                     .set((
                         m::title.eq(&title),
@@ -257,7 +279,7 @@ impl Args {
                 println!("Updated metadata page /{}.{}", slug, lang);
             }
         } else {
-            let (title, body) = md_to_html(contents, lang, img_client)?;
+            let (title, body, _) = md_to_html(contents, lang, img_client)?;
             diesel::insert_into(m::metapages)
                 .values((
                     m::slug.eq(slug),
@@ -377,8 +399,8 @@ fn extract_parts(
     markdown: &str,
     update: Option<&UpdateInfo>,
     img_client: &mut ImgClient,
-) -> Result<(String, String, String)> {
-    let (title, body) = md_to_html(markdown, lang, img_client)?;
+) -> Result<(String, String, String, Option<String>, String, bool)> {
+    let (title, body, description) = md_to_html(markdown, lang, img_client)?;
     // Split at "more" marker, or try to find a good place if the text is long.
     let end = markdown.find("<!-- more -->").or_else(|| {
         if markdown.len() < 900 {
@@ -399,7 +421,9 @@ fn extract_parts(
             Some(end)
         }
     });
-    let teaser = if let Some(teaser) = end.map(|e| &markdown[..e]) {
+    let (teaser, description) = if let Some(teaser) =
+        end.map(|e| &markdown[..e])
+    {
         // If teaser don't have an image and there is a "front" image ...
         let mut teaser = if let Some(img) = (!teaser.contains("\n!["))
             .then(|| ())
@@ -440,11 +464,18 @@ fn extract_parts(
             &teaser,
             |_, target| format!("](/{}/{}.{}#{})", year, slug, lang, target),
         );
-        md_to_html(&teaser, lang, img_client).map(|(_, teaser)| teaser)?
+        md_to_html(&teaser, lang, img_client)
+            .map(|(_, teaser, desc)| (teaser, desc))?
     } else {
-        body.clone()
+        (body.clone(), description)
     };
-    Ok((title, teaser, body))
+    let front_image = regex_captures!(
+        "<figure[^>]*><(?:a href|img[^>]src)=['\"]([^'\"]+)['\"]",
+        &teaser
+    )
+    .map(|(_, url)| url.to_string());
+    let use_leaflet = body.contains("function initmap()");
+    Ok((title, teaser, body, front_image, description, use_leaflet))
 }
 
 /// Convert my flavour of markdown to my preferred html.
@@ -454,7 +485,7 @@ fn md_to_html(
     markdown: &str,
     lang: &str,
     img_client: &mut ImgClient,
-) -> Result<(String, String)> {
+) -> Result<(String, String, String)> {
     let mut fixlink = |broken_link: BrokenLink| {
         Some(if let Some(url) = fa_link(&broken_link.reference) {
             (url.into(), String::new().into())
@@ -490,9 +521,9 @@ fn md_to_html(
     .ok_or_else(|| anyhow!("No end of h1"))?;
     let title = html::collect(title, img_client)?;
 
-    let body = html::collect(items.into_iter(), img_client)?;
-
-    Ok((title, body))
+    let body = html::collect(items.clone().into_iter(), img_client)?;
+    let summary = summary::collect(items.into_iter())?;
+    Ok((title, body, summary))
 }
 
 fn items_until<'a>(

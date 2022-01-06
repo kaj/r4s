@@ -10,7 +10,9 @@ use self::language::{AcceptLang, MyLang};
 use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{Connection, DbOpt, Pool};
-use crate::models::{year_of_date, Comment, Post, PostComment, Tag, Teaser};
+use crate::models::{
+    year_of_date, Comment, FullPost, PostComment, Tag, Teaser,
+};
 use crate::schema::assets::dsl as a;
 use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
@@ -389,22 +391,7 @@ async fn page(
     let slugc = slug.clone();
     let post = db
         .interact(move |db| {
-            p::posts
-                .select((
-                    p::id,
-                    year_of_date(p::posted_at),
-                    p::slug,
-                    p::lang,
-                    p::title,
-                    p::posted_at,
-                    p::updated_at,
-                    p::content,
-                ))
-                .filter(year_of_date(p::posted_at).eq(&year))
-                .filter(p::slug.eq(slug.slug))
-                .filter(p::lang.eq(slug.lang.as_ref()))
-                .first::<Post>(db)
-                .optional()
+            FullPost::load(year, &slug.slug, slug.lang.as_ref(), db)
         })
         .await??
         .ok_or(ViewError::NotFound)?;

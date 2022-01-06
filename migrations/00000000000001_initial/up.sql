@@ -12,12 +12,16 @@ create table posts (
   slug varchar not null,
   title varchar not null,
   lang varchar(2) not null, -- TODO enum?
-  content text not null,
-  teaser text not null, -- The same start of content, may be all if short.
+  content text not null, -- The prerendered html content of the post.
+  teaser text not null, -- The same start of content, may be == content if short.
+  front_image varchar, -- image url.
+  description varchar not null, -- Short plaintext teaser.
+  use_leaflet boolean not null, -- true if leaflet maps are used.
   orig_md text not null
 );
 
 create unique index idx_post_year_slug_l on posts (slug, year_of_date(posted_at), lang);
+-- TODO: use a specicialized version that only checks orig_md for changes!
 select diesel_manage_updated_at('posts');
 
 create table metapages (
