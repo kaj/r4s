@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use reqwest::{Client, Response};
+use reqwest::blocking::{Client, Response};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 
@@ -48,16 +48,16 @@ pub struct ImgClient {
 }
 
 impl ImgClient {
-    pub async fn login(
+    pub fn login(
         base: &str,
         user: &str,
         password: &str,
     ) -> Result<ImgClient> {
-        Self::do_login(base, user, password).await.map_err(|e| {
+        Self::do_login(base, user, password).map_err(|e| {
             anyhow!("Failed to login to {:?} as {:?}: {}", base, user, e)
         })
     }
-    pub async fn do_login(
+    pub fn do_login(
         base: &str,
         user: &str,
         password: &str,
@@ -67,40 +67,37 @@ impl ImgClient {
         let response = Client::new()
             .post(&format!("{}/api/login", base))
             .json(&BTreeMap::from([("user", user), ("password", password)]))
-            .send()
-            .await?;
+            .send()?;
         #[derive(Deserialize)]
         struct R {
             token: String,
         }
-        let key = check(response).await?.json::<R>().await?.token;
+        let key = check(response)?.json::<R>()?.token;
         Ok(ImgClient { base, key })
     }
-    pub async fn fetch_image(&self, imgref: &str) -> Result<ImageInfo> {
+    pub fn fetch_image(&self, imgref: &str) -> Result<ImageInfo> {
         let response = Client::new()
             .get(&format!("{}/api/image", self.base))
             .header("authorization", &self.key)
             .query(&[("path", imgref)])
-            .send()
-            .await?;
-        Ok(check(response).await?.json().await?)
+            .send()?;
+        Ok(check(response)?.json()?)
     }
-    pub async fn make_image_public(&self, imgref: &str) -> Result<ImageInfo> {
+    pub fn make_image_public(&self, imgref: &str) -> Result<ImageInfo> {
         let response = Client::new()
             .post(&format!("{}/api/image/makepublic", self.base))
             .header("authorization", &self.key)
             .json(&BTreeMap::from([("path", imgref)]))
-            .send()
-            .await?;
-        Ok(check(response).await?.json().await?)
+            .send()?;
+        Ok(check(response)?.json()?)
     }
 }
-async fn check(response: Response) -> Result<Response> {
+fn check(response: Response) -> Result<Response> {
     let status = response.status();
     if status.is_success() {
         Ok(response)
     } else {
-        let err: ImgErr = response.json().await?;
+        let err: ImgErr = response.json()?;
         Err(anyhow!("{}: {}", status, err.err))
     }
 }

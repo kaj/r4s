@@ -19,8 +19,7 @@ use dotenv::dotenv;
 use structopt::StructOpt;
 
 /// Main program: Set up env and run according to arguments.
-#[tokio::main(flavor = "multi_thread", worker_threads = 10)]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     match dotenv() {
         Ok(_) => (),
         Err(ref err) if err.not_found() => (),
@@ -32,7 +31,7 @@ async fn main() -> Result<()> {
         )
         .init();
 
-    R4s::from_args().run().await
+    R4s::from_args().run()
 }
 
 /// Manage and serve my blog
@@ -52,13 +51,13 @@ enum R4s {
 }
 
 impl R4s {
-    async fn run(self) -> Result<()> {
+    fn run(self) -> Result<()> {
         match self {
             R4s::List(args) => args.run(),
             R4s::ModerateComments(args) => args.run(),
-            R4s::ReadFiles(args) => args.run().await,
-            R4s::ReadComments(args) => args.run().await,
-            R4s::RunServer(args) => args.run().await,
+            R4s::ReadFiles(args) => args.run(),
+            R4s::ReadComments(args) => run_async(args.run()),
+            R4s::RunServer(args) => run_async(args.run()),
         }
     }
 }
@@ -68,4 +67,15 @@ pub struct PubBaseOpt {
     /// Base url for the server, in absolute urls
     #[structopt(long, short = "b", env = "R4S_BASE")]
     public_base: String,
+}
+
+fn run_async<F>(work: F) -> Result<()>
+where
+    F: std::future::Future<Output = Result<()>>,
+{
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(10)
+        .build()?
+        .block_on(work)
 }

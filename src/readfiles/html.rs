@@ -8,7 +8,7 @@ use pulldown_cmark::escape::{escape_href, escape_html};
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use std::fmt::Write;
 
-pub async fn collect<'a>(
+pub fn collect<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
     img_client: &mut ImgClient,
 ) -> Result<String> {
@@ -105,7 +105,7 @@ pub async fn collect<'a>(
                     )
                         .unwrap();
                 } else {
-                    let imgdata = img_client.fetch(imgref).await?;
+                    let imgdata = img_client.fetch(imgref)?;
                     if !imgdata.is_public() {
                         tracing::warn!("Image {:?} is not public", imgref);
                     }

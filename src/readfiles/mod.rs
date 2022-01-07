@@ -10,7 +10,6 @@ use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use crate::server::language;
 use anyhow::{anyhow, Context, Result};
-use async_recursion::async_recursion;
 use chrono::{Datelike, Local};
 use diesel::prelude::*;
 use i18n_embed_fl::fl;
@@ -52,25 +51,22 @@ pub struct Args {
 }
 
 impl Args {
-    pub async fn run(self) -> Result<()> {
+    pub fn run(self) -> Result<()> {
         let db = self.db.get_db()?;
         let mut images = self.img.client();
         for path in &self.files {
             if path.is_file() {
                 self.read_file(path, &db, &mut images)
-                    .await
                     .with_context(|| format!("Reading file {:?}", path))?;
             } else {
                 self.read_dir(path, &db, &mut images)
-                    .await
                     .with_context(|| format!("Reading dir {:?}", path))?;
             }
         }
         Ok(())
     }
 
-    #[async_recursion(?Send)]
-    async fn read_dir(
+    fn read_dir(
         &self,
         path: &Path,
         db: &PgConnection,
@@ -83,10 +79,9 @@ impl Args {
                 continue;
             }
             if entry.file_type()?.is_dir() {
-                self.read_dir(&path, db, images).await?;
+                self.read_dir(&path, db, images)?;
             } else if path.extension().unwrap_or_default() == "md" {
                 self.read_file(&path, db, images)
-                    .await
                     .with_context(|| format!("Reading file {:?}", path))?;
             }
         }
@@ -94,7 +89,7 @@ impl Args {
     }
 
     #[tracing::instrument(skip(self, db, img_client))]
-    async fn read_file(
+    fn read_file(
         &self,
         path: &Path,
         db: &PgConnection,
@@ -110,9 +105,13 @@ impl Args {
         let (metadata, contents_md) = extract_metadata(&contents);
 
         if metadata.get("meta").is_some() {
-            return self
-                .read_meta_page(slug, lang, contents_md, db, img_client)
-                .await;
+            return self.read_meta_page(
+                slug,
+                lang,
+                contents_md,
+                db,
+                img_client,
+            );
         }
         let pubdate = metadata
             .get("pubdate")
@@ -172,8 +171,7 @@ impl Args {
                     contents_md,
                     update.as_ref(),
                     img_client,
-                )
-                .await?;
+                )?;
                 if pubdate.is_none() {
                     title.push_str(" \u{1f58b}");
                 }
@@ -201,8 +199,7 @@ impl Args {
                 contents_md,
                 update.as_ref(),
                 img_client,
-            )
-            .await?;
+            )?;
             if pubdate.is_none() {
                 title.push_str(" \u{1f58b}");
             }
@@ -231,7 +228,7 @@ impl Args {
         Ok(())
     }
 
-    async fn read_meta_page(
+    fn read_meta_page(
         &self,
         slug: &str,
         lang: &str,
@@ -247,8 +244,7 @@ impl Args {
             .optional()?
         {
             if old_md != contents || self.force {
-                let (title, body) =
-                    md_to_html(contents, lang, img_client).await?;
+                let (title, body) = md_to_html(contents, lang, img_client)?;
                 diesel::update(m::metapages)
                     .set((
                         m::title.eq(&title),
@@ -261,8 +257,7 @@ impl Args {
                 println!("Updated metadata page /{}.{}", slug, lang);
             }
         } else {
-            let (title, body) =
-                md_to_html(contents, lang, img_client).await?;
+            let (title, body) = md_to_html(contents, lang, img_client)?;
             diesel::insert_into(m::metapages)
                 .values((
                     m::slug.eq(slug),
@@ -375,7 +370,7 @@ fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
     Ok(())
 }
 
-async fn extract_parts(
+fn extract_parts(
     year: i16,
     slug: &str,
     lang: &str,
@@ -383,7 +378,7 @@ async fn extract_parts(
     update: Option<&UpdateInfo>,
     img_client: &mut ImgClient,
 ) -> Result<(String, String, String)> {
-    let (title, body) = md_to_html(markdown, lang, img_client).await?;
+    let (title, body) = md_to_html(markdown, lang, img_client)?;
     // Split at "more" marker, or try to find a good place if the text is long.
     let end = markdown.find("<!-- more -->").or_else(|| {
         if markdown.len() < 900 {
@@ -445,9 +440,7 @@ async fn extract_parts(
             &teaser,
             |_, target| format!("](/{}/{}.{}#{})", year, slug, lang, target),
         );
-        md_to_html(&teaser, lang, img_client)
-            .await
-            .map(|(_, teaser)| teaser)?
+        md_to_html(&teaser, lang, img_client).map(|(_, teaser)| teaser)?
     } else {
         body.clone()
     };
@@ -457,7 +450,7 @@ async fn extract_parts(
 /// Convert my flavour of markdown to my preferred html.
 ///
 /// Returns the title and full content html markup separately.
-async fn md_to_html(
+fn md_to_html(
     markdown: &str,
     lang: &str,
     img_client: &mut ImgClient,
@@ -495,9 +488,9 @@ async fn md_to_html(
         &Event::End(Tag::Heading(HeadingLevel::H1, None, vec![])),
     )
     .ok_or_else(|| anyhow!("No end of h1"))?;
-    let title = html::collect(title, img_client).await?;
+    let title = html::collect(title, img_client)?;
 
-    let body = html::collect(items.into_iter(), img_client).await?;
+    let body = html::collect(items.into_iter(), img_client)?;
 
     Ok((title, body))
 }
@@ -673,27 +666,21 @@ pub struct ImgClient {
     client: Option<crate::imgcli::ImgClient>,
 }
 impl ImgClient {
-    async fn fetch(
-        &mut self,
-        imgref: &str,
-    ) -> Result<crate::imgcli::ImageInfo> {
+    fn fetch(&mut self, imgref: &str) -> Result<crate::imgcli::ImageInfo> {
         if self.client.is_none() {
-            self.client = Some(
-                crate::imgcli::ImgClient::login(
-                    &self.options.base,
-                    &self.options.user,
-                    &self.options.password,
-                )
-                .await?,
-            );
+            self.client = Some(crate::imgcli::ImgClient::login(
+                &self.options.base,
+                &self.options.user,
+                &self.options.password,
+            )?);
         }
         let cli = self.client.as_ref().unwrap();
         if self.options.make_images_public {
-            cli.make_image_public(imgref).await.map_err(|e| {
+            cli.make_image_public(imgref).map_err(|e| {
                 anyhow!("Failed to make image {:?} public: {}", imgref, e)
             })
         } else {
-            cli.fetch_image(imgref).await.map_err(|e| {
+            cli.fetch_image(imgref).map_err(|e| {
                 anyhow!("Failed to fetch image {:?}: {}", imgref, e)
             })
         }
