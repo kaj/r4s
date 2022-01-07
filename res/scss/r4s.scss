@@ -547,7 +547,7 @@ img.gravatar {
 
 #writecomment form {
     display: grid;
-    grid-template-columns: 1fr 3fr 6fr;
+    grid-template-columns: 1fr 2fr 5fr;
     gap: .2em .6em;
     align-items: first baseline;
 
@@ -557,6 +557,15 @@ img.gravatar {
     label {
         grid-column: 1;
     }
+    p:nth-child(1) {
+        label {
+            grid-column: 1/3;
+        }
+        i.helptext {
+            grid-column: 3/4;
+            text-align: right;
+        }
+    }
     #cmt_md {
         grid-column: 1 / 4;
     }
@@ -565,32 +574,24 @@ img.gravatar {
         grid-column: 1 / 4;
         text-align: right;
     }
-    // help for the comment itself
-    p:nth-child(1) i.helptext {
-        grid-column: 2 / 4;
-        text-align: right;
-    }
-}
-
-@media (max-width: 30em) {
-    #writecomment form {
-        grid-template-columns: 1fr 3fr;
-
-        p:nth-child(1) i.helptext {
-            grid-column: 2/3;
-            margin: 0;
-        }
-        #cmt_md {
-            grid-column: 1/3;
-        }
-        .helptext {
-            grid-column: 1/3;
-            text-align: right;
-            margin: -.2em 0 .6em;
+    @media (max-width: 60em) {
+        i.helptext {
+            line-height: 1.2;
+            margin-bottom: .6em;
             font-size: 87%;
         }
-        p.submit {
-            grid-column: 1/3;
+    }
+    @media (max-width: 29em) {
+        p:nth-child(1) i.helptext {
+            grid-column: 3/4;
+            margin: 0;
+        }
+        input {
+            grid-column: 2/4;
+        }
+        .helptext {
+            grid-column: 1/4;
+            text-align: right;
         }
     }
 }

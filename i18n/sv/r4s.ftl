@@ -48,7 +48,7 @@ c-name-h = Ditt namn (eller pseudonym).
 c-mail = Epost:
 c-mail-h = Publiceras inte, utom som gravatar.
 c-url = URL:
-c-url-h = Din hemsida / presentation.
+c-url-h = Din presentation / hem­sida (om du vill).
 c-post = Posta kommentaren
 c-mod = Din kommentar väntar på manuellt godkännande.  Tack för ditt tålamod.
 
