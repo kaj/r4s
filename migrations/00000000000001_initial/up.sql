@@ -1,5 +1,26 @@
 -- Create the sql schema for blog posts
 
+-- Like diesel_manage_updated_at, but only update if orig_md has changed.
+CREATE OR REPLACE FUNCTION r4s_manage_updated_at(_tbl regclass) RETURNS VOID AS $$
+BEGIN
+    EXECUTE format('CREATE TRIGGER set_updated_at BEFORE UPDATE ON %s
+                    FOR EACH ROW EXECUTE PROCEDURE r4s_set_updated_at()', _tbl);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Like diesel_set_updated_at, but only update if orig_md has changed.
+CREATE OR REPLACE FUNCTION r4s_set_updated_at() RETURNS trigger AS $$
+BEGIN
+    IF (
+        NEW.orig_md IS DISTINCT FROM OLD.orig_md AND
+        NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at
+    ) THEN
+        NEW.updated_at := current_timestamp;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 create function year_of_date(arg timestamp with time zone)
   returns smallint
   language sql immutable strict parallel safe
@@ -21,8 +42,7 @@ create table posts (
 );
 
 create unique index idx_post_year_slug_l on posts (slug, year_of_date(posted_at), lang);
--- TODO: use a specicialized version that only checks orig_md for changes!
-select diesel_manage_updated_at('posts');
+select r4s_manage_updated_at('posts');
 
 create table metapages (
   id serial primary key,
@@ -35,7 +55,7 @@ create table metapages (
 );
 
 create unique index idx_page_slug_l on metapages (slug, lang);
-select diesel_manage_updated_at('metapages');
+select r4s_manage_updated_at('metapages');
 
 create table tags (
   id serial primary key,
