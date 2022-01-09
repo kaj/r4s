@@ -11,7 +11,7 @@ use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{
-    year_of_date, Comment, FullPost, PostComment, Tag, Teaser,
+    year_of_date, Comment, FullPost, PostComment, Slug, Tag, Teaser,
 };
 use crate::schema::assets::dsl as a;
 use crate::schema::metapages::dsl as m;
@@ -296,17 +296,16 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
 
 #[derive(Debug, Clone)]
 struct SlugAndLang {
-    slug: String,
+    slug: Slug,
     lang: MyLang,
 }
-
 impl FromStr for SlugAndLang {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (slug, lang) = s.split_once('.').ok_or(())?;
         // TODO: check "slug rules"
         Ok(SlugAndLang {
-            slug: slug.into(),
+            slug: slug.parse()?,
             lang: lang.parse()?,
         })
     }
@@ -370,7 +369,7 @@ async fn page(
             p::posts
                 .select((p::lang, p::title))
                 .filter(year_of_date(p::posted_at).eq(&year))
-                .filter(p::slug.eq(s1.slug))
+                .filter(p::slug.eq(s1.slug.as_ref()))
                 .filter(p::lang.ne(s1.lang.as_ref()))
                 .load::<(String, String)>(db)
         })
@@ -490,7 +489,7 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         .interact(move |db| {
             m::metapages
                 .select((m::lang, m::title))
-                .filter(m::slug.eq(s1.slug))
+                .filter(m::slug.eq(s1.slug.as_ref()))
                 .filter(m::lang.ne(s1.lang.as_ref()))
                 .load::<(String, String)>(db)
         })
@@ -512,7 +511,7 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         .interact(move |db| {
             m::metapages
                 .select((m::title, m::content))
-                .filter(m::slug.eq(slug.slug))
+                .filter(m::slug.eq(slug.slug.as_ref()))
                 .filter(m::lang.eq(slug.lang.as_ref()))
                 .first::<(String, String)>(db)
                 .optional()

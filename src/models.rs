@@ -2,11 +2,13 @@ use crate::schema::comments::dsl as c;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
+use diesel::backend::Backend;
+use diesel::deserialize::FromSql;
 use diesel::dsl::{not, sql};
 use diesel::helper_types::Select;
 use diesel::pg::{Pg, PgConnection};
 use diesel::prelude::*;
-use diesel::sql_types::{BigInt, Bool, Smallint, Timestamptz, Varchar};
+use diesel::sql_types::{BigInt, Bool, Smallint, Text, Timestamptz, Varchar};
 use fluent::types::FluentType;
 use fluent::FluentValue;
 use i18n_embed::fluent::FluentLanguageLoader;
@@ -14,8 +16,9 @@ use i18n_embed_fl::fl;
 use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
 use intl_memoizer::IntlLangMemoizer;
 use std::borrow::Cow;
+use std::str::FromStr;
 
-type Result<T> = std::result::Result<T, diesel::result::Error>;
+type Result<T, E = diesel::result::Error> = std::result::Result<T, E>;
 
 sql_function! {
     fn year_of_date(arg: Timestamptz) -> Smallint;
@@ -23,6 +26,43 @@ sql_function! {
 
 sql_function! {
     fn has_lang(yearp: Smallint, slugp: Varchar, langp: Varchar) -> Bool;
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, FromSqlRow)]
+pub struct Slug(String);
+impl AsRef<str> for Slug {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+impl FromSql<Text, Pg> for Slug {
+    fn from_sql(
+        bytes: Option<&<Pg as Backend>::RawValue>,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        let s = <String as FromSql<Text, Pg>>::from_sql(bytes)?;
+        Slug::from_str(&s).map_err(|_| format!("Bad slug {:?}", s).into())
+    }
+}
+impl std::fmt::Display for Slug {
+    fn fmt(&self, out: &mut std::fmt::Formatter) -> std::fmt::Result {
+        self.0.fmt(out)
+    }
+}
+impl std::ops::Deref for Slug {
+    type Target = str;
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+impl FromStr for Slug {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') {
+            Ok(Slug(s.to_string()))
+        } else {
+            Err(())
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
@@ -70,7 +110,7 @@ impl FluentType for DateTime {
 pub struct PostLink {
     pub id: i32,
     pub year: i16,
-    pub slug: String,
+    pub slug: Slug,
     pub lang: String,
     pub title: String,
 }
@@ -103,7 +143,7 @@ impl PostLink {
 pub struct Post {
     pub id: i32,
     pub year: i16,
-    pub slug: String,
+    pub slug: Slug,
     pub lang: String,
     pub title: String,
     pub posted_at: DateTime,
@@ -347,13 +387,16 @@ impl std::ops::Deref for Teaser {
 #[derive(Debug, Queryable)]
 pub struct Tag {
     pub id: i32,
-    pub slug: String,
+    pub slug: Slug,
     pub name: String,
 }
 
 impl Tag {
-    pub fn by_slug(slug: &str, db: &PgConnection) -> Result<Option<Tag>> {
-        t::tags.filter(t::slug.eq(slug)).first::<Tag>(db).optional()
+    pub fn by_slug(slug: &Slug, db: &PgConnection) -> Result<Option<Tag>> {
+        t::tags
+            .filter(t::slug.eq(slug.as_ref()))
+            .first::<Tag>(db)
+            .optional()
     }
     pub fn for_post(post_id: i32, db: &PgConnection) -> Result<Vec<Tag>> {
         t::tags
@@ -604,7 +647,7 @@ impl std::ops::Deref for FullPost {
 impl FullPost {
     pub fn load(
         year: i16,
-        slug: &str,
+        slug: &Slug,
         lang: &str,
         db: &PgConnection,
     ) -> Result<Option<FullPost>> {
@@ -625,7 +668,7 @@ impl FullPost {
                 p::use_leaflet,
             ))
             .filter(year_of_date(p::posted_at).eq(&year))
-            .filter(p::slug.eq(slug))
+            .filter(p::slug.eq(slug.as_ref()))
             .filter(p::lang.eq(lang))
             .first::<FullPost>(db)
             .optional()

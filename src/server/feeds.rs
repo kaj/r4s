@@ -1,6 +1,6 @@
 use super::error::{ViewError, ViewResult};
 use super::{fl, wrap, App, MyLang, Result};
-use crate::models::{Tag, Teaser};
+use crate::models::{Slug, Tag, Teaser};
 use atom_syndication::*;
 use std::str::FromStr;
 use tracing::instrument;
@@ -86,7 +86,7 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
                                 .iter()
                                 .map(|tag| {
                                     CategoryBuilder::default()
-                                        .term(tag.slug.clone())
+                                        .term(tag.slug.to_string())
                                         .label(tag.name.clone())
                                         .build()
                                 })
@@ -116,7 +116,7 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
 #[derive(Debug)]
 struct FeedArgs {
     lang: MyLang,
-    tag: Option<String>,
+    tag: Option<Slug>,
 }
 
 impl FromStr for FeedArgs {
@@ -130,7 +130,7 @@ impl FromStr for FeedArgs {
                     tag: if tag.is_empty() {
                         None
                     } else {
-                        Some(tag.to_string())
+                        Some(tag.parse().ok()?)
                     },
                 })
             })
