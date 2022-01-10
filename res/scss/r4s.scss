@@ -262,8 +262,19 @@ p.publine {
 }
 
 main aside {
-    float: right;
-    margin: 0 0 1ex 1ex;
+    margin: 1em auto;
+    width: fit-content;
+    > :last-child {
+        margin-bottom: 0;
+    }
+    @media (min-width: 30em) {
+        float: right;
+        margin: 0 0 1ex 1em;
+        max-width: 55%;
+    }
+    @media (min-width: 50em) {
+        max-width: 40%;
+    }
 }
 table {
     border-collapse: collapse;
