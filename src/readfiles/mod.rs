@@ -145,12 +145,17 @@ impl Args {
             .map(|v| v.parse::<UpdateInfo>().context("update"))
             .transpose()?;
 
-        if let Some(res) = metadata.get("res") {
-            for spec in res.split(',').map(|s| s.trim()) {
-                handle_assets(path, spec, year, db)
-                    .with_context(|| format!("Asset {:?}", spec))?;
-            }
-        }
+        let files = if let Some(res) = metadata.get("res") {
+            res.split(',')
+                .map(|s| s.trim())
+                .map(|s| {
+                    handle_asset(path, s, year, db)
+                        .with_context(|| format!("Asset {:?}", s))
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        } else {
+            Vec::new()
+        };
 
         if let Some((id, old_md)) = p::posts
             .select((p::id, p::orig_md))
@@ -178,6 +183,7 @@ impl Args {
                     lang,
                     contents_md,
                     update.as_ref(),
+                    &files,
                     img_client,
                 )?;
                 if pubdate.is_none() {
@@ -216,6 +222,7 @@ impl Args {
                 lang,
                 contents_md,
                 update.as_ref(),
+                &files,
                 img_client,
             )?;
             if pubdate.is_none() {
@@ -266,7 +273,7 @@ impl Args {
         {
             if old_md != contents || self.force {
                 let (title, body, _) =
-                    md_to_html(contents, lang, img_client)?;
+                    Ctx::new(contents, lang).md_to_html(img_client)?;
                 diesel::update(m::metapages)
                     .set((
                         m::title.eq(&title),
@@ -279,7 +286,8 @@ impl Args {
                 println!("Updated metadata page /{}.{}", slug, lang);
             }
         } else {
-            let (title, body, _) = md_to_html(contents, lang, img_client)?;
+            let (title, body, _) =
+                Ctx::new(contents, lang).md_to_html(img_client)?;
             diesel::insert_into(m::metapages)
                 .values((
                     m::slug.eq(slug),
@@ -320,12 +328,12 @@ impl FromStr for UpdateInfo {
     }
 }
 
-fn handle_assets(
+fn handle_asset(
     path: &Path,
     spec: &str,
     year: i16,
     db: &PgConnection,
-) -> Result<()> {
+) -> Result<(String, String)> {
     let (_all, name, _, mime) =
         regex_captures!(r"^([\w_\.-]+)\s+(\{([\w-]+/[\w-]+)\})$", spec)
             .ok_or_else(|| anyhow!("Bad asset spec"))?;
@@ -364,7 +372,7 @@ fn handle_assets(
             .execute(db)
             .with_context(|| format!("Create asset {}/{}", year, name))?;
     }
-    Ok(())
+    Ok((name.into(), format!("/s/{}/{}", year, name)))
 }
 
 fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
@@ -398,9 +406,12 @@ fn extract_parts(
     lang: &str,
     markdown: &str,
     update: Option<&UpdateInfo>,
+    files: &[(String, String)],
     img_client: &mut ImgClient,
 ) -> Result<(String, String, String, Option<String>, String, bool)> {
-    let (title, body, description) = md_to_html(markdown, lang, img_client)?;
+    let (title, body, description) = Ctx::new(markdown, lang)
+        .with_files(files)
+        .md_to_html(img_client)?;
     // Split at "more" marker, or try to find a good place if the text is long.
     let end = markdown.find("<!-- more -->").or_else(|| {
         let h1end = markdown.find('\n').unwrap_or(0);
@@ -469,7 +480,8 @@ fn extract_parts(
             &teaser,
             |_, target| format!("](/{}/{}.{}#{})", year, slug, lang, target),
         );
-        md_to_html(&teaser, lang, img_client)
+        Ctx::new(&teaser, lang)
+            .md_to_html(img_client)
             .map(|(_, teaser, desc)| (teaser, desc))?
     } else {
         (body.clone(), description)
@@ -483,52 +495,71 @@ fn extract_parts(
     Ok((title, teaser, body, front_image, description, use_leaflet))
 }
 
-/// Convert my flavour of markdown to my preferred html.
-///
-/// Returns the title and full content html markup separately.
-fn md_to_html(
-    markdown: &str,
-    lang: &str,
-    img_client: &mut ImgClient,
-) -> Result<(String, String, String)> {
-    let mut fixlink = |broken_link: BrokenLink| {
-        Some(if let Some(url) = fa_link(&broken_link.reference) {
-            (url.into(), String::new().into())
-        } else {
-            link_ext(&broken_link, markdown, lang)
-                .map(|(url, title)| (url.into(), title.into()))
-                .unwrap_or_else(|| {
-                    (
-                        broken_link.reference.to_string().into(),
-                        String::new().into(),
-                    )
-                })
-        })
-    };
-    let mut items = Parser::new_with_broken_link_callback(
-        markdown,
-        Options::all(),
-        Some(&mut fixlink),
-    )
-    .collect::<Vec<_>>();
+use pulldown_cmark::CowStr;
+struct Ctx<'a> {
+    markdown: &'a str,
+    lang: &'a str,
+    files: &'a [(String, String)],
+}
+impl<'a> Ctx<'a> {
+    fn new(markdown: &'a str, lang: &'a str) -> Self {
+        Ctx {
+            markdown,
+            lang,
+            files: &[],
+        }
+    }
+    fn with_files(mut self, files: &'a [(String, String)]) -> Self {
+        self.files = files;
+        self
+    }
+    fn fixlink(&self, link: BrokenLink) -> Option<(CowStr, CowStr)> {
+        let reff = link.reference.trim_matches('`');
+        self.files
+            .iter()
+            .find(|f| f.0 == reff)
+            .map(|(_name, url)| (url.clone().into(), "".into()))
+            .or_else(|| fa_link(reff).map(|url| (url.into(), "".into())))
+            .or_else(|| {
+                link_ext(&link, self.markdown, self.lang)
+                    .map(|(url, title)| (url.into(), title.into()))
+            })
+            .or_else(|| Some((link.reference.to_string().into(), "".into())))
+    }
 
-    let prefix = items_until(
-        &mut items,
-        &Event::Start(Tag::Heading(HeadingLevel::H1, None, vec![])),
-    )
-    .ok_or_else(|| anyhow!("No start of h1"))?;
-    anyhow::ensure!(prefix.is_empty(), "Unexpected prefix: {:?}", prefix);
+    /// Convert my flavour of markdown to my preferred html.
+    ///
+    /// Returns the title and full content html markup separately.
+    fn md_to_html(
+        &self,
+        img_client: &mut ImgClient,
+    ) -> Result<(String, String, String)> {
+        let mut fixlink = |broken_link: BrokenLink| self.fixlink(broken_link);
+        let mut items = Parser::new_with_broken_link_callback(
+            self.markdown,
+            Options::all(),
+            Some(&mut fixlink),
+        )
+        .collect::<Vec<_>>();
 
-    let title = items_until(
-        &mut items,
-        &Event::End(Tag::Heading(HeadingLevel::H1, None, vec![])),
-    )
-    .ok_or_else(|| anyhow!("No end of h1"))?;
-    let title = html::collect(title, img_client)?;
+        let prefix = items_until(
+            &mut items,
+            &Event::Start(Tag::Heading(HeadingLevel::H1, None, vec![])),
+        )
+        .ok_or_else(|| anyhow!("No start of h1"))?;
+        anyhow::ensure!(prefix.is_empty(), "Unexpected prefix: {:?}", prefix);
 
-    let body = html::collect(items.clone().into_iter(), img_client)?;
-    let summary = summary::collect(items.into_iter())?;
-    Ok((title, body, summary))
+        let title = items_until(
+            &mut items,
+            &Event::End(Tag::Heading(HeadingLevel::H1, None, vec![])),
+        )
+        .ok_or_else(|| anyhow!("No end of h1"))?;
+
+        let title = html::collect(title, img_client)?;
+        let body = html::collect(items.clone().into_iter(), img_client)?;
+        let summary = summary::collect(items.into_iter())?;
+        Ok((title, body, summary))
+    }
 }
 
 fn items_until<'a>(
