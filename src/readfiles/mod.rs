@@ -403,22 +403,27 @@ fn extract_parts(
     let (title, body, description) = md_to_html(markdown, lang, img_client)?;
     // Split at "more" marker, or try to find a good place if the text is long.
     let end = markdown.find("<!-- more -->").or_else(|| {
-        if markdown.len() < 900 {
+        let h1end = markdown.find('\n').unwrap_or(0);
+        if markdown.len() < h1end + 900 {
             None
         } else {
-            let mut end = 700;
+            let mut end = h1end + 700;
             while !markdown.is_char_boundary(end) {
                 end -= 1;
             }
-            let end = markdown[..end].rfind("\n\n").unwrap_or(0);
-            let end = markdown[..end].rfind("\n##").unwrap_or_else(|| {
-                if end > 50 {
-                    end
-                } else {
-                    end + 2 + markdown[end + 2..].find("\n\n").unwrap_or(0)
-                }
-            });
-            Some(end)
+            markdown[h1end..end].find("\n#").map(|e| h1end + e).or_else(
+                || {
+                    let e2 = h1end
+                        + markdown[h1end..end].rfind("\n\n").unwrap_or(0);
+                    if e2 > h1end + 50 {
+                        Some(e2)
+                    } else {
+                        markdown[e2 + 2..]
+                            .find("\n\n")
+                            .map(|extra| e2 + 2 + extra)
+                    }
+                },
+            )
         }
     });
     let (teaser, description) = if let Some(teaser) =
