@@ -15,7 +15,6 @@ syntect = { version = "4.2", default-features = false, features = ["default-fanc
 [dependencies]
 accept-language = "2.0"
 anyhow = "1.0.44"
-async-recursion = "1.0.0"
 atom_syndication = "0.11.0"
 base64 = "0.13.0"
 chrono = "0.4.19"
