@@ -418,7 +418,7 @@ fn extract_parts(
         if markdown.len() < h1end + 900 {
             None
         } else {
-            let mut end = h1end + 700;
+            let mut end = h1end + 600;
             while !markdown.is_char_boundary(end) {
                 end -= 1;
             }
