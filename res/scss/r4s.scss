@@ -173,8 +173,8 @@ aside {
         font-style: italic;
     }
     ul {
-        padding: 0 0 0 1em;
-        margin: 0;
+        padding: 0 0 0 1.4em;
+        margin: 0 0 1em;
     }
 
     &#me_box {
@@ -186,6 +186,9 @@ aside {
 
         h1, ul:first-of-type {
             width: -moz-available;
+        }
+        ul {
+            margin-bottom: 0;
         }
     }
 }
@@ -365,22 +368,38 @@ figure {
 article {
     margin: 5vmin 0;
 
+    &:first-child {
+        margin-top: 0;
+    }
     &:after {
-        $size: 12em;
         clear: both;
         mask: url(static_name("deco1.svg"));
-        background: $purple;
+        background: $dark;
         content: "";
         display: block;
-        height: $size * 640 / 1280;
+        aspect-ratio: 1280 / 640;
         margin: 0 auto;
-        width: $size;
+        width: 40%;
+        height: auto;
     }
     &:nth-child(2n):after {
         mask: url(static_name("deco2.svg"));
+        width: 50%;
     }
     &:nth-child(3n):after {
         mask: url(static_name("deco3.svg"));
+        width: 40%;
+    }
+    &:nth-child(5n - 2):after {
+        mask: url(static_name("deco4.svg"));
+        aspect-ratio: 2654 / 988;
+        width: 36%;
+    }
+    &:nth-child(7n - 6):after {
+        mask: url(static_name("deco5.svg"));
+        width: 50%;
+        aspect-ratio: 2606 / 909;
+        margin: 1em auto;
     }
     .readmore {
         text-align: right;
@@ -485,7 +504,7 @@ button {
     &:focus, &:hover {
         background: linear-gradient(color.mix($paper, black, 97%), $paper 40%, $paper 87%, color.mix($paper, black, 92%));
         border: solid .7px $darker;
-        box-shadow: 0 0 1em $darker;
+        box-shadow: 0 0 1em -.4em $dark;
     }
 }
 
@@ -664,7 +683,7 @@ img.gravatar {
         &:focus, &:hover {
             background: linear-gradient(black, $dark 40%, $dark 80%, black);
             border: solid .7px $purple;
-            box-shadow: 0 0 1em lightgreen;
+            box-shadow: 0 0 1em -0.4em lightgreen;
         }
     }
     textarea, input[type=text], input[type=email], input[type=url] {
