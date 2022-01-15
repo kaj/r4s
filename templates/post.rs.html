@@ -81,6 +81,7 @@
       <ul>@for link in similar {
         <li><a href="@link.url()" hreflang="@link.lang" lang="@link.lang">@Html(&link.title)</a> (@link.year)</li>
         }</ul>
+      <p>@Html(fl!(fluent, "morefrom", year=post.year))</p>
     </aside>
     }
     @:me_box(fluent)

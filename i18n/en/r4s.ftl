@@ -19,6 +19,7 @@ updated-at = Last updated { $date }.
 update-at = Updated { $date }:
 tagged = Tagged
 related = Related posts
+morefrom = More from <a href="/{$year}/en">{$year}</a>.
 
 tagshead = Tags on Rasmus​.krats​.se
 taggedhead = Tagged { $tag } on Rasmus​.krats​.se
