@@ -67,7 +67,7 @@ impl FromStr for MyLang {
         match value {
             "en" => Ok(MyLang::En),
             "sv" => Ok(MyLang::Sv),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }
@@ -110,7 +110,7 @@ impl FromStr for AcceptLang {
                         .unwrap_or(lang)
                 })
                 .find_map(|s| MyLang::from_str(&s).ok())
-                .unwrap_or_default()
+                .unwrap_or_default(),
         ))
     }
 }
