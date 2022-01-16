@@ -12,7 +12,7 @@ use std::str::FromStr;
 #[folder = "i18n/"]
 struct Localizations;
 
-static MYLANGS: [&str; 2] = ["en", "sv"];
+static MYLANGS: [MyLang; 2] = [MyLang::En, MyLang::Sv];
 
 #[tracing::instrument]
 pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
@@ -33,12 +33,15 @@ pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
 
 /// Either "sv" or "en".
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MyLang(String);
+pub enum MyLang {
+    En,
+    Sv,
+}
 
 impl MyLang {
     #[tracing::instrument]
     pub fn fluent(&self) -> Result<FluentLanguageLoader> {
-        load(&self.0)
+        load(self.as_ref())
     }
     pub fn other(
         &self,
@@ -46,41 +49,44 @@ impl MyLang {
     ) -> Vec<String> {
         MYLANGS
             .iter()
-            .filter(|&lang| lang != &self.0)
+            .filter(|&lang| lang != self)
             .map(|lang| {
-                let fluent = load(lang).unwrap();
+                let fluent = lang.fluent().unwrap();
                 let name = fl!(fluent, "lang-name");
-                fmt(fluent, lang, &name)
+                fmt(fluent, lang.as_ref(), &name)
             })
             .collect()
     }
     pub fn collator(&self) -> Result<UCollator> {
-        UCollator::try_from(self.0.as_str()).ise()
+        UCollator::try_from(self.as_ref()).ise()
     }
 }
 impl FromStr for MyLang {
     type Err = ();
     fn from_str(value: &str) -> Result<Self, ()> {
-        MYLANGS
-            .iter()
-            .find(|&l| *l == value)
-            .map(|&l| MyLang(l.into()))
-            .ok_or(())
+        match value {
+            "en" => Ok(MyLang::En),
+            "sv" => Ok(MyLang::Sv),
+            _ => Err(())
+        }
     }
 }
 impl Default for MyLang {
     fn default() -> Self {
-        MyLang(MYLANGS[0].into())
+        MyLang::En
     }
 }
 impl AsRef<str> for MyLang {
     fn as_ref(&self) -> &str {
-        &self.0
+        match self {
+            MyLang::En => "en",
+            MyLang::Sv => "sv",
+        }
     }
 }
 impl Display for MyLang {
     fn fmt(&self, out: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(out)
+        self.as_ref().fmt(out)
     }
 }
 
@@ -95,7 +101,7 @@ impl AcceptLang {
 impl FromStr for AcceptLang {
     type Err = ();
     fn from_str(value: &str) -> Result<Self, ()> {
-        Ok(AcceptLang(MyLang(
+        Ok(AcceptLang(
             accept_language::parse(value)
                 .drain(..)
                 .map(|lang| {
@@ -103,9 +109,9 @@ impl FromStr for AcceptLang {
                         .map(|(l, _r)| l.to_string())
                         .unwrap_or(lang)
                 })
-                .find(|lang| MYLANGS.iter().any(|l| l == lang))
-                .unwrap_or_else(|| MYLANGS[0].into()),
-        )))
+                .find_map(|s| MyLang::from_str(&s).ok())
+                .unwrap_or_default()
+        ))
     }
 }
 
@@ -116,7 +122,7 @@ fn accept_1() {
             .parse::<AcceptLang>()
             .unwrap()
             .lang(),
-        "sv".parse().unwrap(),
+        MyLang::Sv,
     );
 }
 #[test]
@@ -126,7 +132,7 @@ fn accept_2() {
             .parse::<AcceptLang>()
             .unwrap()
             .lang(),
-        "en".parse().unwrap(),
+        MyLang::En,
     );
 }
 #[test]
