@@ -32,7 +32,7 @@ create table posts (
   updated_at timestamp with time zone not null default now(),
   slug varchar not null,
   title varchar not null,
-  lang varchar(2) not null, -- TODO enum?
+  lang varchar(2) not null,
   content text not null, -- The prerendered html content of the post.
   teaser text not null, -- The same start of content, may be == content if short.
   front_image varchar, -- image url.
@@ -49,7 +49,7 @@ create table metapages (
   updated_at timestamp with time zone not null default now(),
   slug varchar not null,
   title varchar not null,
-  lang varchar(2) not null, -- TODO enum?
+  lang varchar(2) not null,
   content text not null,
   orig_md text not null
 );
