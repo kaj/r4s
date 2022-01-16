@@ -303,7 +303,6 @@ impl FromStr for SlugAndLang {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (slug, lang) = s.split_once('.').ok_or(())?;
-        // TODO: check "slug rules"
         Ok(SlugAndLang {
             slug: slug.parse()?,
             lang: lang.parse()?,
