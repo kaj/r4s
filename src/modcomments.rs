@@ -74,11 +74,11 @@ impl Args {
                     "How about this comment?",
                     &["ok", "spam", "quit"],
                 )? {
-                    0 => {
+                    "ok" => {
                         println!("Should allow this");
                         do_moderate(c.id(), false, &db)?;
                     }
-                    1 => {
+                    "spam" => {
                         println!("Should disallow this");
                         do_moderate(c.id(), true, &db)?;
                     }
@@ -138,7 +138,7 @@ fn do_moderate(comment: i32, spam: bool, db: &PgConnection) -> Result<()> {
     Ok(())
 }
 
-fn prompt(prompt: &str, alternatives: &[&str]) -> Result<usize> {
+fn prompt<'v>(prompt: &str, alternatives: &[&'v str]) -> Result<&'v str> {
     let input = stdin();
     let mut buf = String::new();
     loop {
@@ -148,9 +148,9 @@ fn prompt(prompt: &str, alternatives: &[&str]) -> Result<usize> {
         ensure!(input.read_line(&mut buf)? > 0, "Expected some input");
         let buf = buf.trim();
         if !buf.is_empty() {
-            for (i, alt) in alternatives.iter().enumerate() {
+            for alt in alternatives.iter() {
                 if alt.starts_with(buf) {
-                    return Ok(i);
+                    return Ok(alt);
                 }
             }
         }
