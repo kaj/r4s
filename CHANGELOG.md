@@ -10,6 +10,7 @@ project more or less adheres to
 
 * Comment poster url validation, avoid empty non-null urls.
   Also, actually link to the url when given.
+* Add --silent --list arguments to moderate-comments, for background check.
 
 
 ## Release 0.2.0
