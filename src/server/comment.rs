@@ -6,6 +6,7 @@ use crate::schema::posts::dsl as p;
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use ipnetwork::IpNetwork;
+use reqwest::Url;
 use serde::Deserialize;
 use std::net::{IpAddr, SocketAddr};
 use tracing::instrument;
@@ -50,7 +51,18 @@ async fn postcomment(
 
     let name = form.name.clone();
     let email = form.email.clone();
-    let (public, spam) = db
+    let url = form
+        .url
+        .as_ref()
+        .filter(|u| !u.trim().is_empty())
+        .map(|u| {
+            Url::parse(u).map_err(|e| {
+                tracing::info!("Invalid url {:?}: {}", u, e);
+                ViewError::BadRequest("Bad url".into())
+            })
+        })
+        .transpose()?;
+    let counts = db
         .interact(move |db| {
             c::comments
                 .select(((c::is_public, c::is_spam), sql("count(*)")))
@@ -59,20 +71,18 @@ async fn postcomment(
                 .filter(c::email.eq(email))
                 .load::<((bool, bool), i64)>(db)
         })
-        .await?
-        .map(|raw| {
-            let mut public = 0;
-            let mut spam = 0;
-            for ((is_public, is_spam), count) in raw {
-                if is_spam {
-                    spam += count;
-                } else if is_public {
-                    public += count;
-                }
-            }
-            (public, spam)
-        })?;
+        .await??;
+    let mut public = 0;
+    let mut spam = 0;
+    for ((is_public, is_spam), count) in counts {
+        if is_spam {
+            spam += count;
+        } else if is_public {
+            public += count;
+        }
+    }
     if spam > 0 {
+        tracing::info!("There are {} simliar spam posts.  Reject.", spam);
         return Err(ViewError::BadRequest("This seems like spam".into()));
     }
     let public = public > 0;
@@ -85,7 +95,7 @@ async fn postcomment(
                     c::content.eq(form.html()),
                     c::name.eq(&form.name),
                     c::email.eq(&form.email),
-                    form.url.as_ref().map(|u| c::url.eq(u)),
+                    url.as_ref().map(|u| c::url.eq(u.as_str())),
                     c::from_host.eq(IpNetwork::from(ip)),
                     c::raw_md.eq(&form.comment),
                     c::is_public.eq(public),

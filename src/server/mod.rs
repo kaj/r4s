@@ -34,6 +34,8 @@ use warp::path::Tail;
 use warp::reply::Response;
 use warp::{self, header, redirect, Filter, Reply};
 
+pub use templates::ToHtml;
+
 type Result<T, E = ViewError> = std::result::Result<T, E>;
 
 #[derive(StructOpt)]

@@ -47,7 +47,7 @@
           <hr/>
           <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
           @Html(&c.content)
-          <p class="signed">@fl!(fluent, "signed") @c.name<br>
+          <p class="signed">@fl!(fluent, "signed") @c.link_name()<br>
             @fl!(fluent, "date", date = (&c.posted_at))</p>
         </section>
         }

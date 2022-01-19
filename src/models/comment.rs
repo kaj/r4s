@@ -1,6 +1,7 @@
 use super::{year_of_date, DateTime, PostLink, Result};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
+use crate::server::ToHtml;
 use diesel::dsl::sql;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -47,6 +48,27 @@ impl Comment {
             .set_rating(Some(Rating::Pg))
             .image_url()
             .to_string()
+    }
+    /// Get a thing that implemnts ToHtml displaying the poster
+    /// name of this comment, linked to the url if there is an url.
+    pub fn link_name(&self) -> LinkName {
+        LinkName(self)
+    }
+}
+
+pub struct LinkName<'a>(&'a Comment);
+
+impl<'a> ToHtml for LinkName<'a> {
+    fn to_html(&self, out: &mut dyn std::io::Write) -> std::io::Result<()> {
+        if let Some(url) = &self.0.url {
+            write!(out, "<a href='")?;
+            url.to_html(out)?;
+            write!(out, "' rel='author noopener nofollow'>")?;
+            self.0.name.to_html(out)?;
+            write!(out, "</a>")
+        } else {
+            self.0.name.to_html(out)
+        }
     }
 }
 

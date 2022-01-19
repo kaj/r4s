@@ -6,6 +6,12 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* Comment poster url validation, avoid empty non-null urls.
+  Also, actually link to the url when given.
+
+
 ## Release 0.2.0
 
 Initial release, Sunday 2022-01-16.
