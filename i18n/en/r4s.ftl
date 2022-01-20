@@ -6,9 +6,9 @@ lang-name = This page in English
 in-lang = In English: {$title}
 
 cc-by-kaj = This work of
-    <a href="/rkaj.en" xmlns:cc="https://creativecommons.org/ns#" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>
+    <a href="/rkaj.en" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>
     is licensed under the
-    <a rel="license" href="https://creativecommons.org/licenses/by/3.0/">Creative
+    <a rel="license cc:license" href="https://creativecommons.org/licenses/by/3.0/">Creative
     Commons Attribution 3.0 license</a>.
 by-prog = Code:
     <a href="https://github.com/kaj/{$proj}">{$proj}</a> {$ver}

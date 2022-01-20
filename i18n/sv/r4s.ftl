@@ -6,9 +6,9 @@ lang-name = Denna sida på svenska
 in-lang = På svenska: {$title}
 
 cc-by-kaj = Detta verk av
-    <a href="/rkaj.sv" xmlns:cc="https://creativecommons.org/ns#" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>
+    <a href="/rkaj.sv" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>
     är licensierat under en
-    <a rel="license" href="https://creativecommons.org/licenses/by/3.0/">Creative
+    <a rel="license cc:license" href="https://creativecommons.org/licenses/by/3.0/">Creative
     Commons Erkännande 3.0 licens</a>.
 by-prog = Kod:
     <a href="https://github.com/kaj/{$proj}">{$proj}</a> {$ver}

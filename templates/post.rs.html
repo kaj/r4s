@@ -5,7 +5,7 @@
 @(fluent: &FluentLanguageLoader, canonical_url: &str, post: &FullPost, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
-<html lang="@post.lang">
+<html lang="@post.lang" xmlns:cc="https://creativecommons.org/ns#">
   <head>
     <title>@post.title — @fl!(fluent, "sitename")</title>
     @:head_canon()

@@ -4,7 +4,7 @@
 @(fluent: &FluentLanguageLoader, title: &str, other_langs: &[String], content: Content)
 
 <!doctype html>
-<html lang="@fluent.current_language()">
+<html lang="@fluent.current_language()" xmlns:cc="https://creativecommons.org/ns#">
   <head>
     <title>@title — @fl!(fluent, "sitename")</title>
     @:head_canon()
