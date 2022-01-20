@@ -9,7 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Comment poster url validation, avoid empty non-null urls.
-  Also, actually link to the url when given.
+  Also, actually link to the url when given.  And log some more.
 * Add --silent --list arguments to moderate-comments, for background check.
 
 

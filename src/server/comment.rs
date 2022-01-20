@@ -105,6 +105,7 @@ async fn postcomment(
         })
         .await??;
 
+    tracing::info!("Comment accepted.  Public? {}", public);
     my_found(&post, public, id)
 }
 
