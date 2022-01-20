@@ -29,9 +29,9 @@
         <address>@fl!(fluent, "signed")
           <a href="/rkaj.@post.lang" rel="author">Rasmus Kaj</a></address>
         <menu class="social">
-          <li><a href="https://twitter.com/share?text=@post.title&url=@canonical_url&via=rasmus_kaj"
+          <li><a href="@tweet_url(&post.title, canonical_url)"
                  class="twitter" rel="noopener" target="_blank">@fl!(fluent, "tweet")</a></li>
-          <li><a href="https://www.facebook.com/sharer/sharer.php?u=@canonical_url&display=popup"
+          <li><a href="@fb_share_url(canonical_url)"
                  class="fb" rel="noopener" target="_blank">@fl!(fluent, "fbshare")</a></li>
         </menu>
       </footer>
