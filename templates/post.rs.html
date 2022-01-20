@@ -43,7 +43,7 @@
         </div>
         }
         @for c in comments {
-        <section id="@c.html_id()">
+        <section id="@c.html_id()" aria-label='@fl!(fluent, "c-by", name=c.name.as_str())'>
           <hr/>
           <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
           @Html(&c.content)

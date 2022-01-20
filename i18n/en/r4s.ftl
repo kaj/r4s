@@ -53,6 +53,7 @@ c-url = URL:
 c-url-h = Your presentation / homepage (if any).
 c-post = Post the comment
 c-mod = Your comment awaits manual moderation.  Please be patient.
+c-by = Comment by { $name }
 
 read-more-comments = Read whole <q>{ $title }</q> with { $n } comments.
 read-more = Read whole <q>{ $title }</q>.

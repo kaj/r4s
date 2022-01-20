@@ -52,6 +52,7 @@ c-url = URL:
 c-url-h = Din presentation / hem­sida (om du vill).
 c-post = Posta kommentaren
 c-mod = Din kommentar väntar på manuellt godkännande.  Tack för ditt tålamod.
+c-by = Kommentar från { $name }
 
 read-more-comments = Läs hela <q>{ $title }</q> med { $n } kommentarer.
 read-more = Läs hela <q>{ $title }</q>.
