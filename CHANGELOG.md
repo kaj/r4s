@@ -11,6 +11,8 @@ project more or less adheres to
 * Comment poster url validation, avoid empty non-null urls.
   Also, actually link to the url when given.  And log some more.
 * Add --silent --list arguments to moderate-comments, for background check.
+* Proper parameter handling for twitter and fb urls.
+* Try to label the sections that are comments.
 
 
 ## Release 0.2.0
