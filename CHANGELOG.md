@@ -6,7 +6,7 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.2.2
 
 * Comment poster url validation, avoid empty non-null urls.
   Also, actually link to the url when given.  And log some more.
