@@ -43,7 +43,7 @@ impl Reply for ViewError {
                 "Not found",
                 "The page you tried to view does not exist. \
                  If you typed the url manually, maybe you did not type it \
-                 correcly – or maybe you corrected a spelling error of mine?",
+                 correcly — or maybe you corrected a spelling error of mine?",
             ),
             ViewError::BadRequest(msg) => {
                 error_response(StatusCode::BAD_REQUEST, &msg, "Sorry.")

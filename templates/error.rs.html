@@ -5,7 +5,7 @@
 @(fluent: &FluentLanguageLoader, code: StatusCode, message: &str, detail: &str)
 
 <!doctype html>
-<html lang="sv" class="error" xmlns:cc="https://creativecommons.org/ns#">
+<html lang="@fluent.current_language()" class="error" xmlns:cc="https://creativecommons.org/ns#">
   <head>
     <title>Error @code.as_u16(): @code.canonical_reason().unwrap_or("error")</title>
     @:head_canon()
