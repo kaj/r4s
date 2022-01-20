@@ -13,6 +13,7 @@ project more or less adheres to
 * Add --silent --list arguments to moderate-comments, for background check.
 * Proper parameter handling for twitter and fb urls.
 * Try to label the sections that are comments.
+* Implemented fallback for some language-less urls.
 
 
 ## Release 0.2.0

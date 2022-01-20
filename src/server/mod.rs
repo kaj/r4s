@@ -143,6 +143,14 @@ impl Args {
                 .then(metapage)
                 .map(wrap)
                 .boxed())
+            .or(param()
+                .and(end())
+                .and(lang_filt)
+                .and(goh())
+                .and(s())
+                .then(metafallback)
+                .map(wrap)
+                .boxed())
             .or(feeds::routes(s()));
 
         warp::serve(routes.recover(error::for_rejection).boxed())
@@ -523,6 +531,41 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
     Ok(Builder::new()
         .html(|o| templates::page(o, &fluent, &title, &content, &other_langs))
         .unwrap())
+}
+
+#[instrument]
+async fn metafallback(
+    slug: String,
+    lang: MyLang,
+    app: App,
+) -> Result<impl Reply> {
+    if slug == "about" {
+        Ok(found("/site.en"))
+    } else if slug == "RasmusKaj" {
+        Ok(found("/rkaj.en"))
+    } else {
+        let s1 = slug.clone();
+        let existing_langs = app
+            .db()
+            .await?
+            .interact(move |db| {
+                m::metapages
+                    .select(m::lang)
+                    .filter(m::slug.eq(s1))
+                    .load::<String>(db)
+            })
+            .await??;
+
+        if existing_langs.is_empty() {
+            Err(ViewError::NotFound)
+        } else {
+            let lang = existing_langs
+                .iter()
+                .find(|l| lang.as_ref() == *l)
+                .unwrap_or(&existing_langs[0]);
+            Ok(found(&format!("/{}.{}", slug, lang)))
+        }
+    }
 }
 
 fn found(url: &str) -> impl Reply {
