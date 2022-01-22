@@ -94,10 +94,7 @@ pub fn collect<'a>(
                     format!("Bad image ref: {:?}", imgref.as_ref())
                 })?;
 
-                if classes
-                    .split_ascii_whitespace()
-                    .any(|w| w == "gallery")
-                {
+                if classes.split_ascii_whitespace().any(|w| w == "gallery") {
                     if !remove_end(&mut result, "</div><!--gallery-->\n") {
                         result.push_str("<div class='gallery'>");
                     }
@@ -147,10 +144,7 @@ pub fn collect<'a>(
                     )
                     .unwrap();
                 }
-                if classes
-                    .split_ascii_whitespace()
-                    .any(|w| w == "gallery")
-                {
+                if classes.split_ascii_whitespace().any(|w| w == "gallery") {
                     result.push_str("</div><!--gallery-->\n");
                 }
                 result.push_str("<p><!--no-p-->");
@@ -223,9 +217,18 @@ pub fn collect<'a>(
             Event::SoftBreak => result.push('\n'),
             Event::Html(code) => result.push_str(&code),
             Event::Code(code) => {
-                result.push_str("<code>");
-                escape_html(&mut result, &code)?;
-                result.push_str("</code>");
+                if code.starts_with('[') && code.ends_with(']') {
+                    result.push_str("<code class='key'>");
+                    escape_html(
+                        &mut result,
+                        code.trim_start_matches('[').trim_end_matches(']'),
+                    )?;
+                    result.push_str("</code>");
+                } else {
+                    result.push_str("<code>");
+                    escape_html(&mut result, &code)?;
+                    result.push_str("</code>");
+                }
             }
             Event::HardBreak => {
                 result.push_str("<br/>\n");

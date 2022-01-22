@@ -256,9 +256,13 @@ blockquote {
     }
 }
 
-
-
-
+code.key {
+  background: wheat;
+  padding: .2em .5em;
+  margin: -.2em .1em;
+  border-radius: .4em;
+  box-shadow: .1em .1em $dark;
+}
 
 p.publine {
     font-family: Cocanut;
@@ -692,6 +696,10 @@ img.gravatar {
                 text-shadow: .04em 0 0 $darker, -.04em 0 0 $darker;
             }
         }
+    }
+    code.key {
+        background: color.mix($dark, brown);
+        box-shadow: .1em .1em .05em wheat;
     }
 
     menu.social a,
