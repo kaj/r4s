@@ -6,6 +6,11 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* Don't hardcode img.krats.se, I use local image server for drafting.
+
+
 ## Release 0.2.2
 
 * Comment poster url validation, avoid empty non-null urls.

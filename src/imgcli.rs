@@ -21,8 +21,7 @@ impl ImageInfo {
 
     pub fn markup(&self, alt: &str) -> String {
         format!(
-            "<a href='https://img.krats.se{}'><img src='https://img.krats.se{}' \
-             alt='{}' width='{}' height='{}'></a>",
+            "<a href='{}'><img src='{}' alt='{}' width='{}' height='{}'></a>",
             self.medium.url,
             self.small.url,
             alt,
@@ -33,12 +32,16 @@ impl ImageInfo {
 
     pub fn markup_large(&self, alt: &str) -> String {
         format!(
-            "<img src='https://img.krats.se{}' alt='{}' width='{}' height='{}'>",
-            self.medium.url,
-            alt,
-            self.medium.width,
-            self.medium.height,
+            "<img src='{}' alt='{}' width='{}' height='{}'>",
+            self.medium.url, alt, self.medium.width, self.medium.height,
         )
+    }
+    fn relative(self, base: &str) -> Self {
+        ImageInfo {
+            small: self.small.relative(base),
+            medium: self.medium.relative(base),
+            public: self.public,
+        }
     }
 }
 
@@ -81,7 +84,7 @@ impl ImgClient {
             .header("authorization", &self.key)
             .query(&[("path", imgref)])
             .send()?;
-        Ok(check(response)?.json()?)
+        Ok(check(response)?.json::<ImageInfo>()?.relative(&self.base))
     }
     pub fn make_image_public(&self, imgref: &str) -> Result<ImageInfo> {
         let response = Client::new()
@@ -89,7 +92,7 @@ impl ImgClient {
             .header("authorization", &self.key)
             .json(&BTreeMap::from([("path", imgref)]))
             .send()?;
-        Ok(check(response)?.json()?)
+        Ok(check(response)?.json::<ImageInfo>()?.relative(&self.base))
     }
 }
 fn check(response: Response) -> Result<Response> {
@@ -107,6 +110,13 @@ struct ImgLink {
     url: String,
     width: u32,
     height: u32,
+}
+
+impl ImgLink {
+    fn relative(mut self, base: &str) -> Self {
+        self.url = format!("{}{}", base, self.url);
+        self
+    }
 }
 
 #[derive(Debug, Deserialize)]
