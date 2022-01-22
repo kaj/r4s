@@ -93,13 +93,23 @@ pub fn collect<'a>(
                 .with_context(|| {
                     format!("Bad image ref: {:?}", imgref.as_ref())
                 })?;
+
+                if classes
+                    .split_ascii_whitespace()
+                    .any(|w| w == "gallery")
+                {
+                    if !remove_end(&mut result, "</div><!--gallery-->\n") {
+                        result.push_str("<div class='gallery'>");
+                    }
+                }
+
                 if imgref == "cover" {
                     let url = inner.parse::<FaRef>().unwrap().cover();
                     write!(
                         &mut result,
                         "<figure class='fa-cover {}'>\
                          <a href='{url}'><img alt='Omslagsbild {}' src='{url}' width='150'/></a>\
-                         <figcaption>{} {} {}</figcaption></figure>\n<p><!--no-p-->",
+                         <figcaption>{} {} {}</figcaption></figure>\n",
                         classes, inner, inner, caption, title,
                         url = url,
                     )
@@ -126,7 +136,7 @@ pub fn collect<'a>(
                     write!(
                         &mut result,
                         "<figure class='{}{}'{} data-type='{:?}'>{}\
-                     <figcaption>{} {}</figcaption></figure>\n<p><!--no-p-->",
+                         <figcaption>{} {}</figcaption></figure>\n",
                         classes,
                         class2,
                         attrs,
@@ -137,6 +147,13 @@ pub fn collect<'a>(
                     )
                     .unwrap();
                 }
+                if classes
+                    .split_ascii_whitespace()
+                    .any(|w| w == "gallery")
+                {
+                    result.push_str("</div><!--gallery-->\n");
+                }
+                result.push_str("<p><!--no-p-->");
             }
             Event::End(Tag::Paragraph)
                 if result.ends_with("<p><!--no-p-->") =>

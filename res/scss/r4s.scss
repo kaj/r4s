@@ -349,6 +349,26 @@ figure {
         height: auto;
     }
 }
+div.gallery {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 1em;
+    margin: 1em 0;
+
+    figure.gallery {
+        flex: 13em 1 1;
+        margin: 0;
+        width: 13em;
+        &.fa-cover {
+            flex: 7.2em 1 1;
+            width: 7.2em;
+        }
+        &.portrait {
+            flex: 9em .3 1;
+            width: 9em;
+        }
+    }
+}
 
 .wrapiframe {
     width: -moz-available;

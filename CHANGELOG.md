@@ -9,6 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Don't hardcode img.krats.se, I use local image server for drafting.
+* Put a div around .gallery images, and use flex layout for them.
 
 
 ## Release 0.2.2
