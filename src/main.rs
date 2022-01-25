@@ -56,7 +56,7 @@ impl R4s {
             R4s::List(args) => args.run(),
             R4s::ModerateComments(args) => args.run(),
             R4s::ReadFiles(args) => args.run(),
-            R4s::ReadComments(args) => run_async(args.run()),
+            R4s::ReadComments(args) => args.run(),
             R4s::RunServer(args) => run_async(args.run()),
         }
     }

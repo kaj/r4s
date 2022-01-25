@@ -6,6 +6,11 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* read-comments is no longer async (there was no await in it).
+
+
 ## Release 0.2.4
 
 * Don't hardcode img.krats.se, I use local image server for drafting.

@@ -22,7 +22,7 @@ pub struct Args {
 }
 
 impl Args {
-    pub async fn run(self) -> Result<()> {
+    pub fn run(self) -> Result<()> {
         let db = self.db.get_db()?;
         let file = File::open(&self.path)
             .with_context(|| format!("Failed to read {:?}", self.path))?;
