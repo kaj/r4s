@@ -102,11 +102,11 @@ pub fn collect<'a>(
 
                 if imgref == "cover" {
                     let url = inner.parse::<FaRef>().unwrap().cover();
-                    write!(
+                    writeln!(
                         &mut result,
                         "<figure class='fa-cover {}'>\
                          <a href='{url}'><img alt='Omslagsbild {}' src='{url}' width='150'/></a>\
-                         <figcaption>{} {} {}</figcaption></figure>\n",
+                         <figcaption>{} {} {}</figcaption></figure>",
                         classes, inner, inner, caption, title,
                         url = url,
                     )
@@ -130,10 +130,10 @@ pub fn collect<'a>(
                     } else {
                         ""
                     };
-                    write!(
+                    writeln!(
                         &mut result,
                         "<figure class='{}{}'{} data-type='{:?}'>{}\
-                         <figcaption>{} {}</figcaption></figure>\n",
+                         <figcaption>{} {}</figcaption></figure>",
                         classes,
                         class2,
                         attrs,
