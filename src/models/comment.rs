@@ -54,6 +54,12 @@ impl Comment {
     pub fn link_name(&self) -> LinkName {
         LinkName(self)
     }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn posted_at(&self) -> &DateTime {
+        &self.posted_at
+    }
 }
 
 pub struct LinkName<'a>(&'a Comment);
@@ -119,28 +125,19 @@ impl PostComment {
             .load(db)
     }
 
-    pub fn c(&self) -> &Comment {
-        &self.comment
-    }
     pub fn p(&self) -> &PostLink {
         &self.post
     }
     pub fn url(&self) -> String {
         format!("{}#{}", self.post.url(), self.comment.html_id())
     }
-    pub fn gravatar(&self) -> String {
-        self.comment.gravatar()
-    }
-    pub fn name(&self) -> &str {
-        &self.comment.name
-    }
-    pub fn posted_at(&self) -> &DateTime {
-        &self.comment.posted_at
-    }
     pub fn post_title(&self) -> &str {
         &self.post.title
     }
     pub fn text_start(&self) -> String {
+        // Note: content here is the raw markdown.
+        // maybe it should be "rendered" here, and if so, the short version
+        // should probably be pre-baked, like the teaser for a post.
         let text = &self.comment.content;
         if text.len() < 100 {
             text.to_string()
@@ -152,5 +149,11 @@ impl PostComment {
             let end = text[..end].rfind(' ').unwrap_or(end);
             format!("{} …", &text[..end])
         }
+    }
+}
+impl std::ops::Deref for PostComment {
+    type Target = Comment;
+    fn deref(&self) -> &Comment {
+        &self.comment
     }
 }

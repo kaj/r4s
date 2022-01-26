@@ -56,18 +56,17 @@ impl Args {
         }
 
         for comment in PostComment::mod_queue(&db)? {
-            let c = comment.c();
             let p = comment.p();
             println!(
                 "{} by {:?} <{}> {:?}\nOn {} ({})",
-                Ago(c.posted_at.raw()),
-                c.name,
-                c.email,
-                c.url,
+                Ago(comment.posted_at.raw()),
+                comment.name,
+                comment.email,
+                comment.url,
                 p.title,
                 p.year
             );
-            showlimited(&c.content);
+            showlimited(&comment.content);
 
             if !self.list {
                 match prompt(
@@ -76,11 +75,11 @@ impl Args {
                 )? {
                     "ok" => {
                         println!("Should allow this");
-                        do_moderate(c.id(), false, &db)?;
+                        do_moderate(comment.id(), false, &db)?;
                     }
                     "spam" => {
                         println!("Should disallow this");
-                        do_moderate(c.id(), true, &db)?;
+                        do_moderate(comment.id(), true, &db)?;
                     }
                     _ => {
                         println!("Giving up for now");
