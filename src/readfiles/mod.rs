@@ -639,9 +639,10 @@ fn link_ext(
     lang: &str,
 ) -> Option<(String, String)> {
     let (_all, text, kind, _, attr_0, _, attrs) = regex_captures!(
-        r"^\[(.*)\]\[(\w+)(:(\w+))?([,\s]+(.*))?\]$",
+        r"^\[(.*)\]\[(\w+)(:(\w+))?([,\s]+(.*))?\]$"s,
         &source[link.span.clone()],
     )?;
+    let text = &regex_replace_all!(r"\s+", text, |_| " ");
     match kind {
         "personname" | "wp" => {
             let lang = if attr_0.is_empty() { lang } else { attr_0 };

@@ -9,6 +9,8 @@ project more or less adheres to
 ## Unreleased
 
 * read-comments is no longer async (there was no await in it).
+* read-files now handles keyword links (e.g. [term][wp]) correctly
+  when the term is written across a line-break.
 
 
 ## Release 0.2.4
