@@ -8,6 +8,8 @@ project more or less adheres to
 
 ## Unreleased
 
+* Support qr-code blocks.  Text from the block is made into a qr-code,
+  encoded as a png image in a data: url.
 * read-comments is no longer async (there was no await in it).
 * read-files now handles keyword links (e.g. [term][wp]) correctly
   when the term is written across a line-break.

@@ -68,7 +68,7 @@ pub fn collect<'a>(
                         x => bail!("Unexpeted in code: {:?}", x),
                     }
                 }
-                handler.end();
+                handler.end()?;
             }
             Event::End(Tag::CodeBlock(_blocktype)) => {
                 unreachable!();

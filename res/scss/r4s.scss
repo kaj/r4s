@@ -348,6 +348,15 @@ figure {
     &.fa-cover {
         width: 8em;
     }
+    &.qr-code {
+        width: 10em;
+        img {
+            image-rendering: crisp-edges;
+            padding: 4%;
+            background: white;
+            border: .5px solid $dark;
+        }
+    }
     > a, > a > img, > img {
         width: -moz-available;
         height: auto;
