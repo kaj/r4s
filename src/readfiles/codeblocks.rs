@@ -20,12 +20,17 @@ impl<'a> DynBlock<'a> {
         out: &'a mut String,
         lang: Option<&'a str>,
     ) -> Result<DynBlock<'a>> {
-        match lang.and_then(|l| l.strip_prefix('!')) {
-            Some("leaflet") => {
+        match lang.and_then(|l| {
+            l.strip_prefix('!')
+                .map(|l| l.split_once(' ').unwrap_or((l, "")))
+        }) {
+            Some(("leaflet", "")) => {
                 Ok(DynBlock::Leaflet(LeafletHandler::open(out)))
             }
-            Some("qr") => Ok(DynBlock::Qr(QrHandler::open(out))),
-            Some(bang) => {
+            Some(("qr", caption)) => {
+                Ok(DynBlock::Qr(QrHandler::open(out, caption)))
+            }
+            Some((bang, _)) => {
                 bail!("Magic for !{:?} not implemented", bang);
             }
             None => Ok(DynBlock::Code(CodeBlock::open(out, lang)?)),
@@ -84,13 +89,15 @@ impl<'a> BlockHandler for LeafletHandler<'a> {
 
 pub struct QrHandler<'a> {
     out: &'a mut String,
+    caption: &'a str,
     data: String,
 }
 
 impl<'a> QrHandler<'a> {
-    fn open(out: &'a mut String) -> Self {
+    fn open(out: &'a mut String, caption: &'a str) -> Self {
         QrHandler {
             out,
+            caption,
             data: String::new(),
         }
     }
@@ -129,9 +136,14 @@ impl<'a> BlockHandler for QrHandler<'a> {
         writeln!(
             self.out,
             "<figure class='qr-code sidebar'>\
-             <img alt='' src='{url}' width='{width}' height='{width}'/>\
-             </figure>",
+             <img alt='' src='{url}' width='{width}' height='{width}'/>"
         )?;
+        if !self.caption.is_empty() {
+            self.out.push_str("<figcaption>");
+            escape_html(&mut *self.out, self.caption)?;
+            self.out.push_str("</figcaption>");
+        }
+        self.out.push_str("</figure>");
         Ok(())
     }
 }
