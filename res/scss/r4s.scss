@@ -114,6 +114,19 @@ body {
     }
 }
 
+a.cc-by {
+    display: inline-block;
+    &:after {
+        content: "🅭 🅯";
+        display: inline-block;
+        font-size: 130%;
+        line-height: 1;
+        margin-left: .25em;
+        text-decoration: none;
+        vertical-align: -.1em;
+    }
+}
+
 :link {
     color: color.mix($purple, blue);
 }

@@ -6,10 +6,10 @@ lang-name = Denna sida på svenska
 in-lang = På svenska: {$title}
 
 cc-by-kaj = Detta verk av
-    <a href="/rkaj.sv" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>
-    är licensierat under en
-    <a rel="license cc:license" href="https://creativecommons.org/licenses/by/3.0/">Creative
-    Commons Erkännande 3.0 licens</a>.
+    <a rel="cc:attributionURL" property="cc:attributionName" href="https://rasmus.krats.se/rkaj.sv">Rasmus Kaj</a>
+    är licensierat som
+    <a href="https://creativecommons.org/licenses/by/4.0/deed.sv" target="_blank" rel="license noopener noreferrer" class="cc-by">CC BY 4.0</a>
+
 by-prog = Kod:
     <a href="https://github.com/kaj/{$proj}">{$proj}</a> {$ver}
 use-cookies = Denna site <a href='/site.sv#cookie'>använder kakor</a>.

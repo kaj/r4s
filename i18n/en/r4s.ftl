@@ -5,11 +5,11 @@ from-year = Posts from year
 lang-name = This page in English
 in-lang = In English: {$title}
 
-cc-by-kaj = This work of
-    <a href="/rkaj.en" rel="cc:attributionURL" property="cc:attributionName">Rasmus Kaj</a>
-    is licensed under the
-    <a rel="license cc:license" href="https://creativecommons.org/licenses/by/3.0/">Creative
-    Commons Attribution 3.0 license</a>.
+cc-by-kaj = This work by
+    <a rel="cc:attributionURL" property="cc:attributionName" href="https://rasmus.krats.se/rkaj.en">Rasmus Kaj</a>
+    is licensed under
+    <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="license noopener noreferrer" class="cc-by">CC BY 4.0</a>
+
 by-prog = Code:
     <a href="https://github.com/kaj/{$proj}">{$proj}</a> {$ver}
 use-cookies = This site <a href='/site.en#cookie'>uses cookies</a>.

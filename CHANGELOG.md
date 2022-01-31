@@ -13,6 +13,7 @@ project more or less adheres to
 * read-comments is no longer async (there was no await in it).
 * read-files now handles keyword links (e.g. [term][wp]) correctly
   when the term is written across a line-break.
+* Update content license to cc-by 4.0.
 
 
 ## Release 0.2.4
