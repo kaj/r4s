@@ -6,6 +6,13 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Release 0.2.8
+
+2022-02-01 23:52 CET
+
+* Bugfix: Fallback route must be last, so it don't hide the feed routes.
+
+
 ## Release 0.2.6
 
 2022-02-01 20:37 CET

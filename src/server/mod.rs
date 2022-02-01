@@ -143,6 +143,7 @@ impl Args {
                 .then(metapage)
                 .map(wrap)
                 .boxed())
+            .or(feeds::routes(s()))
             .or(param()
                 .and(end())
                 .and(lang_filt)
@@ -150,8 +151,7 @@ impl Args {
                 .and(s())
                 .then(metafallback)
                 .map(wrap)
-                .boxed())
-            .or(feeds::routes(s()));
+                .boxed());
 
         warp::serve(routes.recover(error::for_rejection).boxed())
             .run(self.bind)
