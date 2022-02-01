@@ -6,7 +6,9 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.2.6
+
+2022-02-01 20:37 CET
 
 * Support qr-code blocks.  Text from the block is made into a qr-code,
   encoded as a png image in a data: url.
