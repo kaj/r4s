@@ -1,6 +1,6 @@
 [package]
 name = "r4s"
-version = "0.2.8"
+version = "0.2.9-PRE"
 description = "Manage and serve my blog"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 edition = "2021"
@@ -9,7 +9,7 @@ build = "src/build.rs"
 
 [build-dependencies]
 lazy_static = "1.4.0"
-ructe = { version = "0.13.4", features = ["sass", "warp02"] }
+ructe = { version = "0.14.0", features = ["sass", "warp03"] }
 syntect = { version = "4.2", default-features = false, features = ["default-fancy"]}
 
 [dependencies]

@@ -54,8 +54,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
         )});
 
     Ok(Builder::new()
-        .html(|o| templates::tags(o, &fluent, &tags, &other_langs))
-        .unwrap())
+        .html(|o| templates::tags(o, &fluent, &tags, &other_langs))?)
 }
 
 #[instrument]

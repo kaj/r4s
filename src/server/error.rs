@@ -1,5 +1,5 @@
 use super::language;
-use super::templates::{self, RenderRucte};
+use super::templates::{self, RenderRucte, RenderError};
 use deadpool_diesel::{InteractError, PoolError};
 use tracing::{event, Level};
 use warp::http::response::Builder;
@@ -72,6 +72,13 @@ fn error_response(code: StatusCode, message: &str, detail: &str) -> Response {
         .status(code)
         .html(|o| templates::error(o, &fluent, code, message, detail))
         .unwrap()
+}
+
+impl From<RenderError> for ViewError {
+    fn from(e: RenderError) -> Self {
+        event!(Level::ERROR, "Rendering error: {}\n    {:?}", e, e);
+        ViewError::Err("Rendering error".to_string())
+    }
 }
 
 impl From<diesel::result::Error> for ViewError {

@@ -6,6 +6,11 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* Updated ructe to 0.14.0, improving rendering error handling.
+
+
 ## Release 0.2.8
 
 2022-02-01 23:52 CET
