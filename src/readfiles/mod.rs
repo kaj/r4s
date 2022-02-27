@@ -234,7 +234,7 @@ impl Args {
                     update
                         .as_ref()
                         .map(|u| &u.date)
-                        .or_else(|| pubdate.as_ref())
+                        .or(pubdate.as_ref())
                         .map(|date| p::updated_at.eq(date)),
                     p::slug.eq(slug),
                     p::lang.eq(lang),
