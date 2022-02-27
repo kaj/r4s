@@ -1,5 +1,5 @@
 use super::language;
-use super::templates::{self, RenderRucte, RenderError};
+use super::templates::{self, RenderError, RenderRucte};
 use deadpool_diesel::{InteractError, PoolError};
 use tracing::{event, Level};
 use warp::http::response::Builder;
