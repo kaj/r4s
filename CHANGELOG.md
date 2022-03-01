@@ -8,6 +8,8 @@ project more or less adheres to
 
 ## Unreleased
 
+* Support `!embed` blocks for youtube, in preparation for improving
+  privacy by not contacting youtube before the user starts a video.
 * Updated ructe to 0.14.0, improving rendering error handling.
 * Improved error handling, getting rid of some `unwrap()` calls.
 

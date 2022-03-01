@@ -14,6 +14,7 @@ pub enum DynBlock<'a> {
     Leaflet(LeafletHandler<'a>),
     Code(CodeBlock<'a>),
     Qr(QrHandler<'a>),
+    Embed(EmbedHandler<'a>),
 }
 impl<'a> DynBlock<'a> {
     pub fn for_kind(
@@ -30,6 +31,9 @@ impl<'a> DynBlock<'a> {
             Some(("qr", caption)) => {
                 Ok(DynBlock::Qr(QrHandler::open(out, caption)))
             }
+            Some(("embed", "")) => {
+                Ok(DynBlock::Embed(EmbedHandler::open(out)))
+            }
             Some((bang, _)) => {
                 bail!("Magic for !{:?} not implemented", bang);
             }
@@ -44,6 +48,7 @@ impl<'a> BlockHandler for DynBlock<'a> {
             DynBlock::Leaflet(x) => x.push(content),
             DynBlock::Code(x) => x.push(content),
             DynBlock::Qr(x) => x.push(content),
+            DynBlock::Embed(x) => x.push(content),
         }
     }
     fn end(self) -> Result<()> {
@@ -51,6 +56,7 @@ impl<'a> BlockHandler for DynBlock<'a> {
             DynBlock::Leaflet(x) => x.end(),
             DynBlock::Code(x) => x.end(),
             DynBlock::Qr(x) => x.end(),
+            DynBlock::Embed(x) => x.end(),
         }
     }
 }
@@ -144,6 +150,45 @@ impl<'a> BlockHandler for QrHandler<'a> {
             self.out.push_str("</figcaption>");
         }
         self.out.push_str("</figure>");
+        Ok(())
+    }
+}
+
+pub struct EmbedHandler<'a> {
+    out: &'a mut String,
+    data: String,
+}
+
+impl<'a> EmbedHandler<'a> {
+    fn open(out: &'a mut String) -> Self {
+        EmbedHandler {
+            out,
+            data: String::new(),
+        }
+    }
+}
+impl<'a> BlockHandler for EmbedHandler<'a> {
+    fn push(&mut self, content: &str) -> Result<()> {
+        self.data.push_str(content);
+        Ok(())
+    }
+
+    fn end(self) -> Result<()> {
+        let data = self.data.trim();
+        if let Some(yt) = data.strip_prefix("https://youtu.be/") {
+            writeln!(
+                self.out,
+                "<div class='wrapiframe'>\
+                 <iframe width='560' height='315' \
+                 src='https://www.youtube.com/embed/{yt}' \
+                 frameborder='0' allowfullscreen='t' allow='accelerometer; \
+                 autoplay; encrypted-media; gyroscope; picture-in-picture'>\
+                 </iframe>\
+                 </div>"
+            )?;
+        } else {
+            bail!("Bad embed: {data:?}");
+        }
         Ok(())
     }
 }
