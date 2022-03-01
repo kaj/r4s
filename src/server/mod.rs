@@ -146,6 +146,11 @@ impl Args {
                 .map(wrap)
                 .boxed())
             .or(feeds::routes(s()))
+            .or(path("robots.txt")
+                .and(end())
+                .and(goh())
+                .map(robots_txt)
+                .map(wrap))
             .or(param()
                 .and(end())
                 .and(lang_filt)
@@ -583,6 +588,18 @@ impl FromStr for CsrfSecret {
             })?,
         })
     }
+}
+
+fn robots_txt() -> Result<Response> {
+    use warp::http::header::CONTENT_TYPE;
+    Builder::new()
+        .header(CONTENT_TYPE, mime::TEXT_PLAIN.as_ref())
+        .body(
+            "User-agent: *\n\
+             Disallow: /tmp/\n"
+                .into(),
+        )
+        .or_ise()
 }
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));

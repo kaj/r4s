@@ -10,6 +10,7 @@ project more or less adheres to
 
 * Support `!embed` blocks for youtube, in preparation for improving
   privacy by not contacting youtube before the user starts a video.
+* Bring back my `robots.txt`.
 * Updated ructe to 0.14.0, improving rendering error handling.
 * Improved error handling, getting rid of some `unwrap()` calls.
 
