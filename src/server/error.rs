@@ -20,14 +20,14 @@ pub enum ViewError {
 }
 
 pub trait ViewResult<T> {
-    fn ise(self) -> Result<T, ViewError>;
+    fn or_ise(self) -> Result<T, ViewError>;
 }
 
 impl<T, E> ViewResult<T> for Result<T, E>
 where
     E: std::error::Error,
 {
-    fn ise(self) -> Result<T, ViewError> {
+    fn or_ise(self) -> Result<T, ViewError> {
         self.map_err(|e| {
             event!(Level::ERROR, "Internal server error: {}", e);
             ViewError::Err("Something went wrong".into())

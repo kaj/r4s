@@ -90,11 +90,12 @@ impl Args {
                 .and(goh())
                 .and(lang_filt)
                 .map(|lang| {
-                    redirect::see_other(
+                    wrap(
                         Uri::builder()
                             .path_and_query(&format!("/{}", lang))
                             .build()
-                            .unwrap(),
+                            .or_ise()
+                            .map(redirect::see_other),
                     )
                 })
                 .boxed())
@@ -104,11 +105,12 @@ impl Args {
                 .and(goh())
                 .and(lang_filt)
                 .map(|year: i16, lang| {
-                    redirect::see_other(
+                    wrap(
                         Uri::builder()
                             .path_and_query(&format!("/{}/{}", year, lang))
                             .build()
-                            .unwrap(),
+                            .map(redirect::see_other)
+                            .or_ise(),
                     )
                 })
                 .boxed())
@@ -204,7 +206,9 @@ impl AppData {
     }
     fn generate_csrf_pair(&self) -> Result<(CsrfToken, CsrfCookie)> {
         let ttl = 4 * 3600;
-        self.csrf_protection().generate_token_pair(None, ttl).ise()
+        self.csrf_protection()
+            .generate_token_pair(None, ttl)
+            .or_ise()
     }
     fn csrf_protection(&self) -> impl CsrfProtection {
         AesGcmCsrfProtection::from_key(self.csrf_secret)
@@ -234,11 +238,11 @@ fn static_file(name: Tail) -> Result<impl Reply> {
     use warp::http::header::{CONTENT_TYPE, EXPIRES};
     let data = StaticFile::get(name.as_str()).ok_or(ViewError::NotFound)?;
     let far_expires = Utc::now() + Duration::days(180);
-    Ok(Builder::new()
+    Builder::new()
         .header(CONTENT_TYPE, data.mime.as_ref())
         .header(EXPIRES, far_expires.to_rfc2822())
         .body(data.content)
-        .unwrap())
+        .or_ise()
 }
 
 #[instrument]
@@ -258,11 +262,11 @@ async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
         .await??
         .ok_or(ViewError::NotFound)?;
 
-    Ok(Builder::new()
+    Builder::new()
         .header(CONTENT_TYPE, mime)
         //.header(EXPIRES, far_expires.to_rfc2822())
         .body(content.into())
-        .unwrap())
+        .or_ise()
 }
 
 #[instrument]
@@ -290,18 +294,16 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
             lang=lang, name=name,
         )});
 
-    Ok(Builder::new()
-        .html(|o| {
-            templates::frontpage(
-                o,
-                &fluent,
-                &posts,
-                &comments,
-                &years,
-                &other_langs,
-            )
-        })
-        .unwrap())
+    Ok(Builder::new().html(|o| {
+        templates::frontpage(
+            o,
+            &fluent,
+            &posts,
+            &comments,
+            &years,
+            &other_langs,
+        )
+    })?)
 }
 
 #[derive(Debug, Clone)]
@@ -346,19 +348,9 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
             year, lang=lang, name=name,
         )});
 
-    Ok(Builder::new()
-        .html(|o| {
-            templates::posts(
-                o,
-                &fluent,
-                &h1,
-                None,
-                &posts,
-                &years,
-                &other_langs,
-            )
-        })
-        .unwrap())
+    Ok(Builder::new().html(|o| {
+        templates::posts(o, &fluent, &h1, None, &posts, &years, &other_langs)
+    })?)
 }
 
 #[instrument]
@@ -485,8 +477,7 @@ async fn page(
                 &other_langs,
                 &related,
             )
-        })
-        .unwrap())
+        })?)
 }
 
 #[instrument]
@@ -528,9 +519,9 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         .await??
         .ok_or(ViewError::NotFound)?;
 
-    Ok(Builder::new()
-        .html(|o| templates::page(o, &fluent, &title, &content, &other_langs))
-        .unwrap())
+    Ok(Builder::new().html(|o| {
+        templates::page(o, &fluent, &title, &content, &other_langs)
+    })?)
 }
 
 #[instrument]

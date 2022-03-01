@@ -8,12 +8,12 @@ pub fn tweet_url(text: &str, url: &str) -> Url {
         "https://twitter.com/share",
         &[("text", text), ("url", url), ("via", "rasmus_kaj")],
     )
-    .unwrap()
+    .unwrap() // only errs if hardcoded part is bad
 }
 pub fn fb_share_url(url: &str) -> Url {
     Url::parse_with_params(
         "https://www.facebook.com/sharer/sharer.php",
         &[("u", url), ("display", "popup")],
     )
-    .unwrap()
+    .unwrap() // only errs if hardcoded part is bad
 }

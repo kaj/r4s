@@ -23,36 +23,32 @@ impl Post {
         lang: &FluentLanguageLoader,
         tags: &[Tag],
     ) -> String {
-        use std::fmt::Write;
         let mut line = fl!(lang, "posted-at", date = (&self.posted_at));
 
         if self.updated_at > self.posted_at {
-            write!(
-                &mut line,
-                " {}",
-                fl!(lang, "updated-at", date = (&self.updated_at))
-            )
-            .unwrap();
+            line.push(' ');
+            line.push_str(&fl!(
+                lang,
+                "updated-at",
+                date = (&self.updated_at)
+            ));
+        }
+        fn push_taglink(to: &mut String, tag: &Tag, lang: &str) {
+            to.push_str(" <a href='/tag/");
+            to.push_str(&tag.slug);
+            to.push('.');
+            to.push_str(lang);
+            to.push_str("' rel='tag'>");
+            to.push_str(&tag.name);
+            to.push_str("</a>");
         }
         if let Some((first, rest)) = tags.split_first() {
-            write!(
-                line,
-                " {} <a href='/tag/{slug}.{lang}' rel='tag'>{name}</a>",
-                fl!(lang, "tagged"),
-                slug = first.slug,
-                name = first.name,
-                lang = self.lang,
-            )
-            .unwrap();
+            line.push(' ');
+            line.push_str(&fl!(lang, "tagged"));
+            push_taglink(&mut line, first, &self.lang);
             for tag in rest {
-                write!(
-                    line,
-                    ", <a href='/tag/{slug}.{lang}' rel='tag'>{name}</a>",
-                    slug = tag.slug,
-                    name = tag.name,
-                    lang = self.lang,
-                )
-                .unwrap();
+                line.push(',');
+                push_taglink(&mut line, tag, &self.lang);
             }
             line.push('.');
         }

@@ -117,9 +117,9 @@ pub fn my_found(
     use std::fmt::Write;
     let mut url = post.url();
     if public {
-        write!(&mut url, "#c{:x}", comment).ise()?
+        write!(&mut url, "#c{:x}", comment).or_ise()?
     } else {
-        write!(&mut url, "?c={}#cxmod", comment).ise()?
+        write!(&mut url, "?c={}#cxmod", comment).or_ise()?
     }
     Ok(super::found(&url))
 }

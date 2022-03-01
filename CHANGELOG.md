@@ -9,6 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Updated ructe to 0.14.0, improving rendering error handling.
+* Improved error handling, getting rid of some `unwrap()` calls.
 
 
 ## Release 0.2.8

@@ -58,7 +58,7 @@ impl MyLang {
             .collect()
     }
     pub fn collator(&self) -> Result<UCollator> {
-        UCollator::try_from(self.as_ref()).ise()
+        UCollator::try_from(self.as_ref()).or_ise()
     }
 }
 impl FromStr for MyLang {

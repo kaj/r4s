@@ -81,17 +81,15 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
         )});
 
     let feed = format!("{}/atom-{}-{}.xml", app.base, langc, tag.slug);
-    Ok(Builder::new()
-        .html(|o| {
-            templates::posts(
-                o,
-                &fluent,
-                &h1,
-                Some(&feed),
-                &posts,
-                &[],
-                &other_langs,
-            )
-        })
-        .unwrap())
+    Ok(Builder::new().html(|o| {
+        templates::posts(
+            o,
+            &fluent,
+            &h1,
+            Some(&feed),
+            &posts,
+            &[],
+            &other_langs,
+        )
+    })?)
 }
