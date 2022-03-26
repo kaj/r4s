@@ -1,16 +1,22 @@
+use super::Loader;
 use crate::syntax_hl::ClassedHTMLGenerator;
 use crate::syntax_hl::LinesWithEndings;
+use anyhow::Context;
 use anyhow::{bail, Result};
 use pulldown_cmark::escape::escape_html;
 use qr_code::QrCode;
+use reqwest::blocking::Client;
+use reqwest::header::CONTENT_TYPE;
+use serde::Deserialize;
 use std::fmt::Write;
+use warp::hyper::body::Bytes;
 
-pub trait BlockHandler {
+pub(super) trait BlockHandler {
     fn push(&mut self, content: &str) -> Result<()>;
     fn end(self) -> Result<()>;
 }
 
-pub enum DynBlock<'a> {
+pub(super) enum DynBlock<'a> {
     Leaflet(LeafletHandler<'a>),
     Code(CodeBlock<'a>),
     Qr(QrHandler<'a>),
@@ -19,9 +25,12 @@ pub enum DynBlock<'a> {
 impl<'a> DynBlock<'a> {
     pub fn for_kind(
         out: &'a mut String,
-        lang: Option<&'a str>,
+        fence: Option<&'a str>,
+        loader: &'a Loader,
+        year: i16,
+        lang: &'a str,
     ) -> Result<DynBlock<'a>> {
-        match lang.and_then(|l| {
+        match fence.and_then(|l| {
             l.strip_prefix('!')
                 .map(|l| l.split_once(' ').unwrap_or((l, "")))
         }) {
@@ -31,13 +40,13 @@ impl<'a> DynBlock<'a> {
             Some(("qr", caption)) => {
                 Ok(DynBlock::Qr(QrHandler::open(out, caption)))
             }
-            Some(("embed", "")) => {
-                Ok(DynBlock::Embed(EmbedHandler::open(out)))
-            }
+            Some(("embed", "")) => Ok(DynBlock::Embed(EmbedHandler::open(
+                out, loader, year, lang,
+            ))),
             Some((bang, _)) => {
                 bail!("Magic for !{:?} not implemented", bang);
             }
-            None => Ok(DynBlock::Code(CodeBlock::open(out, lang)?)),
+            None => Ok(DynBlock::Code(CodeBlock::open(out, fence)?)),
         }
     }
 }
@@ -157,13 +166,24 @@ impl<'a> BlockHandler for QrHandler<'a> {
 pub struct EmbedHandler<'a> {
     out: &'a mut String,
     data: String,
+    loader: &'a Loader,
+    year: i16,
+    lang: &'a str,
 }
 
 impl<'a> EmbedHandler<'a> {
-    fn open(out: &'a mut String) -> Self {
+    fn open(
+        out: &'a mut String,
+        loader: &'a Loader,
+        year: i16,
+        lang: &'a str,
+    ) -> Self {
         EmbedHandler {
             out,
             data: String::new(),
+            loader,
+            year,
+            lang,
         }
     }
 }
@@ -175,22 +195,84 @@ impl<'a> BlockHandler for EmbedHandler<'a> {
 
     fn end(self) -> Result<()> {
         let data = self.data.trim();
-        if let Some(yt) = data.strip_prefix("https://youtu.be/") {
+        if let Some(ytid) = data.strip_prefix("https://youtu.be/") {
+            let id = format!("yt-{ytid}");
+            let client = Client::builder()
+                .user_agent("r4s https://github.com/kaj/r4s")
+                .build()?;
+            let embed: EmbedData = client
+                .get("https://www.youtube.com/oembed")
+                .query(&[("url", data), ("format", "json")])
+                .send()?
+                .error_for_status()?
+                .json()?;
+            let img = embed.thumbnail_url;
+            let img = fetch_content(
+                &client,
+                &img.replace("hqdefault.jpg", "maxresdefault.jpg"),
+            )
+            .or_else(|_| fetch_content(&client, &img))?;
+            let img = self.loader.store_asset(
+                self.year,
+                &format!("{id}.jpg"),
+                &img.0,
+                &img.1,
+            )?;
+            let notice = if self.lang == "sv" {
+                "Om du klickar Play bäddas en youtube\u{AD}video in. \
+                 Det ger youtube möjlighet att spåra dig."
+            } else {
+                "Klicking play embedds a youtube video. \
+                 That makes it possible for youtube to track you."
+            };
             writeln!(
                 self.out,
-                "<div class='wrapiframe'>\
-                 <iframe width='560' height='315' \
-                 src='https://www.youtube.com/embed/{yt}' \
-                 frameborder='0' allowfullscreen='t' allow='accelerometer; \
-                 autoplay; encrypted-media; gyroscope; picture-in-picture'>\
-                 </iframe>\
-                 </div>"
+                "<figure id='{id}' class='wrapiframe' \
+                 style='padding-bottom: {aspect}%'>\
+                 \n  <figcaption>{title}</figcaption>\
+                 \n  <img class='ifrprev' src='{img}' \
+                 width='{width}' height='{height}'>\
+                 \n  <div class='ifrprev'><button \
+                 onclick='document.getElementById(\"{id}\")\
+                 .innerHTML=\"{iframe}\"'>⏵ Play</button>\
+                 \n  <p>{notice}</p></div>\
+                 </figure>",
+                title = embed.title,
+                aspect =
+                    100. * f64::from(embed.height) / f64::from(embed.width),
+                height = embed.height,
+                width = embed.width,
+                iframe = embed
+                    .html
+                    .replace("?feature=oembed", "?autoplay=1")
+                    .replace('\'', "\\\'")
+                    .replace('"', "\\\""),
             )?;
         } else {
-            bail!("Bad embed: {data:?}");
+            bail!("Unknown embed: {data:?}");
         }
         Ok(())
     }
+}
+
+/// The interesting parts of an oembed response.
+#[derive(Debug, Deserialize)]
+struct EmbedData {
+    title: String,
+    height: u32,
+    width: u32,
+    thumbnail_url: String,
+    html: String,
+}
+
+fn fetch_content(client: &Client, url: &str) -> Result<(String, Bytes)> {
+    let resp = client.get(url).send()?.error_for_status()?;
+    let ctype = resp
+        .headers()
+        .get(CONTENT_TYPE)
+        .context("content-type")?
+        .to_str()?;
+    Ok((ctype.into(), resp.bytes()?))
 }
 
 pub struct CodeBlock<'a> {

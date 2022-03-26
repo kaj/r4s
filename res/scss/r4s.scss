@@ -79,6 +79,7 @@ body {
     > aside {
         grid-column: 2;
         margin: 1em 0 0;
+        width: 100%;
         width: -moz-available;
         &:last-of-type {
             margin-bottom: 30vmin;
@@ -199,6 +200,7 @@ aside {
         justify-content: space-between;
 
         h1, ul:first-of-type {
+            width: 100%;
             width: -moz-available;
         }
         ul {
@@ -372,6 +374,7 @@ figure {
         }
     }
     > a, > a > img, > img {
+        width: 100%;
         width: -moz-available;
         height: auto;
     }
@@ -398,17 +401,53 @@ div.gallery {
 }
 
 .wrapiframe {
-    width: -moz-available;
-    height: 0;
+    margin: 1em 0;
     padding-bottom: 56.25%; // Default, to override per video?
     position: relative;
+    width: 100%;
+    width: -moz-available;
+    height: 0;
 
-    iframe {
+    figcaption {
+        background: rgba($paper2, 0.9);
+        border-radius: 0 1ex 1ex 0;
+        box-shadow: 2px 3px 2px rgba($dark, 0.5);
+        padding: 1ex 2em;
+        width: fit-content;
+        margin-right: 1ex;
+        top: 2%;
         position: absolute;
+        z-index: 1;
+    }
+    iframe, .ifrprev {
+        position: absolute;
+        bottom: 0;
         height: 100%;
-        width: 100%;
-        top: 0;
         left: 0;
+        right: 0;
+        top: 0;
+        width: 100%;
+    }
+    img.ifrprev {
+        object-fit: cover;
+    }
+    div.ifrprev {
+        display: flex;
+        flex-flow: column;
+        justify-content: space-evenly;
+        text-align: center;
+        top: 4em;
+        align-items: center;
+        height: auto;
+
+        p {
+            background: rgba($paper2, 0.9);
+            border-radius: 1ex;
+            padding: 1ex;
+            margin: 0 auto;
+            width: 28em;
+            max-width: 95%;
+        }
     }
 }
 
@@ -741,5 +780,17 @@ img.gravatar {
         background: $darker;
         color: wheat;
         border: .7px inset $purple;
+    }
+
+    .wrapiframe {
+        figcaption {
+            background: rgba($darker, 0.8);
+            box-shadow: 2px 3px 2px rgba(wheat, 0.3);
+        }
+        div.ifrprev {
+            p {
+                background: rgba($darker, 0.8);
+            }
+        }
     }
 }

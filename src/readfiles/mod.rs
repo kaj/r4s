@@ -146,7 +146,7 @@ impl Loader {
             res.split(',')
                 .map(|s| s.trim())
                 .map(|s| {
-                    handle_asset(path, s, year, &self.db)
+                    self.handle_asset(path, s, year)
                         .with_context(|| format!("Asset {:?}", s))
                 })
                 .collect::<Result<Vec<_>, _>>()?
@@ -181,7 +181,7 @@ impl Loader {
                     contents_md,
                     update.as_ref(),
                     &files,
-                    &mut self.imgcli,
+                    self,
                 )?;
                 if pubdate.is_none() {
                     title.push_str(" \u{1f58b}");
@@ -220,7 +220,7 @@ impl Loader {
                 contents_md,
                 update.as_ref(),
                 &files,
-                &mut self.imgcli,
+                self,
             )?;
             if pubdate.is_none() {
                 title.push_str(" \u{1f58b}");
@@ -268,7 +268,7 @@ impl Loader {
         {
             if old_md != contents || self.force {
                 let (title, body, _) =
-                    Ctx::new(contents, lang).md_to_html(&mut self.imgcli)?;
+                    Ctx::new(contents, 0, lang).md_to_html(self)?;
                 diesel::update(m::metapages)
                     .set((
                         m::title.eq(&title),
@@ -282,7 +282,7 @@ impl Loader {
             }
         } else {
             let (title, body, _) =
-                Ctx::new(contents, lang).md_to_html(&mut self.imgcli)?;
+                Ctx::new(contents, 0, lang).md_to_html(self)?;
             diesel::insert_into(m::metapages)
                 .values((
                     m::slug.eq(slug),
@@ -296,6 +296,65 @@ impl Loader {
             println!("Created metapage /{}.{}: {}", slug, lang, title);
         }
         Ok(())
+    }
+
+    fn handle_asset(
+        &self,
+        path: &Path,
+        spec: &str,
+        year: i16,
+    ) -> Result<(String, String)> {
+        let (_all, name, _, mime) =
+            regex_captures!(r"^([\w_\.-]+)\s+(\{([\w-]+/[\w-]+)\})$", spec)
+                .ok_or_else(|| anyhow!("Bad asset spec"))?;
+        let path = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
+        let content =
+            read(&path).with_context(|| path.display().to_string())?;
+        let url = self.store_asset(year, name, mime, &content)?;
+        Ok((name.into(), url))
+    }
+
+    fn store_asset(
+        &self,
+        year: i16,
+        name: &str,
+        mime: &str,
+        content: &[u8],
+    ) -> Result<String> {
+        if let Some((id, old_mime, old_content)) = a::assets
+            .select((a::id, a::mime, a::content))
+            .filter(a::year.eq(year))
+            .filter(a::name.eq(name))
+            .first::<(i32, String, Vec<u8>)>(&self.db)
+            .optional()?
+        {
+            if mime != old_mime || content != old_content {
+                println!("Content #{} ({}) updating", id, name);
+                diesel::update(a::assets)
+                    .filter(a::id.eq(id))
+                    .set((
+                        a::year.eq(year),
+                        a::name.eq(name),
+                        a::mime.eq(mime),
+                        a::content.eq(&content),
+                    ))
+                    .execute(&self.db)
+                    .with_context(|| {
+                        format!("Update asset #{} {}/{}", id, year, name)
+                    })?;
+            }
+        } else {
+            diesel::insert_into(a::assets)
+                .values((
+                    a::year.eq(year),
+                    a::name.eq(name),
+                    a::mime.eq(mime),
+                    a::content.eq(content),
+                ))
+                .execute(&self.db)
+                .with_context(|| format!("Create asset {}/{}", year, name))?;
+        }
+        Ok(format!("/s/{}/{}", year, name))
     }
 }
 
@@ -321,53 +380,6 @@ impl FromStr for UpdateInfo {
         let info = info.trim().to_string();
         Ok(UpdateInfo { date, info })
     }
-}
-
-fn handle_asset(
-    path: &Path,
-    spec: &str,
-    year: i16,
-    db: &PgConnection,
-) -> Result<(String, String)> {
-    let (_all, name, _, mime) =
-        regex_captures!(r"^([\w_\.-]+)\s+(\{([\w-]+/[\w-]+)\})$", spec)
-            .ok_or_else(|| anyhow!("Bad asset spec"))?;
-    let path = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
-    let content = read(&path).with_context(|| path.display().to_string())?;
-    if let Some((id, old_mime, old_content)) = a::assets
-        .select((a::id, a::mime, a::content))
-        .filter(a::year.eq(year))
-        .filter(a::name.eq(name))
-        .first::<(i32, String, Vec<u8>)>(db)
-        .optional()?
-    {
-        if mime != old_mime || content != old_content {
-            println!("Content #{} ({}) updating", id, name);
-            diesel::update(a::assets)
-                .filter(a::id.eq(id))
-                .set((
-                    a::year.eq(year),
-                    a::name.eq(name),
-                    a::mime.eq(mime),
-                    a::content.eq(&content),
-                ))
-                .execute(db)
-                .with_context(|| {
-                    format!("Update asset #{} {}/{}", id, year, name)
-                })?;
-        }
-    } else {
-        diesel::insert_into(a::assets)
-            .values((
-                a::year.eq(year),
-                a::name.eq(name),
-                a::mime.eq(mime),
-                a::content.eq(content),
-            ))
-            .execute(db)
-            .with_context(|| format!("Create asset {}/{}", year, name))?;
-    }
-    Ok((name.into(), format!("/s/{}/{}", year, name)))
 }
 
 fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
@@ -402,11 +414,11 @@ fn extract_parts(
     markdown: &str,
     update: Option<&UpdateInfo>,
     files: &[(String, String)],
-    img_client: &mut ImgClient,
+    loader: &mut Loader,
 ) -> Result<(String, String, String, Option<String>, String, bool)> {
-    let (title, body, description) = Ctx::new(markdown, lang)
+    let (title, body, description) = Ctx::new(markdown, year, lang)
         .with_files(files)
-        .md_to_html(img_client)?;
+        .md_to_html(loader)?;
     // Split at "more" marker, or try to find a good place if the text is long.
     let end = markdown.find("<!-- more -->").or_else(|| {
         let h1end = markdown.find('\n').unwrap_or(0);
@@ -475,8 +487,8 @@ fn extract_parts(
             &teaser,
             |_, target| format!("](/{}/{}.{}#{})", year, slug, lang, target),
         );
-        Ctx::new(&teaser, lang)
-            .md_to_html(img_client)
+        Ctx::new(&teaser, year, lang)
+            .md_to_html(loader)
             .map(|(_, teaser, desc)| (teaser, desc))?
     } else {
         (body.clone(), description)
@@ -493,13 +505,15 @@ fn extract_parts(
 use pulldown_cmark::CowStr;
 struct Ctx<'a> {
     markdown: &'a str,
+    year: i16,
     lang: &'a str,
     files: &'a [(String, String)],
 }
 impl<'a> Ctx<'a> {
-    fn new(markdown: &'a str, lang: &'a str) -> Self {
+    fn new(markdown: &'a str, year: i16, lang: &'a str) -> Self {
         Ctx {
             markdown,
+            year,
             lang,
             files: &[],
         }
@@ -527,7 +541,7 @@ impl<'a> Ctx<'a> {
     /// Returns the title and full content html markup separately.
     fn md_to_html(
         &self,
-        img_client: &mut ImgClient,
+        loader: &mut Loader,
     ) -> Result<(String, String, String)> {
         let mut fixlink = |broken_link: BrokenLink| self.fixlink(broken_link);
         let mut items = Parser::new_with_broken_link_callback(
@@ -550,9 +564,10 @@ impl<'a> Ctx<'a> {
         )
         .ok_or_else(|| anyhow!("No end of h1"))?;
 
-        let title = html::collect(title, img_client)?;
-        let body = html::collect(items.clone().into_iter(), img_client)?;
-        let summary = summary::collect(items.into_iter())?;
+        let title = html::collect(title, loader, self.year, self.lang)?;
+        let summary = summary::collect(items.clone().into_iter())?;
+        let body =
+            html::collect(items.into_iter(), loader, self.year, self.lang)?;
         Ok((title, body, summary))
     }
 }
