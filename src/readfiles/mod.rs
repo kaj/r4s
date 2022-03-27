@@ -53,26 +53,34 @@ pub struct Args {
 
 impl Args {
     pub fn run(self) -> Result<()> {
-        let db = self.db.get_db()?;
-        let mut images = self.img.client();
+        let mut loader = Loader {
+            include_drafts: self.include_drafts,
+            force: self.force,
+            db: self.db.get_db()?,
+            imgcli: self.img.client(),
+        };
         for path in &self.files {
             if path.is_file() {
-                self.read_file(path, &db, &mut images)
+                loader
+                    .read_file(path)
                     .with_context(|| format!("Reading file {:?}", path))?;
             } else {
-                self.read_dir(path, &db, &mut images)
+                loader
+                    .read_dir(path)
                     .with_context(|| format!("Reading dir {:?}", path))?;
             }
         }
         Ok(())
     }
-
-    fn read_dir(
-        &self,
-        path: &Path,
-        db: &PgConnection,
-        images: &mut ImgClient,
-    ) -> Result<()> {
+}
+struct Loader {
+    include_drafts: bool,
+    force: bool,
+    db: PgConnection,
+    imgcli: ImgClient,
+}
+impl Loader {
+    fn read_dir(&mut self, path: &Path) -> Result<()> {
         for entry in path.read_dir()? {
             let entry = entry?;
             let path = entry.path();
@@ -80,22 +88,17 @@ impl Args {
                 continue;
             }
             if entry.file_type()?.is_dir() {
-                self.read_dir(&path, db, images)?;
+                self.read_dir(&path)?;
             } else if path.extension().unwrap_or_default() == "md" {
-                self.read_file(&path, db, images)
+                self.read_file(&path)
                     .with_context(|| format!("Reading file {:?}", path))?;
             }
         }
         Ok(())
     }
 
-    #[tracing::instrument(skip(self, db, img_client))]
-    fn read_file(
-        &self,
-        path: &Path,
-        db: &PgConnection,
-        img_client: &mut ImgClient,
-    ) -> Result<()> {
+    #[tracing::instrument(skip(self))]
+    fn read_file(&mut self, path: &Path) -> Result<()> {
         let (slug, lang) = path
             .file_stem()
             .and_then(std::ffi::OsStr::to_str)
@@ -106,13 +109,7 @@ impl Args {
         let (metadata, contents_md) = extract_metadata(&contents);
 
         if metadata.get("meta").is_some() {
-            return self.read_meta_page(
-                slug,
-                lang,
-                contents_md,
-                db,
-                img_client,
-            );
+            return self.read_meta_page(slug, lang, contents_md);
         }
         let pubdate = metadata
             .get("pubdate")
@@ -137,7 +134,7 @@ impl Args {
                     .filter(p::title.like("% \u{1f58b}"))
                     .filter(p::orig_md.ne(&contents)),
             )
-            .execute(db)?;
+            .execute(&self.db)?;
         }
 
         let update = metadata
@@ -149,7 +146,7 @@ impl Args {
             res.split(',')
                 .map(|s| s.trim())
                 .map(|s| {
-                    handle_asset(path, s, year, db)
+                    handle_asset(path, s, year, &self.db)
                         .with_context(|| format!("Asset {:?}", s))
                 })
                 .collect::<Result<Vec<_>, _>>()?
@@ -162,7 +159,7 @@ impl Args {
             .filter(year_of_date(p::posted_at).eq(&year))
             .filter(p::slug.eq(slug))
             .filter(p::lang.eq(lang))
-            .first::<(i32, String)>(db)
+            .first::<(i32, String)>(&self.db)
             .optional()?
         {
             if old_md != contents || self.force {
@@ -184,7 +181,7 @@ impl Args {
                     contents_md,
                     update.as_ref(),
                     &files,
-                    img_client,
+                    &mut self.imgcli,
                 )?;
                 if pubdate.is_none() {
                     title.push_str(" \u{1f58b}");
@@ -201,10 +198,10 @@ impl Args {
                         p::use_leaflet.eq(use_leaflet),
                         p::orig_md.eq(&contents),
                     ))
-                    .execute(db)
+                    .execute(&self.db)
                     .with_context(|| format!("Update #{}", id))?;
                 if let Some(tags) = metadata.get("tags") {
-                    tag_post(id, tags, db)?;
+                    tag_post(id, tags, &self.db)?;
                 }
             }
         } else {
@@ -223,7 +220,7 @@ impl Args {
                 contents_md,
                 update.as_ref(),
                 &files,
-                img_client,
+                &mut self.imgcli,
             )?;
             if pubdate.is_none() {
                 title.push_str(" \u{1f58b}");
@@ -247,33 +244,31 @@ impl Args {
                     p::orig_md.eq(&contents),
                 ))
                 .returning(p::id)
-                .get_result::<i32>(db)
+                .get_result::<i32>(&self.db)
                 .context("Insert post")?;
             if let Some(tags) = metadata.get("tags") {
-                tag_post(post_id, tags, db)?;
+                tag_post(post_id, tags, &self.db)?;
             }
         }
         Ok(())
     }
 
     fn read_meta_page(
-        &self,
+        &mut self,
         slug: &str,
         lang: &str,
         contents: &str,
-        db: &PgConnection,
-        img_client: &mut ImgClient,
     ) -> Result<()> {
         if let Some((id, old_md)) = m::metapages
             .select((m::id, m::orig_md))
             .filter(m::slug.eq(slug))
             .filter(m::lang.eq(lang))
-            .first::<(i32, String)>(db)
+            .first::<(i32, String)>(&self.db)
             .optional()?
         {
             if old_md != contents || self.force {
                 let (title, body, _) =
-                    Ctx::new(contents, lang).md_to_html(img_client)?;
+                    Ctx::new(contents, lang).md_to_html(&mut self.imgcli)?;
                 diesel::update(m::metapages)
                     .set((
                         m::title.eq(&title),
@@ -281,13 +276,13 @@ impl Args {
                         m::orig_md.eq(&contents),
                     ))
                     .filter(m::id.eq(id))
-                    .execute(db)
+                    .execute(&self.db)
                     .context("Upadte metapage")?;
                 println!("Updated metadata page /{}.{}", slug, lang);
             }
         } else {
             let (title, body, _) =
-                Ctx::new(contents, lang).md_to_html(img_client)?;
+                Ctx::new(contents, lang).md_to_html(&mut self.imgcli)?;
             diesel::insert_into(m::metapages)
                 .values((
                     m::slug.eq(slug),
@@ -296,7 +291,7 @@ impl Args {
                     m::content.eq(&body),
                     m::orig_md.eq(&contents),
                 ))
-                .execute(db)
+                .execute(&self.db)
                 .context("Insert metapage")?;
             println!("Created metapage /{}.{}: {}", slug, lang, title);
         }
