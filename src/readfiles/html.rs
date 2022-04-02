@@ -1,16 +1,17 @@
 //! How to serialize parsed markdown into my kind of html
 use super::codeblocks::{BlockHandler, DynBlock};
-use super::FaRef;
-use super::ImgClient;
+use super::{FaRef, Loader};
 use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
 use pulldown_cmark::escape::{escape_href, escape_html};
 use pulldown_cmark::{CodeBlockKind, Event, Tag};
 use std::fmt::Write;
 
-pub fn collect<'a>(
+pub(super) fn collect<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
-    img_client: &mut ImgClient,
+    loader: &mut Loader,
+    year: i16,
+    lang: &str,
 ) -> Result<String> {
     let mut result = String::new();
     let mut data = data.into_iter();
@@ -54,13 +55,19 @@ pub fn collect<'a>(
                 }
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
-                let lang = match blocktype {
+                let fence = match blocktype {
                     CodeBlockKind::Fenced(ref f) => {
                         (!f.is_empty()).then(|| f.as_ref())
                     }
                     CodeBlockKind::Indented => None,
                 };
-                let mut handler = DynBlock::for_kind(&mut result, lang)?;
+                let mut handler = DynBlock::for_kind(
+                    &mut result,
+                    fence,
+                    loader,
+                    year,
+                    lang,
+                )?;
                 for event in &mut data {
                     match event {
                         Event::End(Tag::CodeBlock(_blocktype)) => break,
@@ -112,7 +119,7 @@ pub fn collect<'a>(
                     )
                         .unwrap();
                 } else {
-                    let imgdata = img_client.fetch(imgref)?;
+                    let imgdata = loader.imgcli.fetch(imgref)?;
                     if !imgdata.is_public() {
                         tracing::warn!("Image {:?} is not public", imgref);
                     }
