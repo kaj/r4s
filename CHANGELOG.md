@@ -8,7 +8,9 @@ project more or less adheres to
 
 ## Unreleased
 
-* …
+* Improve how youtube videos are handled (PR #4).
+* Specify that the main font should be serif.
+* Some refactoring.
 
 
 ## Release 0.2.10
