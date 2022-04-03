@@ -6,7 +6,7 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.2.12
 
 * Improve how youtube videos are handled (PR #4).
 * Specify that the main font should be serif.
