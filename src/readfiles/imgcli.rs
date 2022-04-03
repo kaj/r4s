@@ -46,28 +46,31 @@ impl ImageInfo {
 }
 
 pub struct ImgClient {
+    web: Client,
     base: String,
     key: String,
 }
 
 impl ImgClient {
     pub fn login(
+        web: Client,
         base: &str,
         user: &str,
         password: &str,
     ) -> Result<ImgClient> {
-        Self::do_login(base, user, password).map_err(|e| {
+        Self::do_login(web, base, user, password).map_err(|e| {
             anyhow!("Failed to login to {:?} as {:?}: {}", base, user, e)
         })
     }
-    pub fn do_login(
+    fn do_login(
+        web: Client,
         base: &str,
         user: &str,
         password: &str,
     ) -> Result<ImgClient> {
         let base = String::from(base);
         tracing::info!("Logging in to {:?}.", base);
-        let response = Client::new()
+        let response = web
             .post(&format!("{}/api/login", base))
             .json(&BTreeMap::from([("user", user), ("password", password)]))
             .send()?;
@@ -76,10 +79,11 @@ impl ImgClient {
             token: String,
         }
         let key = check(response)?.json::<R>()?.token;
-        Ok(ImgClient { base, key })
+        Ok(ImgClient { web, base, key })
     }
     pub fn fetch_image(&self, imgref: &str) -> Result<ImageInfo> {
-        let response = Client::new()
+        let response = self
+            .web
             .get(&format!("{}/api/image", self.base))
             .header("authorization", &self.key)
             .query(&[("path", imgref)])
@@ -87,7 +91,8 @@ impl ImgClient {
         Ok(check(response)?.json::<ImageInfo>()?.relative(&self.base))
     }
     pub fn make_image_public(&self, imgref: &str) -> Result<ImageInfo> {
-        let response = Client::new()
+        let response = self
+            .web
             .post(&format!("{}/api/image/makepublic", self.base))
             .header("authorization", &self.key)
             .json(&BTreeMap::from([("path", imgref)]))

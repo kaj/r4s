@@ -17,11 +17,14 @@ use diesel::prelude::*;
 use i18n_embed_fl::fl;
 use lazy_regex::{regex_captures, regex_find, regex_replace_all};
 use pulldown_cmark::{BrokenLink, Event, HeadingLevel, Options, Parser, Tag};
+use reqwest::blocking::Client;
+use reqwest::header::CONTENT_TYPE;
 use slug::slugify;
 use std::collections::BTreeMap;
 use std::fs::{read, read_to_string};
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
+use warp::hyper::body::Bytes;
 
 type DateTime = chrono::DateTime<chrono::FixedOffset>;
 
@@ -54,11 +57,15 @@ pub struct Args {
 
 impl Args {
     pub fn run(self) -> Result<()> {
+        let web = Client::builder()
+            .user_agent("r4s https://github.com/kaj/r4s")
+            .build()?;
         let mut loader = Loader {
             include_drafts: self.include_drafts,
             force: self.force,
             db: self.db.get_db()?,
-            imgcli: self.img.client(),
+            imgcli: self.img.client(web.clone()),
+            web,
         };
         for path in &self.files {
             if path.is_file() {
@@ -78,6 +85,7 @@ struct Loader {
     include_drafts: bool,
     force: bool,
     db: PgConnection,
+    web: Client,
     imgcli: ImgClient,
 }
 impl Loader {
@@ -313,6 +321,16 @@ impl Loader {
             read(&path).with_context(|| path.display().to_string())?;
         let url = self.store_asset(year, name, mime, &content)?;
         Ok((name.into(), url))
+    }
+
+    fn fetch_content(&self, url: &str) -> Result<(String, Bytes)> {
+        let resp = self.web.get(url).send()?.error_for_status()?;
+        let ctype = resp
+            .headers()
+            .get(CONTENT_TYPE)
+            .context("content-type")?
+            .to_str()?;
+        Ok((ctype.into(), resp.bytes()?))
     }
 
     fn store_asset(
@@ -732,9 +750,10 @@ struct ImgClientOpt {
     make_images_public: bool,
 }
 impl ImgClientOpt {
-    fn client(&self) -> ImgClient {
+    fn client(&self, web: Client) -> ImgClient {
         ImgClient {
             options: self.clone(),
+            web,
             client: None,
         }
     }
@@ -742,12 +761,14 @@ impl ImgClientOpt {
 
 pub struct ImgClient {
     options: ImgClientOpt,
+    web: Client,
     client: Option<self::imgcli::ImgClient>,
 }
 impl ImgClient {
     fn fetch(&mut self, imgref: &str) -> Result<self::imgcli::ImageInfo> {
         if self.client.is_none() {
             self.client = Some(self::imgcli::ImgClient::login(
+                self.web.clone(),
                 &self.options.base,
                 &self.options.user,
                 &self.options.password,

@@ -1,15 +1,11 @@
 use super::Loader;
 use crate::syntax_hl::ClassedHTMLGenerator;
 use crate::syntax_hl::LinesWithEndings;
-use anyhow::Context;
 use anyhow::{bail, Result};
 use pulldown_cmark::escape::escape_html;
 use qr_code::QrCode;
-use reqwest::blocking::Client;
-use reqwest::header::CONTENT_TYPE;
 use serde::Deserialize;
 use std::fmt::Write;
-use warp::hyper::body::Bytes;
 
 pub(super) trait BlockHandler {
     fn push(&mut self, content: &str) -> Result<()>;
@@ -197,21 +193,21 @@ impl<'a> BlockHandler for EmbedHandler<'a> {
         let data = self.data.trim();
         if let Some(ytid) = data.strip_prefix("https://youtu.be/") {
             let id = format!("yt-{ytid}");
-            let client = Client::builder()
-                .user_agent("r4s https://github.com/kaj/r4s")
-                .build()?;
-            let embed: EmbedData = client
+            let embed: EmbedData = self
+                .loader
+                .web
                 .get("https://www.youtube.com/oembed")
                 .query(&[("url", data), ("format", "json")])
                 .send()?
                 .error_for_status()?
                 .json()?;
             let img = embed.thumbnail_url;
-            let img = fetch_content(
-                &client,
-                &img.replace("hqdefault.jpg", "maxresdefault.jpg"),
-            )
-            .or_else(|_| fetch_content(&client, &img))?;
+            let img = self
+                .loader
+                .fetch_content(
+                    &img.replace("hqdefault.jpg", "maxresdefault.jpg"),
+                )
+                .or_else(|_| self.loader.fetch_content(&img))?;
             let img = self.loader.store_asset(
                 self.year,
                 &format!("{id}.jpg"),
@@ -263,16 +259,6 @@ struct EmbedData {
     width: u32,
     thumbnail_url: String,
     html: String,
-}
-
-fn fetch_content(client: &Client, url: &str) -> Result<(String, Bytes)> {
-    let resp = client.get(url).send()?.error_for_status()?;
-    let ctype = resp
-        .headers()
-        .get(CONTENT_TYPE)
-        .context("content-type")?
-        .to_str()?;
-    Ok((ctype.into(), resp.bytes()?))
 }
 
 pub struct CodeBlock<'a> {
