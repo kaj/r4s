@@ -101,10 +101,10 @@ pub(super) fn collect<'a>(
                     format!("Bad image ref: {:?}", imgref.as_ref())
                 })?;
 
-                if classes.split_ascii_whitespace().any(|w| w == "gallery") {
-                    if !remove_end(&mut result, "</div><!--gallery-->\n") {
-                        result.push_str("<div class='gallery'>");
-                    }
+                if classes.split_ascii_whitespace().any(|w| w == "gallery")
+                    && !remove_end(&mut result, "</div><!--gallery-->\n")
+                {
+                    result.push_str("<div class='gallery'>");
                 }
 
                 if imgref == "cover" {
