@@ -111,9 +111,9 @@ impl Loader {
         let (slug, lang) = path
             .file_stem()
             .and_then(std::ffi::OsStr::to_str)
-            .ok_or_else(|| anyhow!("Bad name"))?
+            .context("Bad file name")?
             .split_once('.')
-            .ok_or_else(|| anyhow!("No language in file name"))?;
+            .context("No language in file name")?;
         let contents = read_to_string(path)?;
         let (metadata, contents_md) = extract_metadata(&contents);
 
@@ -315,7 +315,7 @@ impl Loader {
     ) -> Result<(String, String)> {
         let (_all, name, _, mime) =
             regex_captures!(r"^([\w_\.-]+)\s+(\{([\w-]+/[\w-]+)\})$", spec)
-                .ok_or_else(|| anyhow!("Bad asset spec"))?;
+                .context("Bad asset spec")?;
         let path = path.parent().unwrap_or_else(|| Path::new(".")).join(name);
         let content =
             read(&path).with_context(|| path.display().to_string())?;
