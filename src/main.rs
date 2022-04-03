@@ -4,7 +4,6 @@
 extern crate diesel;
 
 mod dbopt;
-mod imgcli;
 mod listposts;
 mod modcomments;
 mod models;

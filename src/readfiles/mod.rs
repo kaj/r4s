@@ -1,5 +1,6 @@
 mod codeblocks;
 mod html;
+mod imgcli;
 mod summary;
 
 use crate::dbopt::DbOpt;
@@ -741,12 +742,12 @@ impl ImgClientOpt {
 
 pub struct ImgClient {
     options: ImgClientOpt,
-    client: Option<crate::imgcli::ImgClient>,
+    client: Option<self::imgcli::ImgClient>,
 }
 impl ImgClient {
-    fn fetch(&mut self, imgref: &str) -> Result<crate::imgcli::ImageInfo> {
+    fn fetch(&mut self, imgref: &str) -> Result<self::imgcli::ImageInfo> {
         if self.client.is_none() {
-            self.client = Some(crate::imgcli::ImgClient::login(
+            self.client = Some(self::imgcli::ImgClient::login(
                 &self.options.base,
                 &self.options.user,
                 &self.options.password,
