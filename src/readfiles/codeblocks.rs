@@ -287,7 +287,7 @@ impl<'a> BlockHandler for CodeBlock<'a> {
     fn push(&mut self, content: &str) -> Result<()> {
         if let Some(gen) = &mut self.gen {
             for line in LinesWithEndings::from(content) {
-                gen.parse_html_for_line_which_includes_newline(line);
+                gen.parse_html_for_line_which_includes_newline(line)?;
             }
         } else {
             escape_html(&mut *self.out, content)?;

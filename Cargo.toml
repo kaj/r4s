@@ -8,9 +8,10 @@ edition = "2021"
 build = "src/build.rs"
 
 [build-dependencies]
+anyhow = "1.0.44"
 lazy_static = "1.4.0"
 ructe = { version = "0.14.0", features = ["sass", "warp03"] }
-syntect = { version = "4.2", default-features = false, features = ["default-fancy"]}
+syntect = { version = "5.0.0", default-features = false, features = ["default-fancy"]}
 
 [dependencies]
 accept-language = "2.0"
@@ -42,7 +43,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 slug = "0.1"
 structopt = "0.3.23"
-syntect = { version = "4.2", default-features = false, features = ["default-fancy"]}
+syntect = { version = "5.0.0", default-features = false, features = ["default-fancy"]}
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.29"
 tracing-subscriber = { version = "0.3.4", features = ["env-filter"] }

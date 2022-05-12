@@ -1,5 +1,5 @@
 //! This module is used both by the builder and by the program!
-
+use anyhow::{bail, Context, Result};
 use lazy_static::lazy_static;
 use syntect::highlighting::ThemeSet;
 use syntect::html::css_for_theme_with_class_style;
@@ -28,16 +28,17 @@ pub fn for_lang(lang: &str) -> Option<ClassedHTMLGenerator> {
 }
 
 #[allow(unused)]
-pub fn get_css(theme: &str) -> Option<String> {
+pub fn get_css(theme: &str) -> Result<String> {
     let themeset = ThemeSet::load_defaults();
     if let Some(theme) = themeset.themes.get(theme) {
-        Some(css_for_theme_with_class_style(theme, STYLE))
+        css_for_theme_with_class_style(theme, STYLE)
+            .context("Get css for theme")
     } else {
         println!(
             "cargo:warning=No theme {:?}. Known: {:?}",
             theme,
             themeset.themes.keys()
         );
-        None
+        bail!("No theme {:?}", theme);
     }
 }

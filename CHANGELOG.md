@@ -8,6 +8,8 @@ project more or less adheres to
 
 ## Unreleased
 
+* Update syntect (the syntax highlighter) to 5.0.0.
+
 
 ## Release 0.2.14
 

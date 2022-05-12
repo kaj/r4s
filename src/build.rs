@@ -1,5 +1,6 @@
+use anyhow::Result;
 mod syntax_hl;
-use ructe::{Result, Ructe};
+use ructe::Ructe;
 use syntax_hl::get_css;
 
 fn main() -> Result<()> {
@@ -8,8 +9,7 @@ fn main() -> Result<()> {
     // Use a standard synect style, but replace some colors for improved contrast.
     statics.add_file_data(
         "shl.css",
-        get_css("Solarized (light)")
-            .unwrap()
+        get_css("Solarized (light)")?
             .replace("#268bd2;", "#1578bd;")
             .replace("#2aa198;", "#115e58;")
             .replace("#657b83;", "#48585e;")
@@ -27,5 +27,5 @@ fn main() -> Result<()> {
     statics.add_files("res/js")?;
     statics.add_files_as("res/leaflet-1.7.1", "ll171")?;
     statics.add_sass_file("res/scss/r4s.scss")?;
-    ructe.compile_templates("templates")
+    Ok(ructe.compile_templates("templates")?)
 }
