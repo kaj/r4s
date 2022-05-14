@@ -3,7 +3,7 @@
 $paper: #fdfbf9;
 $paper2: color.mix($paper, wheat, 90%);
 $purple: mix(rebeccapurple, purple);
-$dark: color.mix($purple, black);
+$dark: color.mix($purple, black, 70%);
 $darker: color.mix($purple, black, 33%);
 
 @use "kratsbox";
@@ -13,12 +13,49 @@ html, body {
     padding: 0;
 }
 
+html {
+    --col-f: black;
+    --col-fl: color.mix($purple, blue);
+    --col-fv: $purple;
+    --col-fh: $dark;
+    --col-b: $paper;
+    --col-bt: rgba($paper2, 0.9);  // background, transparent
+    --col-bx: wheat;
+    --col-bl: color.mix($paper, $purple, 65%);
+    --col-bv: color.mix($paper, $purple, 80%);
+    --col-bext: color.mix($paper, white);
+    --col-b1: $paper2;
+    --col-b2: color.mix($paper, wheat, 70%);
+    --col-flare: white;
+}
+
+@mixin darktheme {
+    --col-f: $paper;
+    --col-fl: color.mix($purple, color.mix(blue, white, 30%), 30%);
+    --col-fv: color.mix($purple, $paper, 30%);
+    --col-fh: wheat;
+    --col-b: $darker;
+    --col-bt: rgba($darker, 0.8);
+    --col-bx: $purple;
+    --col-bl: color.mix($purple, blue);
+    --col-bv: $purple;
+    --col-bext: color.mix($darker, black);
+    --col-flare: rgba(black, 0.5);
+    --col-b1: color.mix($darker, black, 75%);
+    --col-b2: color.mix($darker, black);
+}
+
+html.theme-dark { @include darktheme; }
+@media (prefers-color-scheme: dark) {
+    html:not(.theme-light) { @include darktheme; }
+}
+
 body {
     background:
-        linear-gradient(166deg, transparent 10em, white 17em, transparent 40em),
-        linear-gradient(90deg, $paper2, $paper 40%, $paper 87%, color.mix($paper2, black, 95%));
-    background-color: $paper;
-    color: black;
+        linear-gradient(166deg, transparent 10em, var(--col-flare) 17em, transparent 40em),
+        linear-gradient(90deg, var(--col-b1), var(--col-b) 40%, var(--col-b) 80%, var(--col-b2));
+    background-color: var(--col-b);
+    color: var(--col-f);
     min-height: 100vh;
     line-height: 1.4;
     font-family: serif;
@@ -57,6 +94,10 @@ body {
         p:not(.tagline) {
             margin: 0;
         }
+        p:not(:first-of-type) {
+            display: inline-block;
+            margin-inline-start: 1ex;
+        }
         &::after {
             mask: url(static_name("bike-1.svg"));
             -webkit-mask: url(static_name("bike-1.svg"));
@@ -86,8 +127,8 @@ body {
         }
     }
     > footer {
-        background: $darker;
-        color: $paper;
+        background: var(--col-fh);
+        color: var(--col-b);
         margin: 0;
         display: flex;
         flex-flow: row wrap;
@@ -95,10 +136,10 @@ body {
         gap: 1em;
         p { margin: 0; }
         :link {
-            color: color.mix($paper, $purple, 65%);
+            color: var(--col-bl);
         }
         :visited {
-            color: color.mix($paper, $purple, 80%);
+            color: var(--col-bv);
         }
         hr {
             background: inherit;
@@ -130,10 +171,10 @@ a.cc-by {
 }
 
 :link {
-    color: color.mix($purple, blue);
+    color: var(--col-fl);
 }
 :visited {
-    color: $purple;
+    color: var(--col-fv);
 }
 
 html:lang(en) a:not(:lang(en)),
@@ -171,6 +212,7 @@ html:lang(sv) a:not(:lang(sv)) {
 }
 h1, h2, h3, h4, h5, h6, header {
     font-family: "Cocanut";
+    color: var(--col-fh);
     :link, :visited {
         text-decoration: none;
         &:hover {
@@ -246,7 +288,7 @@ p {
 
 blockquote {
     font-family: Cocanut;
-    border-left: solid color.mix($purple, $paper) 2px;
+    border-left: solid var(--col-fv) 2px;
     border-radius: 1ex;
     padding: 1ex 1em;
     margin: 1ex auto 1.5em 2em;
@@ -257,7 +299,7 @@ blockquote {
         display: block;
         font-size: 600%;
         position: absolute;
-        color: $purple;
+        color: var(--col-fl);
         font-weight: bold;
         top: -0.29em;
         left: -.24em;
@@ -273,11 +315,11 @@ blockquote {
 }
 
 code.key {
-  background: wheat;
+  background: var(--col-bx);
   padding: .2em .5em;
   margin: -.2em .1em;
   border-radius: .4em;
-  box-shadow: .1em .1em $dark;
+  box-shadow: .1em .1em .05em var(--col-fh);
 }
 
 p.publine {
@@ -407,11 +449,12 @@ div.gallery {
     width: 100%;
     width: -moz-available;
     height: 0;
+    overflow: hidden;
 
     figcaption {
-        background: rgba($paper2, 0.9);
+        background: var(--col-bt);
         border-radius: 0 1ex 1ex 0;
-        box-shadow: 2px 3px 2px rgba($dark, 0.5);
+        box-shadow: 2px 1px 4px var(--col-fh);
         padding: 1ex 2em;
         width: fit-content;
         margin-right: 1ex;
@@ -441,7 +484,8 @@ div.gallery {
         height: auto;
 
         p {
-            background: rgba($paper2, 0.9);
+            background: var(--col-bt);
+            box-shadow: 1px 2px 5px -1px var(--col-fh);
             border-radius: 1ex;
             padding: 1ex;
             margin: 0 auto;
@@ -461,7 +505,7 @@ article {
         clear: both;
         mask: url(static_name("deco1.svg"));
         -webkit-mask: url(static_name("deco1.svg"));
-        background: $dark;
+        background: $purple;
         content: "";
         display: block;
         aspect-ratio: 1280 / 640;
@@ -500,10 +544,9 @@ article {
 }
 
 pre {
-    $bcol: burlywood;
-    background: color.mix($paper, white);
-    border: solid 1px $bcol;
-    color: black;
+    background: var(--col-bext);
+    border: solid 1px var(--col-bx);
+    color: var(--col-f);
     margin: 1em 1ex;
     overflow: auto;
     padding: 1ex;
@@ -512,7 +555,7 @@ pre {
         position: relative;
 
         &::before {
-            background: linear-gradient(60deg, rgba($bcol, 0) 1em, $bcol 2em);
+            background: linear-gradient(60deg, transparent 1em, var(--col-bx) 2em);
             content: attr(data-lang);
             display: block;
             font-family: cocanut;
@@ -582,10 +625,10 @@ menu.social {
 
 menu.social a,
 button {
-    background: linear-gradient(white, $paper);
+    background: linear-gradient(var(--col-b) 40%, var(--col-b2));
     border-radius: .3em;
-    border: solid .7px $dark;
-    color: black;
+    border: solid .7px var(--col-fl);
+    color: var(--col-fh);
     display: inline-block;
     font-family: cocanut;
     font-size: inherit;
@@ -593,9 +636,9 @@ button {
     text-decoration: none;
 
     &:focus, &:hover {
-        background: linear-gradient(color.mix($paper, black, 97%), $paper 40%, $paper 87%, color.mix($paper, black, 92%));
-        border: solid .7px $darker;
-        box-shadow: 0 0 1em -.4em $dark;
+        background: linear-gradient(var(--col-b1), var(--col-b) 30%, var(--col-b) 75%, var(--col-b2));
+        color: var(--col-f);
+        box-shadow: 0 0 1em -.4em var(--col-fh);
     }
 }
 
@@ -620,21 +663,21 @@ button {
     }
 
     hr {
-        background-color: $purple;
+        background-color: var(--col-fh);
         border: 0;
         height: 2px;
         border-radius: 50%;
         position: relative;
         margin: 2em min(20%, 7em) 1em 0;
         &::after {
-            color: $purple;
+            color: var(--col-fh);
             content: "☙";
             display: block;
             font-size: 3em;
             margin: 0 auto;
             position: relative;
             text-align: center;
-            text-shadow: .04em 0 0 $paper, -.04em 0 0 $paper;
+            text-shadow: .04em 0 0 var(--col-b), -.04em 0 0 var(--col-b);
             top: -.75em;
             width: 3em;
         }
@@ -717,85 +760,39 @@ img.gravatar {
     }
 }
 
-@media (prefers-color-scheme: dark) {
-    body {
-        background:
-            linear-gradient(166deg, transparent 10em, rgba(black,0.5) 17em, transparent 40em),
-            linear-gradient(90deg, color.mix(black, $darker), $darker 40%, $darker 87%, color.mix(black, $darker));
-        background-color: $darker;
-        color: $paper;
-        > footer {
-            background: wheat;
-            color: black;
-            :link {
-                color: color.mix($dark, blue, 65%);
-            }
-            :visited {
-                color: $dark;
-            }
-        }
-    }
-    h1, h2, h3, h4, h5, h6 {
-        color: wheat;
-    }
-    :link {
-        color: color.mix($paper, $purple, 65%);
-    }
-    :visited {
-        color: color.mix($paper, $purple, 80%);
-    }
+textarea, input[type=text], input[type=email], input[type=url] {
+    background: var(--col-bext);
+    color: var(--col-fx);
+    border: .7px inset var(--col-bx);
+}
 
-    pre {
-        $bcol: $dark;
-        background: color.mix($darker, black);
-        border: solid 1px $bcol;
-        color: $paper;
-        &[data-lang]::before {
-            background: linear-gradient(60deg, rgba($bcol, 0) 1em, $bcol 2em);
+button.themeswitch {
+    position: relative;
+    padding: 0 1ex;
+    &:hover, &:focus {
+        &:after {
+            background: var(--col-b);
+            border: solid .6px var(--col-fh);
+            box-shadow: 0 0 1em -.4em var(--col-fh);
+            max-width: max-content;
+            padding: 0 1ex;
+            position: absolute;
+            right: -1ex;
+            top: 1.6em;
+            width: 60vw;
+            content: "Choose dark theme (device default is selected).";
+            html.theme-dark & { content: "Choose light theme (dark is selected)."; }
+            html.theme-light & { content: "Choose device or dark theme (light is selected)."; }
         }
-    }
-
-    #comments {
-        hr {
-            background-color: $purple;
-            &::after {
-                color: $purple;
-                text-shadow: .04em 0 0 $darker, -.04em 0 0 $darker;
+        &:lang(sv) {
+            &:after {
+                content: "Välj mörkt tema (default för enhet är valt).";
+                html.theme-dark & { content: "Välj ljust tema (mörkt är valt)."; }
+                html.theme-light & { content: "Välj defaulttema för enhet (ljust är valt)."; }
             }
         }
     }
-    code.key {
-        background: color.mix($dark, brown);
-        box-shadow: .1em .1em .05em wheat;
-    }
-
-    menu.social a,
-    button {
-        background: linear-gradient(black, $dark);
-        border-color: $purple;
-        color: wheat;
-
-        &:focus, &:hover {
-            background: linear-gradient(black, $dark 40%, $dark 80%, black);
-            border: solid .7px $purple;
-            box-shadow: 0 0 1em -0.4em lightgreen;
-        }
-    }
-    textarea, input[type=text], input[type=email], input[type=url] {
-        background: $darker;
-        color: wheat;
-        border: .7px inset $purple;
-    }
-
-    .wrapiframe {
-        figcaption {
-            background: rgba($darker, 0.8);
-            box-shadow: 2px 3px 2px rgba(wheat, 0.3);
-        }
-        div.ifrprev {
-            p {
-                background: rgba($darker, 0.8);
-            }
-        }
-    }
+    &::before { content: '☽'; margin-inline-end: 1ch; }
+    html.theme-dark &::before { content: '☼' }
+    html.theme-light &::before { content: '☽☼' }
 }

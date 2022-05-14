@@ -1,8 +1,9 @@
-@use super::statics::{shl_css, r4s_css, kaj_svg, kratsbox_js};
+@use super::statics::{shl_css, r4s_css, kaj_svg, kratsbox_js, site_js};
 
 @()
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <link rel="stylesheet" href="/s/@r4s_css.name" type="text/css"/>
 <link rel="stylesheet" href="/s/@shl_css.name" type="text/css"/>
 <link rel="icon" href="/s/@kaj_svg.name" type="image/svg"/>
+<script async src="/s/@site_js.name"></script>
 <script defer src="/s/@kratsbox_js.name" onload="kratsbox('figure > a')"></script>
