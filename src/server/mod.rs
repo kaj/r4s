@@ -465,7 +465,7 @@ async fn page(
         .header(
             SET_COOKIE,
             format!(
-                "CSRF={}; SameSite=Strict; Path=/; HttpOnly",
+                "CSRF={}; SameSite=Strict; Path=/; Secure; HttpOnly",
                 cookie.b64_string()
             ),
         )
