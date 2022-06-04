@@ -58,7 +58,7 @@ impl Args {
         for comment in PostComment::mod_queue(&db)? {
             let p = comment.p();
             println!(
-                "{} by {:?} <{}> {:?}\nOn {} ({})",
+                "\n{} by {:?} <{}> {:?}\nOn {} ({})",
                 Ago(comment.posted_at.raw()),
                 comment.name,
                 comment.email,
@@ -99,7 +99,6 @@ impl Display for Ago {
     fn fmt(&self, out: &mut fmt::Formatter) -> fmt::Result {
         let date = self.0;
         let elapsed_mins = (Utc::now() - date).num_minutes();
-        println!();
         if elapsed_mins == 0 {
             out.write_str("Now")
         } else if elapsed_mins < 45 {

@@ -9,6 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Add fallback route for post urls without language.
+* Fix incosistency in moderate-comments formatting.
 
 
 ## Release 0.2.16
