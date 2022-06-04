@@ -6,6 +6,11 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* Add fallback route for post urls without language.
+
+
 ## Release 0.2.16
 
 * Update syntect (the syntax highlighter) to 5.0.0.

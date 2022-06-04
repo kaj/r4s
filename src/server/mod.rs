@@ -139,6 +139,15 @@ impl Args {
                 .map(wrap)
                 .boxed())
             .or(param()
+                .and(param())
+                .and(end())
+                .and(lang_filt)
+                .and(goh())
+                .and(s())
+                .then(page_fallback)
+                .map(wrap)
+                .boxed())
+            .or(param()
                 .and(end())
                 .and(goh())
                 .and(s())
@@ -483,6 +492,35 @@ async fn page(
                 &related,
             )
         })?)
+}
+
+/// When asked for a page without lang in url, redirect to existing.
+///
+/// Tries to respect the language preference from the user agent.
+#[instrument]
+async fn page_fallback(
+    year: i16,
+    slug: Slug,
+    lpref: MyLang,
+    app: App,
+) -> Result<impl Reply> {
+    let db = app.db().await?;
+
+    let slugc = slug.clone();
+    let lang = db
+        .interact(move |db| {
+            p::posts
+                .select(p::lang)
+                .filter(year_of_date(p::posted_at).eq(&year))
+                .filter(p::slug.eq(slugc.as_ref()))
+                .order(p::lang.eq(lpref.as_ref()).desc())
+                .first::<String>(db)
+                .optional()
+        })
+        .await??
+        .ok_or(ViewError::NotFound)?;
+
+    Ok(found(&format!("/{year}/{slug}.{lang}")))
 }
 
 #[instrument]
