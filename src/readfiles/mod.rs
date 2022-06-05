@@ -699,11 +699,11 @@ fn link_ext(
     }
 }
 
-fn wikilink(text: &str, lang: &str, xyzzy: &str) -> (String, String) {
-    let t = if xyzzy.is_empty() {
+fn wikilink(text: &str, lang: &str, disambig: &str) -> (String, String) {
+    let t = if disambig.is_empty() {
         text.to_string()
     } else {
-        format!("{} ({})", text, xyzzy)
+        format!("{} ({})", text, disambig)
     };
     (
         format!(
@@ -711,6 +711,7 @@ fn wikilink(text: &str, lang: &str, xyzzy: &str) -> (String, String) {
             lang,
             t.replace(' ', "_").replace('\u{ad}', ""),
         ),
+        // TODO: Translate this to page (not link) language!
         format!("Se {} på wikipedia", t),
     )
 }
