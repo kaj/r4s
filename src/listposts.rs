@@ -1,16 +1,16 @@
 use crate::dbopt::DbOpt;
 use crate::models::PostLink;
 use anyhow::Result;
+use clap::Parser;
 use diesel::prelude::*;
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
 
     /// The paths to read content from.
-    #[structopt(long, short = "b", default_value = "")]
+    #[clap(long, short = 'b', default_value = "")]
     public_base: String,
 }
 

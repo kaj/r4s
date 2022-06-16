@@ -18,6 +18,7 @@ use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::PubBaseOpt;
+use clap::Parser;
 use csrf::{AesGcmCsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
 use deadpool_diesel::PoolError;
 use diesel::prelude::*;
@@ -25,7 +26,6 @@ use serde::Deserialize;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use structopt::StructOpt;
 use tracing::{event, instrument, Level};
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
@@ -38,27 +38,27 @@ pub use templates::ToHtml;
 
 type Result<T, E = ViewError> = std::result::Result<T, E>;
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
 
     /// Adress to listen on
-    #[structopt(long, default_value = "127.0.0.1:8765")]
+    #[clap(long, default_value = "127.0.0.1:8765")]
     bind: SocketAddr,
 
-    #[structopt(flatten)]
+    #[clap(flatten)]
     base: PubBaseOpt,
 
     /// A 32-byte secret key for csrf generation and verification.
-    #[structopt(long, env = "CSRF_SECRET", hide_env_values = true)]
+    #[clap(long, env = "CSRF_SECRET", hide_env_values = true)]
     csrf_secret: CsrfSecret,
 
     /// Use this flag if the server runs behind a proxy.
     ///
     /// Comments will then take their source ip address from the
     /// `x-forwarded-for` header instead of the connected remote addr.
-    #[structopt(long)]
+    #[clap(long)]
     is_proxied: bool,
 }
 

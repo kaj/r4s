@@ -3,25 +3,25 @@ use crate::models::PostComment;
 use crate::schema::comments::dsl as c;
 use anyhow::{ensure, Result};
 use chrono::{DateTime, Utc};
+use clap::Parser;
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use std::fmt::{self, Display};
 use std::io::{stdin, stdout, Write};
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
 
     /// Only list the status and moderation queue.
     ///
     /// Does not wait for input, does not modify anything.
-    #[structopt(long, short)]
+    #[clap(long, short)]
     list: bool,
 
     /// Be silent if there is no pending comments.
-    #[structopt(long, short)]
+    #[clap(long, short)]
     silent: bool,
 }
 

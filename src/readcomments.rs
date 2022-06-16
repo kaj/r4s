@@ -4,6 +4,7 @@ use crate::models::{safe_md2html, year_of_date};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use anyhow::{anyhow, Context, Result};
+use clap::Parser;
 use diesel::prelude::*;
 use ipnetwork::IpNetwork;
 use serde::{self, Deserialize, Deserializer};
@@ -11,11 +12,10 @@ use std::fs::File;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
 
     path: PathBuf,

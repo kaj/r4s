@@ -14,8 +14,8 @@ mod server;
 mod syntax_hl;
 
 use anyhow::{Context, Result};
+use clap::Parser;
 use dotenv::dotenv;
-use structopt::StructOpt;
 
 /// Main program: Set up env and run according to arguments.
 fn main() -> Result<()> {
@@ -34,8 +34,8 @@ fn main() -> Result<()> {
 }
 
 /// Manage and serve my blog
-#[derive(StructOpt)]
-#[structopt(about, author)]
+#[derive(Parser)]
+#[clap(about, author, version)]
 enum R4s {
     /// List known posts
     List(listposts::Args),
@@ -61,10 +61,10 @@ impl R4s {
     }
 }
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 pub struct PubBaseOpt {
     /// Base url for the server, in absolute urls
-    #[structopt(long, short = "b", env = "R4S_BASE")]
+    #[clap(long, short = 'b', env = "R4S_BASE")]
     public_base: String,
 }
 

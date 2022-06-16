@@ -23,27 +23,26 @@ use slug::slugify;
 use std::collections::BTreeMap;
 use std::fs::{read, read_to_string};
 use std::path::{Path, PathBuf};
-use structopt::StructOpt;
 use warp::hyper::body::Bytes;
 
 type DateTime = chrono::DateTime<chrono::FixedOffset>;
 
-#[derive(StructOpt)]
+#[derive(clap::Parser)]
 pub struct Args {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     db: DbOpt,
 
-    #[structopt(flatten)]
+    #[clap(flatten)]
     img: ImgClientOpt,
 
     /// The paths to read content from.
-    #[structopt(parse(from_os_str))]
+    #[clap(value_parser)]
     files: Vec<PathBuf>,
 
     /// Update content even if it has not changed.
     ///
     /// Mainly usefull while developing r4s itself.
-    #[structopt(long)]
+    #[clap(long)]
     force: bool,
 
     /// Include drafts.
@@ -51,7 +50,7 @@ pub struct Args {
     /// Posts without a publication date are drafts, and normally
     /// ignored.  With this flag, they are included.
     /// Not for use on the production server.
-    #[structopt(long)]
+    #[clap(long)]
     include_drafts: bool,
 }
 
@@ -730,16 +729,16 @@ fn extract_metadata(src: &str) -> (BTreeMap<&str, &str>, &str) {
     (meta, src.trim())
 }
 
-#[derive(Clone, StructOpt)]
+#[derive(Clone, clap::Parser)]
 struct ImgClientOpt {
     /// Base url for rphotos image api client.
-    #[structopt(long = "image-base", env = "IMG_URL")]
+    #[clap(long = "image-base", env = "IMG_URL")]
     base: String,
     /// User for rphotos api.
-    #[structopt(long = "image-user", env = "IMG_USER")]
+    #[clap(long = "image-user", env = "IMG_USER")]
     user: String,
     /// Password for rphotos api.
-    #[structopt(
+    #[clap(
         long = "image-password",
         env = "IMG_PASSWORD",
         hide_env_values = true
@@ -747,7 +746,7 @@ struct ImgClientOpt {
     password: String,
     /// Make referenced images public (otherwise a warning is issued
     /// when private images are referenced).
-    #[structopt(long)]
+    #[clap(long)]
     make_images_public: bool,
 }
 impl ImgClientOpt {

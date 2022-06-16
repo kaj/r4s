@@ -10,6 +10,7 @@ project more or less adheres to
 
 * Add fallback route for post urls without language.
 * Fix incosistency in moderate-comments formatting.
+* Use clap 3.2.5 instead of structopt.
 
 
 ## Release 0.2.16
