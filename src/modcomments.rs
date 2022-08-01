@@ -8,6 +8,7 @@ use diesel::dsl::sql;
 use diesel::prelude::*;
 use std::fmt::{self, Display};
 use std::io::{stdin, stdout, Write};
+use textwrap::wrap;
 
 #[derive(Parser)]
 pub struct Args {
@@ -55,6 +56,10 @@ impl Args {
             );
         }
 
+        let wrap_opt = textwrap::Options::with_termwidth()
+            .initial_indent(" > ")
+            .subsequent_indent(" > ");
+
         for comment in PostComment::mod_queue(&db)? {
             let p = comment.p();
             println!(
@@ -66,7 +71,9 @@ impl Args {
                 p.title,
                 p.year
             );
-            showlimited(&comment.content);
+            for line in wrap(&comment.content, &wrap_opt) {
+                println!("{}", line);
+            }
 
             if !self.list {
                 match prompt(
@@ -107,23 +114,6 @@ impl Display for Ago {
             date.format("%H:%M").fmt(out)
         } else {
             date.format("%Y-%m-%d %H:%M").fmt(out)
-        }
-    }
-}
-fn showlimited(content: &str) {
-    for (i, line) in content.trim().lines().enumerate() {
-        print!(" > ");
-        let mut chars = line.chars();
-        for c in (&mut chars).take(72) {
-            print!("{}", c);
-        }
-        if chars.next().is_some() {
-            print!(" …");
-        }
-        println!();
-
-        if i > 4 {
-            return;
         }
     }
 }
