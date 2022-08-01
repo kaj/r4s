@@ -1,6 +1,6 @@
 [package]
 name = "r4s"
-version = "0.2.18"
+version = "0.2.19-PRE"
 description = "Manage and serve my blog"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 edition = "2021"
@@ -31,7 +31,6 @@ intl-memoizer =  "0.5.1"
 ipnetwork = "0.18.0" # must match version supported by diesel
 lazy-regex = "2.2.2"
 lazy_static = "1.4.0"
-log = "0.4.6"
 mime = "0.3.0"
 png = "0.17.2"
 pulldown-cmark = "0.9.0"
