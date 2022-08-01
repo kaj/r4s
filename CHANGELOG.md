@@ -15,6 +15,7 @@ project more or less adheres to
 
 
 ## Release 0.2.16
+2022-05-16 23:18 CEST.
 
 * Update syntect (the syntax highlighter) to 5.0.0.
 * Implement a theme switcher UI (PR #5)
@@ -22,11 +23,13 @@ project more or less adheres to
 
 
 ## Release 0.2.14
+2022-04-05 19:05 CEST.
 
 * Improve webkit/chrome compatibility in the stylesheet.
 
 
 ## Release 0.2.12
+2022-04-03 18:26 CEST.
 
 * Improve how youtube videos are handled (PR #4).
 * Specify that the main font should be serif.
@@ -34,8 +37,7 @@ project more or less adheres to
 
 
 ## Release 0.2.10
-
-2022-03-01 22:20 CET
+2022-03-01 22:20 CET.
 
 * Support `!embed` blocks for youtube, in preparation for improving
   privacy by not contacting youtube before the user starts a video.
@@ -45,15 +47,13 @@ project more or less adheres to
 
 
 ## Release 0.2.8
-
-2022-02-01 23:52 CET
+2022-02-01 23:52 CET.
 
 * Bugfix: Fallback route must be last, so it don't hide the feed routes.
 
 
 ## Release 0.2.6
-
-2022-02-01 20:37 CET
+2022-02-01 20:37 CET.
 
 * Support qr-code blocks.  Text from the block is made into a qr-code,
   encoded as a png image in a data: url.
@@ -64,6 +64,7 @@ project more or less adheres to
 
 
 ## Release 0.2.4
+2022-01-23 00:20 CET.
 
 * Don't hardcode img.krats.se, I use local image server for drafting.
 * Put a div around .gallery images, and use flex layout for them.
@@ -71,6 +72,7 @@ project more or less adheres to
 
 
 ## Release 0.2.2
+2022-01-20 18:30 CET.
 
 * Comment poster url validation, avoid empty non-null urls.
   Also, actually link to the url when given.  And log some more.
@@ -82,7 +84,7 @@ project more or less adheres to
 
 ## Release 0.2.0
 
-Initial release, Sunday 2022-01-16.
+Initial release, Sunday 2022-01-16 22:35 CET.
 There is posts, meta pages and comments.
 There is syntax highlighting in code samples, and rphotos support for
 images.
