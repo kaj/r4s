@@ -796,3 +796,71 @@ button.themeswitch {
     html.theme-dark &::before { content: '☼' }
     html.theme-light &::before { content: '☽☼' }
 }
+
+@media print {
+    $headh: 14pt;
+
+    @page {
+        margin: 7mm 9mm 12mm 25mm;
+    }
+    @page :left {
+        margin: 7mm 25mm 12mm 9mm;
+    }
+
+    body {
+        font-size: 10pt;
+        background: white; // Gradient w/ transp is buggy in chrome.
+        > header {
+            min-height: $headh;
+            padding: 0;
+            &:after {
+                height: $headh;
+                width: $headh * 1.33;
+            }
+        }
+        > footer {
+            $treesize: 20mm;
+            margin-top: $treesize;
+            padding: 1pt 1em;
+            font-size: 87%;
+            hr {
+                height: $treesize;
+                top: calc(#{-$treesize} + 1Q);
+                width: $treesize * 27 / 30;
+            }
+        }
+    }
+
+    body > header p:not(:first-of-type),
+    menu.social,
+    section#comments.pending,
+    section#writecomment,
+    body > aside,
+    aside#me_box,
+    footer p.cookies {
+        display: none;
+    }
+
+    #comments section {
+        break-inside: avoid;
+    }
+
+    // Override colors for print both with and without light theme, to
+    // be more specific.
+    html.theme-light,
+    html:not(.theme-light) {
+        --col-f: black;
+        --col-fl: color.mix($purple, blue);
+        --col-fv: $purple;
+        --col-fh: $dark;
+        --col-b: white;
+        --col-bt: rgba(white, 0.9);
+        --col-bx: wheat;
+        --col-bl: color.mix(white, $purple, 65%);
+        --col-bv: color.mix(white, $purple, 80%);
+        --col-bext: white;
+        --col-b1: white;
+        --col-b2: white;
+        --col-flare: white;
+    }
+}

@@ -35,7 +35,7 @@
                  class="fb" rel="noopener" target="_blank">@fl!(fluent, "fbshare")</a></li>
         </menu>
       </footer>
-      <section id="comments">
+      <section id="comments" @if comments.is_empty() && !bad_comment {class="pending"}>
         <h2>@fl!(fluent, "comments")</h2>
         @if bad_comment {
         <div id="cxmod">

@@ -9,6 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Add fallback route for post urls without language.
+* Improve print styling.
 * Use textwrap to improve moderate-comments formatting.
 * Use clap 3.2.5 instead of structopt.
 
