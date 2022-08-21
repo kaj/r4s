@@ -56,9 +56,11 @@ body {
         linear-gradient(90deg, var(--col-b1), var(--col-b) 40%, var(--col-b) 80%, var(--col-b2));
     background-color: var(--col-b);
     color: var(--col-f);
-    min-height: 100vh;
-    line-height: 1.4;
     font-family: serif;
+    font-variant: oldstyle-nums;
+    line-height: 1.4;
+    min-height: 100vh;
+    print-color-adjust: exact;
 
     > main, > aside {
         padding: 5vmin 2vw 2vmin;
@@ -314,6 +316,9 @@ blockquote {
     }
 }
 
+code {
+    font-variant: lining-nums;
+}
 code.key {
   background: var(--col-bx);
   padding: .2em .5em;
@@ -547,6 +552,7 @@ pre {
     background: var(--col-bext);
     border: solid 1px var(--col-bx);
     color: var(--col-f);
+    font-variant: lining-nums;
     margin: 1em 1ex;
     overflow: auto;
     padding: 1ex;
