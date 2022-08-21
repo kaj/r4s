@@ -14,35 +14,35 @@ html, body {
 }
 
 html {
-    --col-f: black;
-    --col-fl: color.mix($purple, blue);
-    --col-fv: $purple;
-    --col-fh: $dark;
-    --col-b: $paper;
-    --col-bt: rgba($paper2, 0.9);  // background, transparent
-    --col-bx: wheat;
-    --col-bl: color.mix($paper, $purple, 65%);
-    --col-bv: color.mix($paper, $purple, 80%);
-    --col-bext: color.mix($paper, white);
-    --col-b1: $paper2;
-    --col-b2: color.mix($paper, wheat, 70%);
-    --col-flare: white;
+    --col-f: #{black};
+    --col-fl: #{color.mix($purple, blue)};
+    --col-fv: #{$purple};
+    --col-fh: #{$dark};
+    --col-b: #{$paper};
+    --col-bt: #{rgba($paper2, 0.9)};  // background, transparent
+    --col-bx: #{wheat};
+    --col-bl: #{color.mix($paper, $purple, 65%)};
+    --col-bv: #{color.mix($paper, $purple, 80%)};
+    --col-bext: #{color.mix($paper, white)};
+    --col-b1: #{$paper2};
+    --col-b2: #{color.mix($paper, wheat, 70%)};
+    --col-flare: #{white};
 }
 
 @mixin darktheme {
-    --col-f: $paper;
-    --col-fl: color.mix($purple, color.mix(blue, white, 30%), 30%);
-    --col-fv: color.mix($purple, $paper, 30%);
-    --col-fh: wheat;
-    --col-b: $darker;
-    --col-bt: rgba($darker, 0.8);
-    --col-bx: $purple;
-    --col-bl: color.mix($purple, blue);
-    --col-bv: $purple;
-    --col-bext: color.mix($darker, black);
-    --col-flare: rgba(black, 0.5);
-    --col-b1: color.mix($darker, black, 75%);
-    --col-b2: color.mix($darker, black);
+    --col-f: #{$paper};
+    --col-fl: #{color.mix($purple, color.mix(blue, white, 30%), 30%)};
+    --col-fv: #{color.mix($purple, $paper, 30%)};
+    --col-fh: #{wheat};
+    --col-b: #{$darker};
+    --col-bt: #{rgba($darker, 0.8)};
+    --col-bx: #{$purple};
+    --col-bl: #{color.mix($purple, blue)};
+    --col-bv: #{$purple};
+    --col-bext: #{color.mix($darker, black)};
+    --col-flare: #{rgba(black, 0.5)};
+    --col-b1: #{color.mix($darker, black, 75%)};
+    --col-b2: #{color.mix($darker, black)};
 }
 
 html.theme-dark { @include darktheme; }
@@ -849,18 +849,18 @@ button.themeswitch {
     // be more specific.
     html.theme-light,
     html:not(.theme-light) {
-        --col-f: black;
-        --col-fl: color.mix($purple, blue);
-        --col-fv: $purple;
-        --col-fh: $dark;
-        --col-b: white;
-        --col-bt: rgba(white, 0.9);
-        --col-bx: wheat;
-        --col-bl: color.mix(white, $purple, 65%);
-        --col-bv: color.mix(white, $purple, 80%);
-        --col-bext: white;
-        --col-b1: white;
-        --col-b2: white;
-        --col-flare: white;
+        --col-f: #{black};
+        --col-fl: #{color.mix($purple, blue)};
+        --col-fv: #{$purple};
+        --col-fh: #{$dark};
+        --col-b: #{white};
+        --col-bt: #{rgba(white, 0.9)};
+        --col-bx: #{wheat};
+        --col-bl: #{color.mix(white, $purple, 65%)};
+        --col-bv: #{color.mix(white, $purple, 80%)};
+        --col-bext: #{white};
+        --col-b1: #{white};
+        --col-b2: #{white};
+        --col-flare: #{white};
     }
 }
