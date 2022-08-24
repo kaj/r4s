@@ -100,19 +100,21 @@ body {
             display: inline-block;
             margin-inline-start: 1ex;
         }
-        &::after {
-            mask: url(static_name("bike-1.svg"));
-            -webkit-mask: url(static_name("bike-1.svg"));
-            background: $purple;
-            content: "";
-            display: block;
-            height: 50px;
-            margin: 0;
-            padding: 0;
-            position: absolute;
-            left: 10%;
-            bottom: 0;
-            width: calc(50px * 1.33);
+        @media (min-width: 30em) {
+            &::after {
+                mask: url(static_name("bike-1.svg"));
+                -webkit-mask: url(static_name("bike-1.svg"));
+                background: $purple;
+                content: "";
+                display: block;
+                height: 50px;
+                margin: 0;
+                padding: 0;
+                position: absolute;
+                left: 10%;
+                bottom: 0;
+                width: calc(50px * 1.33);
+            }
         }
     }
     > main {
