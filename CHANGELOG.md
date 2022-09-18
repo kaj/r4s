@@ -8,7 +8,9 @@ project more or less adheres to
 
 ## Unreleased
 
-* ...
+* Style update: Use oldstyle numbers in text and only show the top
+  bike if there s room for it.
+* Update ructe to 0.15.0.
 
 
 ## Release 0.2.18
