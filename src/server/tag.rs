@@ -3,7 +3,9 @@ use super::{goh, wrap, App, MyLang, Result, SlugAndLang, ViewError};
 use crate::models::{Tag, Teaser};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
+use diesel::dsl::count_star;
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use i18n_embed_fl::fl;
 use tracing::instrument;
 use warp::filters::BoxedFilter;
@@ -20,20 +22,14 @@ pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
 
 #[instrument]
 async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
-    let db = app.db().await?;
-    let tags = db
-        .interact(move |db| {
-            use diesel::dsl::sql;
-            use diesel::sql_types::Integer;
-            let c = sql::<Integer>("cast(count(*) as integer)");
-            t::tags
-                .left_join(pt::post_tags.on(pt::tag_id.eq(t::id)))
-                .select((t::tags::all_columns(), c.clone()))
-                .group_by(t::tags::all_columns())
-                .order(c.desc())
-                .load::<(Tag, i32)>(db)
-        })
-        .await??;
+    let mut db = app.db().await?;
+    let tags = t::tags
+        .left_join(pt::post_tags.on(pt::tag_id.eq(t::id)))
+        .group_by(t::tags::all_columns())
+        .select((t::tags::all_columns(), count_star()))
+        .order(count_star().desc())
+        .load::<(Tag, i64)>(&mut db)
+        .await?;
     let n = tags.len();
     let m = 6;
     let mut tags = tags
@@ -59,18 +55,15 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
 
 #[instrument]
 async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
-    let db = app.db().await?;
+    let mut db = app.db().await?;
     let lang = tag.lang;
     let langc = lang.clone();
-    let tag = db
-        .interact(move |db| Tag::by_slug(&tag.slug, db))
-        .await??
+    let tag = Tag::by_slug(&tag.slug, &mut db)
+        .await?
         .ok_or(ViewError::NotFound)?;
 
     let tag_id = tag.id;
-    let posts = db
-        .interact(move |db| Teaser::tagged(tag_id, lang.as_ref(), 50, db))
-        .await??;
+    let posts = Teaser::tagged(tag_id, lang.as_ref(), 50, &mut db).await?;
 
     let fluent = langc.fluent()?;
     let h1 = fl!(fluent, "posts-tagged", tag = tag.name);

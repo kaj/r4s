@@ -23,7 +23,7 @@ pub struct Args {
 
 impl Args {
     pub fn run(self) -> Result<()> {
-        let db = self.db.get_db()?;
+        let mut db = self.db.get_db()?;
         let file = File::open(&self.path)
             .with_context(|| format!("Failed to read {:?}", self.path))?;
         for comment in serde_json::from_reader::<_, Vec<Dumped>>(file)? {
@@ -33,7 +33,7 @@ impl Args {
                 .filter(year_of_date(p::posted_at).eq(&post.year))
                 .filter(p::slug.eq(&post.slug))
                 .filter(p::lang.eq(&post.lang))
-                .first(&db)?;
+                .first(&mut db)?;
 
             let ip: IpAddr =
                 comment.by_ip.as_deref().unwrap_or("127.0.0.17").parse()?;
@@ -50,7 +50,7 @@ impl Args {
                     c::raw_md.eq(&comment.comment),
                     c::is_public.eq(true),
                 ))
-                .execute(&db)?;
+                .execute(&mut db)?;
         }
         Ok(())
     }

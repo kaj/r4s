@@ -3,8 +3,9 @@ use super::{wrap, App, Result};
 use crate::models::{safe_md2html, PostLink};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
-use diesel::dsl::sql;
+use diesel::dsl::count_star;
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use ipnetwork::IpNetwork;
 use reqwest::Url;
 use serde::Deserialize;
@@ -38,16 +39,13 @@ async fn postcomment(
     app: App,
 ) -> Result<impl Reply> {
     app.verify_csrf(&form.csrftoken, &csrf_cookie)?;
-    let db = app.db().await?;
+    let mut db = app.db().await?;
 
     let post = form.post;
-    let post = db
-        .interact(move |db| {
-            PostLink::select()
-                .filter(p::id.eq(post))
-                .first::<PostLink>(db)
-        })
-        .await??;
+    let post = PostLink::select()
+        .filter(p::id.eq(post))
+        .first::<PostLink>(&mut db)
+        .await?;
 
     let name = form.name.clone();
     let email = form.email.clone();
@@ -62,16 +60,13 @@ async fn postcomment(
             })
         })
         .transpose()?;
-    let counts = db
-        .interact(move |db| {
-            c::comments
-                .select(((c::is_public, c::is_spam), sql("count(*)")))
-                .group_by((c::is_public, c::is_spam))
-                .filter(c::name.eq(name))
-                .filter(c::email.eq(email))
-                .load::<((bool, bool), i64)>(db)
-        })
-        .await??;
+    let counts = c::comments
+        .group_by((c::is_public, c::is_spam))
+        .select(((c::is_public, c::is_spam), count_star()))
+        .filter(c::name.eq(name))
+        .filter(c::email.eq(email))
+        .load::<((bool, bool), i64)>(&mut db)
+        .await?;
     let mut public = 0;
     let mut spam = 0;
     for ((is_public, is_spam), count) in counts {
@@ -87,23 +82,20 @@ async fn postcomment(
     }
     let public = public > 0;
 
-    let (id, public) = db
-        .interact(move |db| {
-            diesel::insert_into(c::comments)
-                .values((
-                    c::post_id.eq(&form.post),
-                    c::content.eq(form.html()),
-                    c::name.eq(&form.name),
-                    c::email.eq(&form.email),
-                    url.as_ref().map(|u| c::url.eq(u.as_str())),
-                    c::from_host.eq(IpNetwork::from(ip)),
-                    c::raw_md.eq(&form.comment),
-                    c::is_public.eq(public),
-                ))
-                .returning((c::id, c::is_public))
-                .get_result::<(i32, bool)>(db)
-        })
-        .await??;
+    let (id, public) = diesel::insert_into(c::comments)
+        .values((
+            c::post_id.eq(&form.post),
+            c::content.eq(form.html()),
+            c::name.eq(&form.name),
+            c::email.eq(&form.email),
+            url.as_ref().map(|u| c::url.eq(u.as_str())),
+            c::from_host.eq(IpNetwork::from(ip)),
+            c::raw_md.eq(&form.comment),
+            c::is_public.eq(public),
+        ))
+        .returning((c::id, c::is_public))
+        .get_result::<(i32, bool)>(&mut db)
+        .await?;
 
     tracing::info!("Comment accepted.  Public? {}", public);
     my_found(&post, public, id)

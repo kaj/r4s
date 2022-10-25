@@ -1,4 +1,4 @@
-use diesel::sql_types::{Bool, Smallint, Timestamptz, Varchar};
+use diesel::sql_types::{Smallint, Timestamptz, Varchar};
 
 mod comment;
 mod datetime;

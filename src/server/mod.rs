@@ -20,8 +20,10 @@ use crate::schema::posts::dsl as p;
 use crate::PubBaseOpt;
 use clap::Parser;
 use csrf::{AesGcmCsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
-use deadpool_diesel::PoolError;
+use diesel::dsl::count_distinct;
 use diesel::prelude::*;
+use diesel_async::pooled_connection::deadpool::PoolError;
+use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -262,18 +264,15 @@ fn static_file(name: Tail) -> Result<impl Reply> {
 #[instrument]
 async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
     use warp::http::header::CONTENT_TYPE;
-    let db = app.db().await?;
+    let mut db = app.db().await?;
 
-    let (mime, content) = db
-        .interact(move |db| {
-            a::assets
-                .select((a::mime, a::content))
-                .filter(a::year.eq(year))
-                .filter(a::name.eq(name))
-                .first::<(String, Vec<u8>)>(db)
-                .optional()
-        })
-        .await??
+    let (mime, content) = a::assets
+        .select((a::mime, a::content))
+        .filter(a::year.eq(year))
+        .filter(a::name.eq(name))
+        .first::<(String, Vec<u8>)>(&mut db)
+        .await
+        .optional()?
         .ok_or(ViewError::NotFound)?;
 
     Builder::new()
@@ -285,21 +284,20 @@ async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
 
 #[instrument]
 async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
-    let db = app.db().await?;
+    let mut db = app.db().await?;
     let limit = 5;
     let langc = lang.clone();
-    let posts = db
-        .interact(move |db| Teaser::recent(lang.as_ref(), limit, db))
-        .await??;
+    let posts = Teaser::recent(lang.as_ref(), limit, &mut db).await?;
 
-    let comments = db.interact(move |db| PostComment::recent(db)).await??;
+    let comments = PostComment::recent(&mut db).await?;
 
-    let years = db
-        .interact(move |db| {
-            let year = year_of_date(p::posted_at);
-            p::posts.select(year).distinct().order(year).load(db)
-        })
-        .await??;
+    let year = year_of_date(p::posted_at);
+    let years = p::posts
+        .select(year)
+        .distinct()
+        .order(year)
+        .load(&mut db)
+        .await?;
 
     let fluent = langc.fluent()?;
     let other_langs = langc.other(|_, lang, name| {
@@ -338,21 +336,20 @@ impl FromStr for SlugAndLang {
 
 #[instrument]
 async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
-    let db = app.db().await?;
+    let mut db = app.db().await?;
     let langc = lang.clone();
-    let posts = db
-        .interact(move |db| Teaser::for_year(year, lang.as_ref(), db))
-        .await??;
+    let posts = Teaser::for_year(year, lang.as_ref(), &mut db).await?;
     if posts.is_empty() {
         return Err(ViewError::NotFound);
     }
 
-    let years = db
-        .interact(move |db| {
-            let year = year_of_date(p::posted_at);
-            p::posts.select(year).distinct().order(year).load(db)
-        })
-        .await??;
+    let p_year = year_of_date(p::posted_at);
+    let years = p::posts
+        .select(p_year)
+        .distinct()
+        .order(p_year)
+        .load(&mut db)
+        .await?;
 
     let fluent = langc.fluent()?;
     let h1 = fl!(fluent, "posts-year", year = year);
@@ -376,19 +373,16 @@ async fn page(
 ) -> Result<Response> {
     use crate::models::{has_lang, PostLink};
     use diesel::dsl::not;
-    let db = app.db().await?;
+    let mut db = app.db().await?;
     let fluent = slug.lang.fluent()?;
     let s1 = slug.clone();
-    let other_langs = db
-        .interact(move |db| {
-            p::posts
-                .select((p::lang, p::title))
-                .filter(year_of_date(p::posted_at).eq(&year))
-                .filter(p::slug.eq(s1.slug.as_ref()))
-                .filter(p::lang.ne(s1.lang.as_ref()))
-                .load::<(String, String)>(db)
-        })
-        .await??
+    let other_langs = p::posts
+        .select((p::lang, p::title))
+        .filter(year_of_date(p::posted_at).eq(&year))
+        .filter(p::slug.eq(s1.slug.as_ref()))
+        .filter(p::lang.ne(s1.lang.as_ref()))
+        .load::<(String, String)>(&mut db)
+        .await?
         .into_iter()
         .map(|(lang, title)| {
             let fluent = language::load(&lang).unwrap();
@@ -403,19 +397,14 @@ async fn page(
         .collect::<Vec<_>>();
 
     let slugc = slug.clone();
-    let post = db
-        .interact(move |db| {
-            FullPost::load(year, &slug.slug, slug.lang.as_ref(), db)
-        })
-        .await??
+    let post = FullPost::load(year, &slug.slug, slug.lang.as_ref(), &mut db)
+        .await?
         .ok_or(ViewError::NotFound)?;
 
     let url = format!("{}{}", app.base, post.url());
 
     let post_id = post.id;
-    let comments = db
-        .interact(move |db| Comment::for_post(post_id, db))
-        .await??;
+    let comments = Comment::for_post(post_id, &mut db).await?;
 
     let bad_comment = if let Some(q_comment) = query.c {
         for cmt in &comments {
@@ -432,40 +421,22 @@ async fn page(
         false
     };
 
-    let post_id = post.id;
-    let tags = db.interact(move |db| Tag::for_post(post_id, db)).await??;
-
+    let tags = Tag::for_post(post.id, &mut db).await?;
     let tag_ids = tags.iter().map(|t| t.id).collect::<Vec<_>>();
-    let post_id = post.id;
-    let lang = post.lang.clone();
-    let related = db
-        .interact(move |db| {
-            use diesel::dsl::sql;
-            use diesel::sql_types::BigInt;
-            let c = sql::<BigInt>("count(*)");
-            let post_fields = (
-                p::id,
-                year_of_date(p::posted_at),
-                p::slug,
-                p::lang,
-                p::title,
-            );
-            p::posts
-                .select(post_fields)
-                .left_join(pt::post_tags.on(p::id.eq(pt::post_id)))
-                .filter(pt::tag_id.eq_any(tag_ids))
-                .filter(p::lang.eq(&lang).or(not(has_lang(
-                    year_of_date(p::posted_at),
-                    p::slug,
-                    &lang,
-                ))))
-                .filter(p::id.ne(post_id))
-                .group_by(post_fields)
-                .order((c.desc(), p::posted_at.desc()))
-                .limit(8)
-                .load::<PostLink>(db)
-        })
-        .await??;
+
+    let lang = &post.lang;
+    let p_year = year_of_date(p::posted_at);
+    let related: Vec<_> = p::posts
+        .group_by(p::id)
+        .select((p::id, p_year, p::slug, p::lang, p::title))
+        .filter(p::id.ne(post.id))
+        .filter(p::lang.eq(lang).or(not(has_lang(p_year, p::slug, lang))))
+        .left_join(pt::post_tags.on(p::id.eq(pt::post_id)))
+        .filter(pt::tag_id.eq_any(tag_ids))
+        .order((count_distinct(pt::tag_id).desc(), p::posted_at.desc()))
+        .limit(8)
+        .load::<PostLink>(&mut db)
+        .await?;
 
     let (token, cookie) = app.generate_csrf_pair()?;
 
@@ -504,20 +475,17 @@ async fn page_fallback(
     lpref: MyLang,
     app: App,
 ) -> Result<impl Reply> {
-    let db = app.db().await?;
+    let mut db = app.db().await?;
 
     let slugc = slug.clone();
-    let lang = db
-        .interact(move |db| {
-            p::posts
-                .select(p::lang)
-                .filter(year_of_date(p::posted_at).eq(&year))
-                .filter(p::slug.eq(slugc.as_ref()))
-                .order(p::lang.eq(lpref.as_ref()).desc())
-                .first::<String>(db)
-                .optional()
-        })
-        .await??
+    let lang = p::posts
+        .select(p::lang)
+        .filter(year_of_date(p::posted_at).eq(&year))
+        .filter(p::slug.eq(slugc.as_ref()))
+        .order(p::lang.eq(lpref.as_ref()).desc())
+        .first::<String>(&mut db)
+        .await
+        .optional()?
         .ok_or(ViewError::NotFound)?;
 
     Ok(found(&format!("/{year}/{slug}.{lang}")))
@@ -525,18 +493,15 @@ async fn page_fallback(
 
 #[instrument]
 async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
-    let db = app.db().await?;
+    let mut db = app.db().await?;
     let fluent = slug.lang.fluent()?;
     let s1 = slug.clone();
-    let other_langs = db
-        .interact(move |db| {
-            m::metapages
-                .select((m::lang, m::title))
-                .filter(m::slug.eq(s1.slug.as_ref()))
-                .filter(m::lang.ne(s1.lang.as_ref()))
-                .load::<(String, String)>(db)
-        })
-        .await??
+    let other_langs = m::metapages
+        .select((m::lang, m::title))
+        .filter(m::slug.eq(s1.slug.as_ref()))
+        .filter(m::lang.ne(s1.lang.as_ref()))
+        .load::<(String, String)>(&mut db)
+        .await?
         .into_iter()
         .map(|(lang, title): (String, String)| {
             let fluent = language::load(&lang).unwrap();
@@ -550,16 +515,13 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         })
         .collect::<Vec<_>>();
 
-    let (title, content) = db
-        .interact(move |db| {
-            m::metapages
-                .select((m::title, m::content))
-                .filter(m::slug.eq(slug.slug.as_ref()))
-                .filter(m::lang.eq(slug.lang.as_ref()))
-                .first::<(String, String)>(db)
-                .optional()
-        })
-        .await??
+    let (title, content) = m::metapages
+        .select((m::title, m::content))
+        .filter(m::slug.eq(slug.slug.as_ref()))
+        .filter(m::lang.eq(slug.lang.as_ref()))
+        .first::<(String, String)>(&mut db)
+        .await
+        .optional()?
         .ok_or(ViewError::NotFound)?;
 
     Ok(Builder::new().html(|o| {
@@ -579,16 +541,11 @@ async fn metafallback(
         Ok(found("/rkaj.en"))
     } else {
         let s1 = slug.clone();
-        let existing_langs = app
-            .db()
-            .await?
-            .interact(move |db| {
-                m::metapages
-                    .select(m::lang)
-                    .filter(m::slug.eq(s1))
-                    .load::<String>(db)
-            })
-            .await??;
+        let existing_langs = m::metapages
+            .select(m::lang)
+            .filter(m::slug.eq(s1))
+            .load::<String>(&mut app.db().await?)
+            .await?;
 
         if existing_langs.is_empty() {
             Err(ViewError::NotFound)

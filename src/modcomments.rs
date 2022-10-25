@@ -1,10 +1,11 @@
 use crate::dbopt::DbOpt;
-use crate::models::PostComment;
+use crate::models::{year_of_date, PostComment};
 use crate::schema::comments::dsl as c;
+use crate::schema::posts::dsl as p;
 use anyhow::{ensure, Result};
 use chrono::{DateTime, Utc};
 use clap::Parser;
-use diesel::dsl::sql;
+use diesel::dsl::count_star;
 use diesel::prelude::*;
 use std::fmt::{self, Display};
 use std::io::{stdin, stdout, Write};
@@ -28,11 +29,11 @@ pub struct Args {
 
 impl Args {
     pub fn run(self) -> Result<()> {
-        let db = self.db.get_db()?;
+        let mut db = self.db.get_db()?;
         let (public, spam, pending) = c::comments
-            .select(((c::is_public, c::is_spam), sql("count(*)")))
             .group_by((c::is_public, c::is_spam))
-            .load::<((bool, bool), i64)>(&db)
+            .select(((c::is_public, c::is_spam), count_star()))
+            .load::<((bool, bool), i64)>(&mut db)
             .map(|raw| {
                 let mut public = 0;
                 let mut spam = 0;
@@ -60,7 +61,7 @@ impl Args {
             .initial_indent(" > ")
             .subsequent_indent(" > ");
 
-        for comment in PostComment::mod_queue(&db)? {
+        for comment in mod_queue(&mut db)? {
             let p = comment.p();
             println!(
                 "\n{} by {:?} <{}> {:?}\nOn {} ({})",
@@ -82,11 +83,11 @@ impl Args {
                 )? {
                     "ok" => {
                         println!("Should allow this");
-                        do_moderate(comment.id(), false, &db)?;
+                        do_moderate(comment.id(), false, &mut db)?;
                     }
                     "spam" => {
                         println!("Should disallow this");
-                        do_moderate(comment.id(), true, &db)?;
+                        do_moderate(comment.id(), true, &mut db)?;
                     }
                     _ => {
                         println!("Giving up for now");
@@ -98,6 +99,22 @@ impl Args {
 
         Ok(())
     }
+}
+
+pub fn mod_queue(db: &mut PgConnection) -> Result<Vec<PostComment>> {
+    let year = year_of_date(p::posted_at);
+    c::comments
+        .inner_join(p::posts.on(p::id.eq(c::post_id)))
+        .select((
+            (c::id, c::posted_at, c::raw_md, c::name, c::email, c::url),
+            (p::id, year, p::slug, p::lang, p::title),
+        ))
+        .filter(c::is_public.eq(false))
+        .filter(c::is_spam.eq(false))
+        .order_by(c::posted_at.desc())
+        .limit(50)
+        .load(db)
+        .map_err(Into::into)
 }
 
 struct Ago(DateTime<Utc>);
@@ -118,7 +135,11 @@ impl Display for Ago {
     }
 }
 
-fn do_moderate(comment: i32, spam: bool, db: &PgConnection) -> Result<()> {
+fn do_moderate(
+    comment: i32,
+    spam: bool,
+    db: &mut PgConnection,
+) -> Result<()> {
     diesel::update(c::comments)
         .filter(c::id.eq(comment))
         .set((c::is_public.eq(!spam), c::is_spam.eq(spam)))

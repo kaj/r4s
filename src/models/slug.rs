@@ -1,4 +1,4 @@
-use diesel::backend::Backend;
+use diesel::backend::RawValue;
 use diesel::deserialize::FromSql;
 use diesel::pg::Pg;
 use diesel::sql_types::Text;
@@ -13,9 +13,9 @@ impl AsRef<str> for Slug {
 }
 impl FromSql<Text, Pg> for Slug {
     fn from_sql(
-        bytes: Option<&<Pg as Backend>::RawValue>,
-    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
-        let s = <String as FromSql<Text, Pg>>::from_sql(bytes)?;
+        value: RawValue<'_, Pg>,
+    ) -> diesel::deserialize::Result<Self> {
+        let s = <String as FromSql<Text, Pg>>::from_sql(value)?;
         Slug::from_str(&s).map_err(|_| format!("Bad slug {:?}", s).into())
     }
 }

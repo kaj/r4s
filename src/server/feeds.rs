@@ -16,12 +16,12 @@ pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
 
 #[instrument]
 async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
-    let db = app.db().await?;
+    let mut db = app.db().await?;
 
     let tag = if let Some(tag) = args.tag {
         Some(
-            db.interact(move |db| Tag::by_slug(&tag, db))
-                .await??
+            Tag::by_slug(&tag, &mut db)
+                .await?
                 .ok_or(ViewError::NotFound)?,
         )
     } else {
@@ -31,15 +31,11 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
     let fluent = args.lang.fluent()?;
     let lang = args.lang.to_string();
     let tag_id = tag.as_ref().map(|t| t.id);
-    let posts = db
-        .interact(move |db| {
-            if let Some(tag_id) = tag_id {
-                Teaser::tagged(tag_id, &lang, 10, db)
-            } else {
-                Teaser::recent(&lang, 10, db)
-            }
-        })
-        .await??;
+    let posts = if let Some(tag_id) = tag_id {
+        Teaser::tagged(tag_id, &lang, 10, &mut db).await?
+    } else {
+        Teaser::recent(&lang, 10, &mut db).await?
+    };
 
     let feed = FeedBuilder::default()
         .title(Text::plain(if let Some(ref tag) = tag {

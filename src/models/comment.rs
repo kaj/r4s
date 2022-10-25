@@ -1,10 +1,11 @@
 use super::{year_of_date, DateTime, PostLink, Result};
+use crate::dbopt::Connection;
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use crate::server::ToHtml;
-use diesel::dsl::sql;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::{dsl::sql, sql_types::Bool};
+use diesel_async::RunQueryDsl;
 
 #[derive(Debug, Queryable)]
 pub struct Comment {
@@ -17,7 +18,10 @@ pub struct Comment {
 }
 
 impl Comment {
-    pub fn for_post(post_id: i32, db: &PgConnection) -> Result<Vec<Comment>> {
+    pub async fn for_post(
+        post_id: i32,
+        db: &mut Connection,
+    ) -> Result<Vec<Comment>> {
         c::comments
             .select((
                 c::id,
@@ -31,6 +35,7 @@ impl Comment {
             .filter(c::is_public.eq(true))
             .order_by(c::posted_at.asc())
             .load(db)
+            .await
     }
 
     pub fn html_id(&self) -> String {
@@ -85,7 +90,7 @@ pub struct PostComment {
 }
 
 impl PostComment {
-    pub fn recent(db: &PgConnection) -> Result<Vec<PostComment>> {
+    pub async fn recent(db: &mut Connection) -> Result<Vec<PostComment>> {
         c::comments
             .inner_join(p::posts.on(p::id.eq(c::post_id)))
             .select((
@@ -99,30 +104,11 @@ impl PostComment {
                 ),
             ))
             .filter(c::is_public.eq(true))
-            .filter(sql("now() - comments.posted_at < '10 weeks'"))
+            .filter(sql::<Bool>("now() - comments.posted_at < '10 weeks'"))
             .order_by(c::posted_at.desc())
             .limit(5)
             .load(db)
-    }
-
-    pub fn mod_queue(db: &PgConnection) -> Result<Vec<PostComment>> {
-        c::comments
-            .inner_join(p::posts.on(p::id.eq(c::post_id)))
-            .select((
-                (c::id, c::posted_at, c::raw_md, c::name, c::email, c::url),
-                (
-                    p::id,
-                    year_of_date(p::posted_at),
-                    p::slug,
-                    p::lang,
-                    p::title,
-                ),
-            ))
-            .filter(c::is_public.eq(false))
-            .filter(c::is_spam.eq(false))
-            .order_by(c::posted_at.desc())
-            .limit(50)
-            .load(db)
+            .await
     }
 
     pub fn p(&self) -> &PostLink {

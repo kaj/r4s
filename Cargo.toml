@@ -20,15 +20,15 @@ atom_syndication = "0.11.0"
 base64 = "0.13.0"
 chrono = "0.4.19"
 csrf = "0.4.1"
-deadpool-diesel = { version = "0.3.0", features = ["postgres"] }
-diesel = { version = "1.4.0", features = ["chrono", "postgres", "network-address"] }
+diesel = { version = "2.0.2", features = ["chrono", "postgres", "network-address"] }
+diesel-async = { version = "0.1.1", features = ["deadpool", "postgres"] }
 dotenv = "0.15.0"
 gravatar = "0.2.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
 i18n-embed-fl = "0.6.0"
 fluent = "0.16.0"
 intl-memoizer =  "0.5.1"
-ipnetwork = "0.18.0" # must match version supported by diesel
+ipnetwork = "0.20.0" # must match version supported by diesel
 lazy-regex = "2.2.2"
 lazy_static = "1.4.0"
 mime = "0.3.0"

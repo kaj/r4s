@@ -2,7 +2,7 @@
 @use super::page_base;
 @use crate::models::Tag;
 
-@(fluent: &FluentLanguageLoader, tags: &[(Tag, i32, usize)], other_langs: &[String])
+@(fluent: &FluentLanguageLoader, tags: &[(Tag, i64, usize)], other_langs: &[String])
 
 @:page_base(fluent, &fl!(fluent, "tagshead"), other_langs, {
 

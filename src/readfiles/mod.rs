@@ -142,7 +142,7 @@ impl Loader {
                     .filter(p::title.like("% \u{1f58b}"))
                     .filter(p::orig_md.ne(&contents)),
             )
-            .execute(&self.db)?;
+            .execute(&mut self.db)?;
         }
 
         let update = metadata
@@ -167,7 +167,7 @@ impl Loader {
             .filter(year_of_date(p::posted_at).eq(&year))
             .filter(p::slug.eq(slug))
             .filter(p::lang.eq(lang))
-            .first::<(i32, String)>(&self.db)
+            .first::<(i32, String)>(&mut self.db)
             .optional()?
         {
             if old_md != contents || self.force {
@@ -206,10 +206,10 @@ impl Loader {
                         p::use_leaflet.eq(use_leaflet),
                         p::orig_md.eq(&contents),
                     ))
-                    .execute(&self.db)
+                    .execute(&mut self.db)
                     .with_context(|| format!("Update #{}", id))?;
                 if let Some(tags) = metadata.get("tags") {
-                    tag_post(id, tags, &self.db)?;
+                    tag_post(id, tags, &mut self.db)?;
                 }
             }
         } else {
@@ -252,10 +252,10 @@ impl Loader {
                     p::orig_md.eq(&contents),
                 ))
                 .returning(p::id)
-                .get_result::<i32>(&self.db)
+                .get_result::<i32>(&mut self.db)
                 .context("Insert post")?;
             if let Some(tags) = metadata.get("tags") {
-                tag_post(post_id, tags, &self.db)?;
+                tag_post(post_id, tags, &mut self.db)?;
             }
         }
         Ok(())
@@ -271,7 +271,7 @@ impl Loader {
             .select((m::id, m::orig_md))
             .filter(m::slug.eq(slug))
             .filter(m::lang.eq(lang))
-            .first::<(i32, String)>(&self.db)
+            .first::<(i32, String)>(&mut self.db)
             .optional()?
         {
             if old_md != contents || self.force {
@@ -284,7 +284,7 @@ impl Loader {
                         m::orig_md.eq(&contents),
                     ))
                     .filter(m::id.eq(id))
-                    .execute(&self.db)
+                    .execute(&mut self.db)
                     .context("Upadte metapage")?;
                 println!("Updated metadata page /{}.{}", slug, lang);
             }
@@ -299,7 +299,7 @@ impl Loader {
                     m::content.eq(&body),
                     m::orig_md.eq(&contents),
                 ))
-                .execute(&self.db)
+                .execute(&mut self.db)
                 .context("Insert metapage")?;
             println!("Created metapage /{}.{}: {}", slug, lang, title);
         }
@@ -307,7 +307,7 @@ impl Loader {
     }
 
     fn handle_asset(
-        &self,
+        &mut self,
         path: &Path,
         spec: &str,
         year: i16,
@@ -333,7 +333,7 @@ impl Loader {
     }
 
     fn store_asset(
-        &self,
+        &mut self,
         year: i16,
         name: &str,
         mime: &str,
@@ -343,7 +343,7 @@ impl Loader {
             .select((a::id, a::mime, a::content))
             .filter(a::year.eq(year))
             .filter(a::name.eq(name))
-            .first::<(i32, String, Vec<u8>)>(&self.db)
+            .first::<(i32, String, Vec<u8>)>(&mut self.db)
             .optional()?
         {
             if mime != old_mime || content != old_content {
@@ -356,7 +356,7 @@ impl Loader {
                         a::mime.eq(mime),
                         a::content.eq(&content),
                     ))
-                    .execute(&self.db)
+                    .execute(&mut self.db)
                     .with_context(|| {
                         format!("Update asset #{} {}/{}", id, year, name)
                     })?;
@@ -369,7 +369,7 @@ impl Loader {
                     a::mime.eq(mime),
                     a::content.eq(content),
                 ))
-                .execute(&self.db)
+                .execute(&mut self.db)
                 .with_context(|| format!("Create asset {}/{}", year, name))?;
         }
         Ok(format!("/s/{}/{}", year, name))
@@ -400,7 +400,7 @@ impl FromStr for UpdateInfo {
     }
 }
 
-fn tag_post(post_id: i32, tags: &str, db: &PgConnection) -> Result<()> {
+fn tag_post(post_id: i32, tags: &str, db: &mut PgConnection) -> Result<()> {
     use crate::models::Tag;
     diesel::delete(pt::post_tags)
         .filter(pt::post_id.eq(post_id))
@@ -467,7 +467,7 @@ fn extract_parts(
     {
         // If teaser don't have an image and there is a "front" image ...
         let mut teaser = if let Some(img) = (!teaser.contains("\n!["))
-            .then(|| ())
+            .then_some(())
             .and_then(|()| {
                 regex_find!(
                     r#"!\[[^\]]*\]\[[^\]\{]*\{[^\}]*\bfront\b[^\}]*\}[^\]]*\]"#s,

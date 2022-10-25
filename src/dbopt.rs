@@ -1,10 +1,15 @@
 use anyhow::Result;
 use clap::Parser;
-pub use deadpool_diesel::postgres::{Connection, Pool, PoolError};
-use deadpool_diesel::{postgres::Manager, Runtime};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::Connection as _;
+use diesel_async::pooled_connection::deadpool;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::AsyncPgConnection;
+
+/// An asynchronous postgres database connection pool.
+pub type Pool = deadpool::Pool<AsyncPgConnection>;
+pub type Connection = deadpool::Object<AsyncPgConnection>;
 
 #[derive(Parser)]
 pub struct DbOpt {
@@ -15,13 +20,17 @@ pub struct DbOpt {
 
 impl DbOpt {
     /// Get a single database connection from the configured url.
+    ///
+    /// Since this is for one-of admin tasks, it is an ordinary synchronous connection.
     pub fn get_db(&self) -> Result<PgConnection, ConnectionError> {
         PgConnection::establish(&self.db_url)
     }
 
     /// Get a database connection pool from the configured url.
+    ///
+    /// Since this is mainly for the web server, the pooled connections are async.
     pub fn build_pool(&self) -> Result<Pool> {
-        Ok(Pool::builder(Manager::new(&self.db_url, Runtime::Tokio1))
-            .build()?)
+        let config = AsyncDieselConnectionManager::new(&self.db_url);
+        Ok(Pool::builder(config).build()?)
     }
 }

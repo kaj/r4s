@@ -6,6 +6,7 @@ use fluent::FluentValue;
 use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
 use intl_memoizer::IntlLangMemoizer;
 use std::borrow::Cow;
+use std::error::Error as StdError;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
 pub struct DateTime(chrono::DateTime<chrono::Utc>);
@@ -22,8 +23,10 @@ impl DateTime {
 impl Queryable<Timestamptz, Pg> for DateTime {
     type Row =
         <chrono::DateTime<chrono::Utc> as Queryable<Timestamptz, Pg>>::Row;
-    fn build(row: Self::Row) -> Self {
-        DateTime(chrono::DateTime::<chrono::Utc>::build(row))
+    fn build(
+        row: Self::Row,
+    ) -> Result<DateTime, Box<(dyn StdError + Send + Sync + 'static)>> {
+        Ok(DateTime(chrono::DateTime::<chrono::Utc>::build(row)?))
     }
 }
 
