@@ -19,6 +19,7 @@ anyhow = "1.0.44"
 atom_syndication = "0.11.0"
 base64 = "0.13.0"
 chrono = "0.4.19"
+clap = { version = "4.0.18", features = ["derive", "env", "wrap_help"] }
 csrf = "0.4.1"
 diesel = { version = "2.0.2", features = ["chrono", "postgres", "network-address"] }
 diesel-async = { version = "0.1.1", features = ["deadpool", "postgres"] }
@@ -41,7 +42,6 @@ rust_icu_ucol = "2.0.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 slug = "0.1"
-clap = { version = "3.2.5", features = ["derive", "env", "wrap_help"] }
 syntect = { version = "5.0.0", default-features = false, features = ["default-fancy"]}
 textwrap = { version = "0.15.0", features = ["terminal_size"] }
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }

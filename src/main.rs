@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         )
         .init();
 
-    R4s::from_args().run()
+    R4s::parse().run()
 }
 
 /// Manage and serve my blog

@@ -570,6 +570,7 @@ struct PageQuery {
     c: Option<i32>,
 }
 
+#[derive(Clone)]
 struct CsrfSecret {
     secret: [u8; 32],
 }
