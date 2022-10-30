@@ -1,7 +1,8 @@
 use super::{year_of_date, Post, Result, Slug};
+use crate::dbopt::Connection;
 use crate::schema::posts::dsl as p;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 
 #[derive(Debug, Queryable)]
 pub struct FullPost {
@@ -19,11 +20,11 @@ impl std::ops::Deref for FullPost {
 }
 
 impl FullPost {
-    pub fn load(
+    pub async fn load(
         year: i16,
         slug: &Slug,
         lang: &str,
-        db: &PgConnection,
+        db: &mut Connection,
     ) -> Result<Option<FullPost>> {
         p::posts
             .select((
@@ -45,6 +46,7 @@ impl FullPost {
             .filter(p::slug.eq(slug.as_ref()))
             .filter(p::lang.eq(lang))
             .first::<FullPost>(db)
+            .await
             .optional()
     }
 }

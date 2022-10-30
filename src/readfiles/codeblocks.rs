@@ -22,7 +22,7 @@ impl<'a> DynBlock<'a> {
     pub fn for_kind(
         out: &'a mut String,
         fence: Option<&'a str>,
-        loader: &'a Loader,
+        loader: &'a mut Loader,
         year: i16,
         lang: &'a str,
     ) -> Result<DynBlock<'a>> {
@@ -162,7 +162,7 @@ impl<'a> BlockHandler for QrHandler<'a> {
 pub struct EmbedHandler<'a> {
     out: &'a mut String,
     data: String,
-    loader: &'a Loader,
+    loader: &'a mut Loader,
     year: i16,
     lang: &'a str,
 }
@@ -170,7 +170,7 @@ pub struct EmbedHandler<'a> {
 impl<'a> EmbedHandler<'a> {
     fn open(
         out: &'a mut String,
-        loader: &'a Loader,
+        loader: &'a mut Loader,
         year: i16,
         lang: &'a str,
     ) -> Self {

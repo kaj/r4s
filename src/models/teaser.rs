@@ -1,11 +1,12 @@
 use super::{has_lang, year_of_date, Post, Result, Tag};
+use crate::dbopt::Connection;
 use crate::schema::comments::dsl as c;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use diesel::dsl::{not, sql};
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_types::BigInt;
+use diesel_async::RunQueryDsl;
 use i18n_embed_fl::fl;
 
 pub struct Teaser {
@@ -17,12 +18,12 @@ pub struct Teaser {
 }
 
 impl Teaser {
-    pub fn recent(
+    pub async fn recent(
         lang: &str,
         limit: u32,
-        db: &PgConnection,
+        db: &mut Connection,
     ) -> Result<Vec<Self>> {
-        p::posts
+        let posts = p::posts
             .left_join(
                 c::comments
                     .on(c::post_id.eq(p::id).and(c::is_public.eq(true))),
@@ -49,24 +50,28 @@ impl Teaser {
             .group_by(p::posts::all_columns())
             .order(p::updated_at.desc())
             .limit(limit.into())
-            .load::<(Post, bool, i64)>(db)?
-            .into_iter()
-            .map(|(post, is_more, n_comments)| {
-                Tag::for_post(post.id, db).map(|tags| Teaser {
-                    post,
-                    tags,
-                    is_more,
-                    n_comments: n_comments as _,
-                })
-            })
-            .collect()
+            .load::<(Post, bool, i64)>(db)
+            .await?;
+        // Note: Doing this truly async would require a db pool, not just a
+        // connection.  Or can it all be done with a single query?
+        let mut result = Vec::with_capacity(posts.len());
+        for (post, is_more, n_comments) in posts {
+            let tags = Tag::for_post(post.id, db).await?;
+            result.push(Teaser {
+                post,
+                tags,
+                is_more,
+                n_comments: n_comments as _,
+            });
+        }
+        Ok(result)
     }
-    pub fn for_year(
+    pub async fn for_year(
         year: i16,
         lang: &str,
-        db: &PgConnection,
+        db: &mut Connection,
     ) -> Result<Vec<Teaser>> {
-        p::posts
+        let posts = p::posts
             .left_join(
                 c::comments
                     .on(c::post_id.eq(p::id).and(c::is_public.eq(true))),
@@ -97,25 +102,30 @@ impl Teaser {
             ))))
             .group_by(p::posts::all_columns())
             .order(p::updated_at.asc())
-            .load::<(Post, bool, i64)>(db)?
-            .into_iter()
-            .map(|(post, is_more, n_comments)| {
-                Tag::for_post(post.id, db).map(|tags| Teaser {
-                    post,
-                    tags,
-                    is_more,
-                    n_comments: n_comments as _,
-                })
-            })
-            .collect()
+            .load::<(Post, bool, i64)>(db)
+            .await?;
+        // Note: Doing this truly async would require a db pool, not just a
+        // connection.  Or can it all be done with a single query?
+        let mut result = Vec::with_capacity(posts.len());
+        for (post, is_more, n_comments) in posts {
+            let tags = Tag::for_post(post.id, db).await?;
+            result.push(Teaser {
+                post,
+                tags,
+                is_more,
+                n_comments: n_comments as _,
+            });
+        }
+        Ok(result)
     }
-    pub fn tagged(
+
+    pub async fn tagged(
         tag_id: i32,
         lang: &str,
         limit: u32,
-        db: &PgConnection,
+        db: &mut Connection,
     ) -> Result<Vec<Teaser>> {
-        p::posts
+        let posts = p::posts
             .left_join(
                 c::comments
                     .on(c::post_id.eq(p::id).and(c::is_public.eq(true))),
@@ -149,17 +159,21 @@ impl Teaser {
             .group_by(p::posts::all_columns())
             .order(p::updated_at.desc())
             .limit(limit.into())
-            .load::<(Post, bool, i64)>(db)?
-            .into_iter()
-            .map(|(post, is_more, n_comments)| {
-                Tag::for_post(post.id, db).map(|tags| Teaser {
-                    post,
-                    tags,
-                    is_more,
-                    n_comments: n_comments as _,
-                })
-            })
-            .collect()
+            .load::<(Post, bool, i64)>(db)
+            .await?;
+        // Note: Doing this truly async would require a db pool, not just a
+        // connection.  Or can it all be done with a single query?
+        let mut result = Vec::with_capacity(posts.len());
+        for (post, is_more, n_comments) in posts {
+            let tags = Tag::for_post(post.id, db).await?;
+            result.push(Teaser {
+                post,
+                tags,
+                is_more,
+                n_comments: n_comments as _,
+            });
+        }
+        Ok(result)
     }
     pub fn publine(&self) -> String {
         // TODO: Take the fluent as an argument instead?

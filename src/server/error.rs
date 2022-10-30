@@ -1,6 +1,6 @@
 use super::language;
 use super::templates::{self, RenderError, RenderRucte};
-use deadpool_diesel::{InteractError, PoolError};
+use diesel_async::pooled_connection::deadpool::PoolError;
 use tracing::{event, Level};
 use warp::http::response::Builder;
 use warp::http::status::StatusCode;
@@ -98,21 +98,6 @@ impl From<PoolError> for ViewError {
             e => {
                 event!(Level::ERROR, "Db Pool error: {:?}", e);
                 ViewError::Err("Database error".to_string())
-            }
-        }
-    }
-}
-
-impl From<InteractError> for ViewError {
-    fn from(e: InteractError) -> Self {
-        match e {
-            InteractError::Panic(panic) => {
-                event!(Level::ERROR, "Panic in interaction: {:?}", panic);
-                ViewError::Err("Internal panic".into())
-            }
-            InteractError::Aborted => {
-                event!(Level::ERROR, "Interaction aborted");
-                ViewError::Err("Interaction aborted".into())
             }
         }
     }
