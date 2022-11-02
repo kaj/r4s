@@ -257,6 +257,9 @@ aside {
 
 h2 {
     font-size: 200%;
+    :link, :visited {
+        color: inherit;
+    }
 }
 h3, h4 {
     font-size: 140%;
@@ -288,6 +291,9 @@ h4, h6 {
 }
 p {
     margin: 0 0 1em;
+}
+main p {
+    text-align: justify;
 }
 
 blockquote {
@@ -870,5 +876,43 @@ button.themeswitch {
         --col-b1: #{white};
         --col-b2: #{white};
         --col-flare: #{white};
+    }
+}
+
+p.publine + p,
+p.publine + figure.sidebar + p {
+    position: relative;
+    $cb: var(--col-fv);
+    $c1: var(--col-flare);
+    &::first-letter {
+        font-size: 250%;
+        line-height: 1;
+        padding: 0;
+        margin: 0;
+        font-variant: petite-caps;
+        $r1: .1ex / 2.5;
+        $r2: .12ex / 2.5;
+        text-shadow:
+            -$r1 $r1 $c1, $r1 -$r1 $c1, -$r1 -$r1 $c1, $r1 $r1 $c1,
+            -$r2 $r2 $cb, $r2 -$r2 $cb, -$r2 -$r2 $cb, $r2 $r2 $cb
+        ;
+    }
+    &::first-line {
+        letter-spacing: .03em;
+        word-spacing: 0.3em;
+        text-shadow: -.1ex .1ex $c1, .1ex -.1ex $c1, -.1ex -.1ex $c1, .1ex .1ex $c1;;
+    }
+    &::after {
+        mask: url(static_name("anf.svg"));
+        -webkit-mask: url(static_name("anf.svg"));
+        background: $cb;
+        content: "";
+        display: block;
+        height: 2.5em;
+        left: -.2ex;
+        position: absolute;
+        top: -1ex;
+        width: 5em;
+        z-index: -1;
     }
 }
