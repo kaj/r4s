@@ -14,7 +14,8 @@ project more or less adheres to
 * Updated diesel to 2.0 and use diesel-async.  The db code in async
   views becomes simpler by not needing the `interact` wrapper, but on
   the other hand all db access now needs a `&mut db` (PR #6).
-* Updated ructe to 0.15.0, and clap to 4.0.18.
+* Updated `ructe` to 0.15.0, `clap` to 4.0.18, and `rust_icu_ucol` to
+  3.0.
 
 
 ## Release 0.2.18
