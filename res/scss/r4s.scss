@@ -399,7 +399,9 @@ figure {
             float: right;
             margin: 0 0 1ex 1em;
             max-width: 50%;
+            position: relative;
             width: $width;
+            z-index: 1;
             &.portrait, &.fa-cover {
                 width: $paspect * $width;
             }
@@ -885,7 +887,7 @@ p.publine + figure.sidebar + p {
     $cb: var(--col-fv);
     $c1: var(--col-flare);
     &::first-letter {
-        font-size: 250%;
+        font-size: 350%;
         line-height: 1;
         padding: 0;
         margin: 0;
@@ -899,7 +901,7 @@ p.publine + figure.sidebar + p {
     }
     &::first-line {
         letter-spacing: .03em;
-        word-spacing: 0.3em;
+        word-spacing: 0.2em;
         text-shadow: -.1ex .1ex $c1, .1ex -.1ex $c1, -.1ex -.1ex $c1, .1ex .1ex $c1;;
     }
     &::after {
@@ -908,11 +910,11 @@ p.publine + figure.sidebar + p {
         background: $cb;
         content: "";
         display: block;
-        height: 2.5em;
+        height: 3.5em;
         left: -.2ex;
         position: absolute;
         top: -1ex;
-        width: 5em;
+        width: 7em;
         z-index: -1;
     }
 }
