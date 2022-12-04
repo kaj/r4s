@@ -410,11 +410,11 @@ fn tag_post(post_id: i32, tags: &str, db: &mut PgConnection) -> Result<()> {
     for tag in tags.split(',') {
         let tag = tag.trim();
         let tag = t::tags
-            .filter(t::name.ilike(&tag))
+            .filter(t::name.ilike(tag))
             .first::<Tag>(db)
             .or_else(|_| {
                 diesel::insert_into(t::tags)
-                    .values((t::name.eq(&tag), t::slug.eq(&slugify(&tag))))
+                    .values((t::name.eq(tag), t::slug.eq(&slugify(tag))))
                     .get_result::<Tag>(db)
             })
             .context("Find or create tag")?;
