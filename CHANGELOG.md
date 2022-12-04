@@ -11,6 +11,7 @@ project more or less adheres to
 * Style update: Use oldstyle numbers in text and only show the top
   bike if there s room for it.
 * Style addition: Add some illumination to initials (PR #7).
+* Addded mastodon link to `#me_box`.
 * Updated diesel to 2.0 and use diesel-async.  The db code in async
   views becomes simpler by not needing the `interact` wrapper, but on
   the other hand all db access now needs a `&mut db` (PR #6).
