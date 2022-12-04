@@ -8,6 +8,7 @@ project more or less adheres to
 
 ## Unreleased
 
+* Bugfix: Handle bilingual drafts (don't remove both before updating one).
 * Style update: Use oldstyle numbers in text and only show the top
   bike if there s room for it.
 * Style addition: Add some illumination to initials (PR #7).

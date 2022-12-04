@@ -139,6 +139,7 @@ impl Loader {
             diesel::delete(
                 p::posts
                     .filter(p::slug.eq(slug))
+                    .filter(p::lang.eq(lang))
                     .filter(p::title.like("% \u{1f58b}"))
                     .filter(p::orig_md.ne(&contents)),
             )
