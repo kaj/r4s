@@ -1,5 +1,7 @@
 use super::templates::{self, RenderRucte};
-use super::{goh, wrap, App, MyLang, Result, SlugAndLang, ViewError};
+use super::{
+    goh, response, wrap, App, MyLang, Result, SlugAndLang, ViewError,
+};
 use crate::models::{Tag, Teaser};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
@@ -9,7 +11,6 @@ use diesel_async::RunQueryDsl;
 use i18n_embed_fl::fl;
 use tracing::instrument;
 use warp::filters::BoxedFilter;
-use warp::http::response::Builder;
 use warp::path::{end, param};
 use warp::reply::Response;
 use warp::{Filter, Reply};
@@ -49,7 +50,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
             lang=lang, name=name,
         )});
 
-    Ok(Builder::new()
+    Ok(response()
         .html(|o| templates::tags(o, &fluent, &tags, &other_langs))?)
 }
 
@@ -74,7 +75,7 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
         )});
 
     let feed = format!("{}/atom-{}-{}.xml", app.base, langc, tag.slug);
-    Ok(Builder::new().html(|o| {
+    Ok(response().html(|o| {
         templates::posts(
             o,
             &fluent,

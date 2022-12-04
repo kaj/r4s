@@ -1,12 +1,11 @@
 use super::error::{ViewError, ViewResult};
-use super::{fl, wrap, App, MyLang, Result};
+use super::{fl, response, wrap, App, MyLang, Result};
 use crate::models::{Slug, Tag, Teaser};
 use atom_syndication::*;
 use std::str::FromStr;
 use tracing::instrument;
 use warp::filters::BoxedFilter;
 use warp::http::header::CONTENT_TYPE;
-use warp::http::response::Builder;
 use warp::path::{end, param};
 use warp::{self, Filter, Reply};
 
@@ -103,7 +102,7 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
         )
         .build();
 
-    Builder::new()
+    response()
         .header(CONTENT_TYPE, "application/atom+xml")
         .body(feed.to_string())
         .or_ise()

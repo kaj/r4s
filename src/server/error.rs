@@ -1,8 +1,7 @@
-use super::language;
 use super::templates::{self, RenderError, RenderRucte};
+use super::{language, response};
 use diesel_async::pooled_connection::deadpool::PoolError;
 use tracing::{event, Level};
-use warp::http::response::Builder;
 use warp::http::status::StatusCode;
 use warp::reply::Response;
 use warp::{self, Rejection, Reply};
@@ -68,7 +67,7 @@ impl Reply for ViewError {
 
 fn error_response(code: StatusCode, message: &str, detail: &str) -> Response {
     let fluent = language::load("en").unwrap();
-    Builder::new()
+    response()
         .status(code)
         .html(|o| templates::error(o, &fluent, code, message, detail))
         .unwrap()

@@ -24,6 +24,7 @@ use diesel::dsl::count_distinct;
 use diesel::prelude::*;
 use diesel_async::pooled_connection::deadpool::PoolError;
 use diesel_async::RunQueryDsl;
+use reqwest::header::{CONTENT_SECURITY_POLICY, SERVER};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -244,6 +245,20 @@ fn goh() -> BoxedFilter<()> {
     get().or(head()).unify().boxed()
 }
 
+fn response() -> Builder {
+    Builder::new()
+        .header(
+            SERVER,
+            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
+        )
+        .header(
+            CONTENT_SECURITY_POLICY,
+            // Note: should use default-src and img-src, but dev server,
+            // image server, and lefalet makes that a bit hard.
+            "frame-ancestors 'none';",
+        )
+}
+
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
@@ -254,7 +269,7 @@ fn static_file(name: Tail) -> Result<impl Reply> {
     use warp::http::header::{CONTENT_TYPE, EXPIRES};
     let data = StaticFile::get(name.as_str()).ok_or(ViewError::NotFound)?;
     let far_expires = Utc::now() + Duration::days(180);
-    Builder::new()
+    response()
         .header(CONTENT_TYPE, data.mime.as_ref())
         .header(EXPIRES, far_expires.to_rfc2822())
         .body(data.content)
@@ -263,8 +278,10 @@ fn static_file(name: Tail) -> Result<impl Reply> {
 
 #[instrument]
 async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
-    use warp::http::header::CONTENT_TYPE;
+    use chrono::{Duration, Utc};
+    use warp::http::header::{CONTENT_TYPE, EXPIRES};
     let mut db = app.db().await?;
+    let far_expires = Utc::now() + Duration::days(180);
 
     let (mime, content) = a::assets
         .select((a::mime, a::content))
@@ -275,9 +292,9 @@ async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
         .optional()?
         .ok_or(ViewError::NotFound)?;
 
-    Builder::new()
+    response()
         .header(CONTENT_TYPE, mime)
-        //.header(EXPIRES, far_expires.to_rfc2822())
+        .header(EXPIRES, far_expires.to_rfc2822())
         .body(content.into())
         .or_ise()
 }
@@ -306,7 +323,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
             lang=lang, name=name,
         )});
 
-    Ok(Builder::new().html(|o| {
+    Ok(response().html(|o| {
         templates::frontpage(
             o,
             &fluent,
@@ -359,7 +376,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
             year, lang=lang, name=name,
         )});
 
-    Ok(Builder::new().html(|o| {
+    Ok(response().html(|o| {
         templates::posts(o, &fluent, &h1, None, &posts, &years, &other_langs)
     })?)
 }
@@ -441,7 +458,7 @@ async fn page(
     let (token, cookie) = app.generate_csrf_pair()?;
 
     use warp::http::header::SET_COOKIE;
-    Ok(Builder::new()
+    Ok(response()
         .header(
             SET_COOKIE,
             format!(
@@ -524,7 +541,7 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         .optional()?
         .ok_or(ViewError::NotFound)?;
 
-    Ok(Builder::new().html(|o| {
+    Ok(response().html(|o| {
         templates::page(o, &fluent, &title, &content, &other_langs)
     })?)
 }
@@ -588,7 +605,7 @@ impl FromStr for CsrfSecret {
 
 fn robots_txt() -> Result<Response> {
     use warp::http::header::CONTENT_TYPE;
-    Builder::new()
+    response()
         .header(CONTENT_TYPE, mime::TEXT_PLAIN.as_ref())
         .body(
             "User-agent: *\n\
