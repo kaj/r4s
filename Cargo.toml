@@ -17,7 +17,7 @@ syntect = { version = "5.0.0", default-features = false, features = ["default-fa
 accept-language = "2.0"
 anyhow = "1.0.44"
 atom_syndication = "0.11.0"
-base64 = "0.13.0"
+base64 = "0.21.0"
 chrono = { version = "0.4.19", default-features = false }
 clap = { version = "4.0.18", features = ["derive", "env", "wrap_help"] }
 csrf = "0.4.1"
