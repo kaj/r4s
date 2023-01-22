@@ -18,8 +18,7 @@ project more or less adheres to
   views becomes simpler by not needing the `interact` wrapper, but on
   the other hand all db access now needs a `&mut db` (PR #6).
 * Updated to `atom_syndication` 0.12.0, `base64` 0.21.0, `clap` 4.0.18,
- `ructe` 0.15.0, `rust_icu_ucol` 3.0.
-* WIP: Update ructe to upcoming release.
+ `ructe` 0.16.0, `rust_icu_ucol` 3.0.
 
 
 ## Release 0.2.18
