@@ -22,7 +22,7 @@ chrono = { version = "0.4.19", default-features = false }
 clap = { version = "4.0.18", features = ["derive", "env", "wrap_help"] }
 csrf = "0.4.1"
 diesel = { version = "2.0.2", features = ["chrono", "postgres", "network-address"] }
-diesel-async = { version = "0.1.1", features = ["deadpool", "postgres"] }
+diesel-async = { version = "0.2.0", features = ["deadpool", "postgres"] }
 dotenv = "0.15.0"
 gravatar = "0.2.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
