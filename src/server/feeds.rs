@@ -42,7 +42,7 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
         } else {
             fl!(fluent, "sitename")
         }))
-        .subtitle(Text::plain(&fl!(fluent, "tagline")))
+        .subtitle(Text::plain(fl!(fluent, "tagline")))
         .id(if let Some(ref tag) = tag {
             format!("{}/tag/{}.{}", app.base, tag.slug, args.lang)
         } else {

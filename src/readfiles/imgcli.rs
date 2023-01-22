@@ -71,7 +71,7 @@ impl ImgClient {
         let base = String::from(base);
         tracing::info!("Logging in to {:?}.", base);
         let response = web
-            .post(&format!("{}/api/login", base))
+            .post(format!("{base}/api/login"))
             .json(&BTreeMap::from([("user", user), ("password", password)]))
             .send()?;
         #[derive(Deserialize)]
@@ -84,7 +84,7 @@ impl ImgClient {
     pub fn fetch_image(&self, imgref: &str) -> Result<ImageInfo> {
         let response = self
             .web
-            .get(&format!("{}/api/image", self.base))
+            .get(format!("{}/api/image", self.base))
             .header("authorization", &self.key)
             .query(&[("path", imgref)])
             .send()?;
@@ -93,7 +93,7 @@ impl ImgClient {
     pub fn make_image_public(&self, imgref: &str) -> Result<ImageInfo> {
         let response = self
             .web
-            .post(&format!("{}/api/image/makepublic", self.base))
+            .post(format!("{}/api/image/makepublic", self.base))
             .header("authorization", &self.key)
             .json(&BTreeMap::from([("path", imgref)]))
             .send()?;
