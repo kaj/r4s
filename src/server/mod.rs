@@ -324,7 +324,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
         )});
 
     Ok(response().html(|o| {
-        templates::frontpage(
+        templates::frontpage_html(
             o,
             &fluent,
             &posts,
@@ -377,7 +377,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
         )});
 
     Ok(response().html(|o| {
-        templates::posts(o, &fluent, &h1, None, &posts, &years, &other_langs)
+        templates::posts_html(o, &fluent, &h1, None, &posts, &years, &other_langs)
     })?)
 }
 
@@ -467,7 +467,7 @@ async fn page(
             ),
         )
         .html(|o| {
-            templates::post(
+            templates::post_html(
                 o,
                 &fluent,
                 &url,
@@ -542,7 +542,7 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         .ok_or(ViewError::NotFound)?;
 
     Ok(response().html(|o| {
-        templates::page(o, &fluent, &title, &content, &other_langs)
+        templates::page_html(o, &fluent, &title, &content, &other_langs)
     })?)
 }
 

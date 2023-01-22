@@ -51,7 +51,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
         )});
 
     Ok(response()
-        .html(|o| templates::tags(o, &fluent, &tags, &other_langs))?)
+        .html(|o| templates::tags_html(o, &fluent, &tags, &other_langs))?)
 }
 
 #[instrument]
@@ -76,7 +76,7 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
 
     let feed = format!("{}/atom-{}-{}.xml", app.base, langc, tag.slug);
     Ok(response().html(|o| {
-        templates::posts(
+        templates::posts_html(
             o,
             &fluent,
             &h1,

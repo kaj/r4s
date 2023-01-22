@@ -69,7 +69,7 @@ fn error_response(code: StatusCode, message: &str, detail: &str) -> Response {
     let fluent = language::load("en").unwrap();
     response()
         .status(code)
-        .html(|o| templates::error(o, &fluent, code, message, detail))
+        .html(|o| templates::error_html(o, &fluent, code, message, detail))
         .unwrap()
 }
 

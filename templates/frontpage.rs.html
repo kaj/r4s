@@ -1,5 +1,5 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon, me_box};
+@use super::{footer_html, head_canon_html, me_box_html};
 @use crate::models::{PostComment, Teaser};
 
 @(fluent: &FluentLanguageLoader, posts: &[Teaser], comments: &[PostComment], years: &[i16], other_langs: &[String])
@@ -8,7 +8,7 @@
 <html lang="@fluent.current_language()" xmlns:cc="https://creativecommons.org/ns#">
   <head>
     <title>@fl!(fluent, "sitename")</title>
-    @:head_canon()
+    @:head_canon_html()
     <link rel="alternate" type="application/atom+xml" href="/atom-@(fluent.current_language()).xml">
   </head>
   <body>
@@ -33,7 +33,7 @@
         <a href="/@year/@fluent.current_language()">@year</a>}.</p>
       }
     </main>
-    @:me_box(fluent)
+    @:me_box_html(fluent)
     @if !comments.is_empty() {
     <aside id="recentcomments">
       <h2>@fl!(fluent, "recent-comments")</h2>
@@ -47,6 +47,6 @@
       }
     </aside>
     }
-    @:footer(fluent)
+    @:footer_html(fluent)
   </body>
 </html>

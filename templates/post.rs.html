@@ -1,5 +1,5 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon, header, me_box};
+@use super::{footer_html, head_canon_html, header_html, me_box_html};
 @use crate::models::{Comment, FullPost, PostLink, Tag};
 
 @(fluent: &FluentLanguageLoader, canonical_url: &str, post: &FullPost, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
@@ -8,7 +8,7 @@
 <html lang="@post.lang" xmlns:cc="https://creativecommons.org/ns#">
   <head>
     <title>@post.title — @fl!(fluent, "sitename")</title>
-    @:head_canon()
+    @:head_canon_html()
     @if post.use_leaflet {<link rel="stylesheet" href="/s/ll171/leaflet.css"/>
     <script src="/s/ll171/leaflet.js" async onload="initmap()"></script>}
     <meta property="og:title" content="@post.title"/>
@@ -19,7 +19,7 @@
     <meta property="og:description" name="Description" content="@post.description"/>
   </head>
   <body>
-    @:header(fluent, other_langs)
+    @:header_html(fluent, other_langs)
     <main>
       <h1>@Html(&post.title)</h1>
       <p class="publine">@Html(post.publine(fluent, tags))</p>
@@ -84,7 +84,7 @@
       <p>@Html(fl!(fluent, "morefrom", year=post.year))</p>
     </aside>
     }
-    @:me_box(fluent)
-    @:footer(fluent)
+    @:me_box_html(fluent)
+    @:footer_html(fluent)
   </body>
 </html>

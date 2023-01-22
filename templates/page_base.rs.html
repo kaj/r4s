@@ -1,5 +1,5 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon, header, me_box};
+@use super::{footer_html, head_canon_html, header_html, me_box_html};
 
 @(fluent: &FluentLanguageLoader, title: &str, other_langs: &[String], content: Content)
 
@@ -7,15 +7,15 @@
 <html lang="@fluent.current_language()" xmlns:cc="https://creativecommons.org/ns#">
   <head>
     <title>@title — @fl!(fluent, "sitename")</title>
-    @:head_canon()
+    @:head_canon_html()
   </head>
   <body>
-    @:header(fluent, other_langs)
+    @:header_html(fluent, other_langs)
     <main>
       <h1>@title</h1>
       @:content()
     </main>
-    @:me_box(fluent)
-    @:footer(fluent)
+    @:me_box_html(fluent)
+    @:footer_html(fluent)
   </body>
 </html>

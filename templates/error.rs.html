@@ -1,5 +1,5 @@
 @use super::super::prelude::*;
-@use super::{footer, head_canon, header, me_box};
+@use super::{footer_html, head_canon_html, header_html, me_box_html};
 @use warp::http::StatusCode;
 
 @(fluent: &FluentLanguageLoader, code: StatusCode, message: &str, detail: &str)
@@ -8,10 +8,10 @@
 <html lang="@fluent.current_language()" class="error" xmlns:cc="https://creativecommons.org/ns#">
   <head>
     <title>Error @code.as_u16(): @code.canonical_reason().unwrap_or("error")</title>
-    @:head_canon()
+    @:head_canon_html()
   </head>
   <body>
-    @:header(fluent, &[])
+    @:header_html(fluent, &[])
     <main>
       <h1>@message</h1>
 
@@ -19,7 +19,7 @@
 
       <p>@detail</p>
     </main>
-    @:me_box(fluent)
-    @:footer(fluent)
+    @:me_box_html(fluent)
+    @:footer_html(fluent)
   </body>
 </html>
