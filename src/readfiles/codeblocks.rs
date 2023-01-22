@@ -2,6 +2,7 @@ use super::Loader;
 use crate::syntax_hl::ClassedHTMLGenerator;
 use crate::syntax_hl::LinesWithEndings;
 use anyhow::{bail, Result};
+use base64::prelude::*;
 use pulldown_cmark::escape::escape_html;
 use qr_code::QrCode;
 use serde::Deserialize;
@@ -142,8 +143,10 @@ impl<'a> BlockHandler for QrHandler<'a> {
         )?;
         writer.finish()?;
 
-        let url =
-            format!("data:image/png;base64,{}", base64::encode(imgdata));
+        let url = format!(
+            "data:image/png;base64,{}",
+            BASE64_STANDARD_NO_PAD.encode(imgdata)
+        );
         writeln!(
             self.out,
             "<figure class='qr-code sidebar'>\

@@ -205,13 +205,13 @@ impl AppData {
         self.pool.get().await
     }
     fn verify_csrf(&self, token: &str, cookie: &str) -> Result<()> {
-        use base64::decode;
+        use base64::prelude::*;
         fn fail<E: std::fmt::Display>(e: E) -> ViewError {
             event!(Level::INFO, "Csrf verification error: {}", e);
             ViewError::BadRequest("CSRF Verification Failed".into())
         }
-        let token = decode(token.as_bytes()).map_err(fail)?;
-        let cookie = decode(cookie.as_bytes()).map_err(fail)?;
+        let token = BASE64_STANDARD.decode(token).map_err(fail)?;
+        let cookie = BASE64_STANDARD.decode(cookie).map_err(fail)?;
         let protect = self.csrf_protection();
         let token = protect.parse_token(&token).map_err(fail)?;
         let cookie = protect.parse_cookie(&cookie).map_err(fail)?;
