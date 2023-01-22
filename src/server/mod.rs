@@ -377,7 +377,15 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
         )});
 
     Ok(response().html(|o| {
-        templates::posts_html(o, &fluent, &h1, None, &posts, &years, &other_langs)
+        templates::posts_html(
+            o,
+            &fluent,
+            &h1,
+            None,
+            &posts,
+            &years,
+            &other_langs,
+        )
     })?)
 }
 
