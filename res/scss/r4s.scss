@@ -91,7 +91,11 @@ body {
         min-height: 42px;
         text-align: right;
         h1 {
+            font-size: clamp(2.4em, 8vmin, 5em);
             margin-top: 1ex;
+        }
+        p:first-of-type {
+            font-size: 1.4em;
         }
         p:not(.tagline) {
             margin: 0;
@@ -225,7 +229,7 @@ h1, h2, h3, h4, h5, h6, header {
     }
 }
 h1 {
-    font-size: 320%;
+    font-size: clamp(2.2em, 6vmin, 4em);
 }
 aside {
     h2 {
@@ -243,7 +247,6 @@ aside {
         flex-flow: row wrap;
         align-items: end;
         gap: 0 1em;
-        justify-content: space-between;
 
         h1, ul:first-of-type {
             width: 100%;
@@ -251,6 +254,7 @@ aside {
         }
         ul {
             margin-bottom: 0;
+            flex-grow: 1;
         }
     }
 }
@@ -265,9 +269,6 @@ h3, h4 {
     font-size: 140%;
 }
 h5, h6 {
-    font-size: 120%;
-}
-header {
     font-size: 120%;
 }
 section {
