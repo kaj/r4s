@@ -6,7 +6,8 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.3.0
+2023-01-24 19:18 CST.
 
 * Bugfix: Handle bilingual drafts (don't remove both before updating one).
 * Style update: Use oldstyle numbers in text and only show the top
