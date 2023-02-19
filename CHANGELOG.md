@@ -9,7 +9,7 @@ project more or less adheres to
 
 ## Unreleased
 
-* Clean up diesel usage.
+* Clean up diesel usage (PR #8).
   - Use `belonging_to` and (rust-side) `grouped_by` to replace 1+n
     queryes with 1+1 for loading tags on pages.
   - the `post_tags` relation table does not need a separate `id` column.
