@@ -1,5 +1,5 @@
 use crate::dbopt::DbOpt;
-use crate::models::{year_of_date, PostComment};
+use crate::models::{Comment, PostComment, PostLink};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use anyhow::{ensure, Result};
@@ -102,13 +102,9 @@ impl Args {
 }
 
 pub fn mod_queue(db: &mut PgConnection) -> Result<Vec<PostComment>> {
-    let year = year_of_date(p::posted_at);
     c::comments
-        .inner_join(p::posts.on(p::id.eq(c::post_id)))
-        .select((
-            (c::id, c::posted_at, c::raw_md, c::name, c::email, c::url),
-            (p::id, year, p::slug, p::lang, p::title),
-        ))
+        .inner_join(p::posts)
+        .select((Comment::as_select(), PostLink::as_select()))
         .filter(c::is_public.eq(false))
         .filter(c::is_spam.eq(false))
         .order_by(c::posted_at.desc())

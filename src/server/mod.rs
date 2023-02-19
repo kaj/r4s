@@ -11,17 +11,20 @@ use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{
-    year_of_date, Comment, FullPost, PostComment, Slug, Tag, Teaser,
+    year_of_date, Comment, FullPost, PostComment, PostTag, Slug, Tag, Teaser,
 };
 use crate::schema::assets::dsl as a;
+use crate::schema::comments::dsl as c;
 use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::PubBaseOpt;
 use clap::Parser;
 use csrf::{AesGcmCsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
+use diesel::associations::HasTable;
 use diesel::dsl::count_distinct;
 use diesel::prelude::*;
+use diesel::BelongingToDsl;
 use diesel_async::pooled_connection::deadpool::PoolError;
 use diesel_async::RunQueryDsl;
 use reqwest::header::{CONTENT_SECURITY_POLICY, SERVER};
@@ -421,46 +424,48 @@ async fn page(
         })
         .collect::<Vec<_>>();
 
-    let slugc = slug.clone();
     let post = FullPost::load(year, &slug.slug, slug.lang.as_ref(), &mut db)
         .await?
         .ok_or(ViewError::NotFound)?;
 
     let url = format!("{}{}", app.base, post.url());
 
-    let post_id = post.id;
-    let comments = Comment::for_post(post_id, &mut db).await?;
+    let comments = Comment::belonging_to(&post.deref())
+        .select(Comment::as_select())
+        .filter(c::is_public)
+        .order_by(c::posted_at.asc())
+        .load(&mut db)
+        .await?;
 
-    let bad_comment = if let Some(q_comment) = query.c {
-        for cmt in &comments {
-            if cmt.id == q_comment {
-                return Ok(found(&format!(
-                    "/{}/{}.{}#c{:x}",
-                    year, slugc.slug, slugc.lang, q_comment,
-                ))
-                .into_response());
-            }
+    let bad_comment = match query.c {
+        Some(qc) if comments.iter().any(|c| c.id == qc) => {
+            let url = format!("/{year}/{}.{}#c{qc:x}", slug.slug, slug.lang);
+            return Ok(found(&url).into_response());
         }
-        true
-    } else {
-        false
+        Some(_) => true,
+        None => false,
     };
 
-    let tags = Tag::for_post(post.id, &mut db).await?;
+    use std::ops::Deref;
+    let tags = PostTag::belonging_to(post.deref())
+        .inner_join(Tag::table())
+        .select(Tag::as_select())
+        .load(&mut db)
+        .await?;
+
     let tag_ids = tags.iter().map(|t| t.id).collect::<Vec<_>>();
 
     let lang = &post.lang;
     let p_year = year_of_date(p::posted_at);
-    let related: Vec<_> = p::posts
+    let related = PostLink::all()
         .group_by(p::id)
-        .select((p::id, p_year, p::slug, p::lang, p::title))
         .filter(p::id.ne(post.id))
         .filter(p::lang.eq(lang).or(not(has_lang(p_year, p::slug, lang))))
         .left_join(pt::post_tags.on(p::id.eq(pt::post_id)))
         .filter(pt::tag_id.eq_any(tag_ids))
         .order((count_distinct(pt::tag_id).desc(), p::posted_at.desc()))
         .limit(8)
-        .load::<PostLink>(&mut db)
+        .load(&mut db)
         .await?;
 
     let (token, cookie) = app.generate_csrf_pair()?;

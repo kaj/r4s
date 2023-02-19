@@ -38,8 +38,7 @@ table! {
 }
 
 table! {
-    post_tags (id) {
-        id -> Int4,
+    post_tags (post_id, tag_id) {
         post_id -> Int4,
         tag_id -> Int4,
     }

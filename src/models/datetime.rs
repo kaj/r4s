@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Timestamptz;
@@ -17,6 +18,10 @@ impl DateTime {
     }
     pub fn raw(&self) -> chrono::DateTime<chrono::Utc> {
         self.0
+    }
+
+    pub(crate) fn year(&self) -> i16 {
+        self.0.year() as i16
     }
 }
 

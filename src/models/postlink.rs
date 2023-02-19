@@ -1,11 +1,15 @@
 use super::{year_of_date, Slug};
-use crate::schema::posts::dsl as p;
-use diesel::helper_types::Select;
+use crate::schema::posts;
+use diesel::helper_types::{AsSelect, Select};
+use diesel::pg::Pg;
 use diesel::prelude::*;
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Queryable, Selectable, Identifiable)]
+#[diesel(table_name = posts)]
 pub struct PostLink {
     pub id: i32,
+    #[diesel(select_expression = year_of_date(posts::posted_at),
+             select_expression_type=year_of_date::year_of_date<posts::posted_at>)]
     pub year: i16,
     pub slug: Slug,
     pub lang: String,
@@ -13,23 +17,8 @@ pub struct PostLink {
 }
 
 impl PostLink {
-    pub fn select() -> Select<
-        p::posts,
-        (
-            p::id,
-            year_of_date::year_of_date<p::posted_at>,
-            p::slug,
-            p::lang,
-            p::title,
-        ),
-    > {
-        p::posts.select((
-            p::id,
-            year_of_date(p::posted_at),
-            p::slug,
-            p::lang,
-            p::title,
-        ))
+    pub fn all() -> Select<posts::table, AsSelect<PostLink, Pg>> {
+        posts::table.select(Self::as_select())
     }
     pub fn url(&self) -> String {
         format!("/{}/{}.{}", self.year, self.slug, self.lang)

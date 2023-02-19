@@ -1,11 +1,13 @@
-use super::{has_lang, year_of_date, Post, Result, Tag};
+use super::{has_lang, year_of_date, Post, PostTag, Result, Tag};
 use crate::dbopt::Connection;
 use crate::schema::comments::dsl as c;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
+use diesel::associations::HasTable;
 use diesel::dsl::{not, sql};
 use diesel::prelude::*;
 use diesel::sql_types::BigInt;
+use diesel::BelongingToDsl;
 use diesel_async::RunQueryDsl;
 use i18n_embed_fl::fl;
 
@@ -31,7 +33,6 @@ impl Teaser {
             .select((
                 (
                     p::id,
-                    year_of_date(p::posted_at),
                     p::slug,
                     p::lang,
                     p::title,
@@ -52,19 +53,7 @@ impl Teaser {
             .limit(limit.into())
             .load::<(Post, bool, i64)>(db)
             .await?;
-        // Note: Doing this truly async would require a db pool, not just a
-        // connection.  Or can it all be done with a single query?
-        let mut result = Vec::with_capacity(posts.len());
-        for (post, is_more, n_comments) in posts {
-            let tags = Tag::for_post(post.id, db).await?;
-            result.push(Teaser {
-                post,
-                tags,
-                is_more,
-                n_comments: n_comments as _,
-            });
-        }
-        Ok(result)
+        Self::with_tags(posts, db).await
     }
     pub async fn for_year(
         year: i16,
@@ -79,7 +68,6 @@ impl Teaser {
             .select((
                 (
                     p::id,
-                    year_of_date(p::posted_at),
                     p::slug,
                     p::lang,
                     p::title,
@@ -104,19 +92,7 @@ impl Teaser {
             .order(p::updated_at.asc())
             .load::<(Post, bool, i64)>(db)
             .await?;
-        // Note: Doing this truly async would require a db pool, not just a
-        // connection.  Or can it all be done with a single query?
-        let mut result = Vec::with_capacity(posts.len());
-        for (post, is_more, n_comments) in posts {
-            let tags = Tag::for_post(post.id, db).await?;
-            result.push(Teaser {
-                post,
-                tags,
-                is_more,
-                n_comments: n_comments as _,
-            });
-        }
-        Ok(result)
+        Self::with_tags(posts, db).await
     }
 
     pub async fn tagged(
@@ -133,7 +109,6 @@ impl Teaser {
             .select((
                 (
                     p::id,
-                    year_of_date(p::posted_at),
                     p::slug,
                     p::lang,
                     p::title,
@@ -161,20 +136,32 @@ impl Teaser {
             .limit(limit.into())
             .load::<(Post, bool, i64)>(db)
             .await?;
-        // Note: Doing this truly async would require a db pool, not just a
-        // connection.  Or can it all be done with a single query?
-        let mut result = Vec::with_capacity(posts.len());
-        for (post, is_more, n_comments) in posts {
-            let tags = Tag::for_post(post.id, db).await?;
-            result.push(Teaser {
+        Self::with_tags(posts, db).await
+    }
+
+    async fn with_tags(
+        posts: Vec<(Post, bool, i64)>,
+        db: &mut Connection,
+    ) -> Result<Vec<Teaser>> {
+        let postrefs =
+            posts.iter().map(|(post, _, _)| post).collect::<Vec<_>>();
+        Ok(PostTag::belonging_to(&postrefs)
+            .inner_join(Tag::table())
+            .select((PostTag::as_select(), Tag::as_select()))
+            .load(db)
+            .await?
+            .grouped_by(&postrefs)
+            .into_iter()
+            .zip(posts)
+            .map(|(tags, (post, is_more, n_comments))| Teaser {
                 post,
-                tags,
+                tags: tags.into_iter().map(|(_, tag)| tag).collect(),
                 is_more,
                 n_comments: n_comments as _,
-            });
-        }
-        Ok(result)
+            })
+            .collect())
     }
+
     pub fn publine(&self) -> String {
         // TODO: Take the fluent as an argument instead?
         let lang = crate::server::language::load(&self.lang).unwrap();

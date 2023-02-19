@@ -9,8 +9,12 @@ project more or less adheres to
 
 ## Unreleased
 
-* (Nothing yet)
-
+* Clean up diesel usage.
+  - Use `belonging_to` and (rust-side) `grouped_by` to replace 1+n
+    queryes with 1+1 for loading tags on pages.
+  - the `post_tags` relation table does not need a separate `id` column.
+  - Use `Model::as_select()` instead of column tuples some places.
+  - Don't select the year for a post separately when getting the `posted_at`.
 
 ## Release 0.3.0
 2023-01-24 19:18 CST.

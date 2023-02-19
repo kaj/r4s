@@ -30,7 +30,6 @@ impl FullPost {
             .select((
                 (
                     p::id,
-                    year_of_date(p::posted_at),
                     p::slug,
                     p::lang,
                     p::title,
