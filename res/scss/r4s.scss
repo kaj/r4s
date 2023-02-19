@@ -681,11 +681,12 @@ button {
 
     hr {
         background-color: var(--col-fh);
+        border-radius: 50%;
         border: 0;
         height: 2px;
-        border-radius: 50%;
-        position: relative;
         margin: 2em min(20%, 7em) 1em 0;
+        overflow: visible;
+        position: relative;
         &::after {
             color: var(--col-fh);
             content: "☙";
