@@ -1,15 +1,17 @@
-use super::{year_of_date, DateTime, PostLink, Result};
+use super::{DateTime, Post, PostLink, Result};
 use crate::dbopt::Connection;
-use crate::schema::comments::dsl as c;
+use crate::schema::comments::{self, dsl as c};
 use crate::schema::posts::dsl as p;
 use crate::server::ToHtml;
 use diesel::prelude::*;
 use diesel::{dsl::sql, sql_types::Bool};
 use diesel_async::RunQueryDsl;
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Identifiable, Queryable, Selectable, Associations)]
+#[diesel(belongs_to(Post))]
 pub struct Comment {
     pub id: i32,
+    pub post_id: i32,
     pub posted_at: DateTime,
     pub content: String,
     pub name: String,
@@ -18,26 +20,6 @@ pub struct Comment {
 }
 
 impl Comment {
-    pub async fn for_post(
-        post_id: i32,
-        db: &mut Connection,
-    ) -> Result<Vec<Comment>> {
-        c::comments
-            .select((
-                c::id,
-                c::posted_at,
-                c::content,
-                c::name,
-                c::email,
-                c::url,
-            ))
-            .filter(c::post_id.eq(post_id))
-            .filter(c::is_public.eq(true))
-            .order_by(c::posted_at.asc())
-            .load(db)
-            .await
-    }
-
     pub fn html_id(&self) -> String {
         format!("c{:x}", self.id)
     }
@@ -93,16 +75,7 @@ impl PostComment {
     pub async fn recent(db: &mut Connection) -> Result<Vec<PostComment>> {
         c::comments
             .inner_join(p::posts.on(p::id.eq(c::post_id)))
-            .select((
-                (c::id, c::posted_at, c::raw_md, c::name, c::email, c::url),
-                (
-                    p::id,
-                    year_of_date(p::posted_at),
-                    p::slug,
-                    p::lang,
-                    p::title,
-                ),
-            ))
+            .select((Comment::as_select(), PostLink::as_select()))
             .filter(c::is_public.eq(true))
             .filter(sql::<Bool>("now() - comments.posted_at < '10 weeks'"))
             .order_by(c::posted_at.desc())

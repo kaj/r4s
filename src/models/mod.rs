@@ -17,7 +17,7 @@ pub use self::markdown::safe_md2html;
 pub use self::post::Post;
 pub use self::postlink::PostLink;
 pub use self::slug::Slug;
-pub use self::tag::Tag;
+pub use self::tag::{PostTag, Tag};
 pub use self::teaser::Teaser;
 
 type Result<T, E = diesel::result::Error> = std::result::Result<T, E>;

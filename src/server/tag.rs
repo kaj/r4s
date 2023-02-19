@@ -25,9 +25,9 @@ pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
 async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
     let mut db = app.db().await?;
     let tags = t::tags
-        .left_join(pt::post_tags.on(pt::tag_id.eq(t::id)))
+        .left_join(pt::post_tags)
         .group_by(t::tags::all_columns())
-        .select((t::tags::all_columns(), count_star()))
+        .select((Tag::as_select(), count_star()))
         .order(count_star().desc())
         .load::<(Tag, i64)>(&mut db)
         .await?;
@@ -47,7 +47,6 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
     let other_langs = lang.other(|_, lang, name| {
         format!(
             "<a href='/tag/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-            lang=lang, name=name,
         )});
 
     Ok(response()
@@ -58,23 +57,21 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
 async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
     let mut db = app.db().await?;
     let lang = tag.lang;
-    let langc = lang.clone();
     let tag = Tag::by_slug(&tag.slug, &mut db)
         .await?
         .ok_or(ViewError::NotFound)?;
 
-    let tag_id = tag.id;
-    let posts = Teaser::tagged(tag_id, lang.as_ref(), 50, &mut db).await?;
+    let posts = Teaser::tagged(tag.id, lang.as_ref(), 50, &mut db).await?;
 
-    let fluent = langc.fluent()?;
+    let fluent = lang.fluent()?;
     let h1 = fl!(fluent, "posts-tagged", tag = tag.name);
-    let other_langs = langc.other(|_, lang, name| {
+    let other_langs = lang.other(|_, lang, name| {
         format!(
             "<a href='/tag/{tag}.{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-            tag=tag.slug, lang=lang, name=name,
+            tag=tag.slug,
         )});
 
-    let feed = format!("{}/atom-{}-{}.xml", app.base, langc, tag.slug);
+    let feed = format!("{}/atom-{}-{}.xml", app.base, lang, tag.slug);
     Ok(response().html(|o| {
         templates::posts_html(
             o,

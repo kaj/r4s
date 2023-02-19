@@ -16,9 +16,7 @@ pub struct Args {
 
 impl Args {
     pub fn run(self) -> Result<()> {
-        let mut db = self.db.get_db()?;
-        let posts = PostLink::select().load::<PostLink>(&mut db)?;
-        for post in posts {
+        for post in PostLink::all().load(&mut self.db.get_db()?)? {
             println!(
                 "{:4}. {}{:18} {}",
                 post.id,

@@ -41,14 +41,11 @@ async fn postcomment(
     app.verify_csrf(&form.csrftoken, &csrf_cookie)?;
     let mut db = app.db().await?;
 
-    let post = form.post;
-    let post = PostLink::select()
-        .filter(p::id.eq(post))
-        .first::<PostLink>(&mut db)
+    let post = PostLink::all()
+        .filter(p::id.eq(form.post))
+        .first(&mut db)
         .await?;
 
-    let name = form.name.clone();
-    let email = form.email.clone();
     let url = form
         .url
         .as_ref()
@@ -63,8 +60,8 @@ async fn postcomment(
     let counts = c::comments
         .group_by((c::is_public, c::is_spam))
         .select(((c::is_public, c::is_spam), count_star()))
-        .filter(c::name.eq(name))
-        .filter(c::email.eq(email))
+        .filter(c::name.eq(&form.name))
+        .filter(c::email.eq(&form.email))
         .load::<((bool, bool), i64)>(&mut db)
         .await?;
     let mut public = 0;

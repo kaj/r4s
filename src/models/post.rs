@@ -1,11 +1,11 @@
 use super::{DateTime, Slug, Tag};
+use crate::schema::posts;
 use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Queryable, Identifiable)]
 pub struct Post {
     pub id: i32,
-    pub year: i16,
     pub slug: Slug,
     pub lang: String,
     pub title: String,
@@ -16,7 +16,10 @@ pub struct Post {
 
 impl Post {
     pub fn url(&self) -> String {
-        format!("/{}/{}.{}", self.year, self.slug, self.lang)
+        format!("/{}/{}.{}", self.year(), self.slug, self.lang)
+    }
+    pub fn year(&self) -> i16 {
+        self.posted_at.year()
     }
     pub fn publine(
         &self,
