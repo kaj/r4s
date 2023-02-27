@@ -15,6 +15,7 @@ project more or less adheres to
   - the `post_tags` relation table does not need a separate `id` column.
   - Use `Model::as_select()` instead of column tuples some places.
   - Don't select the year for a post separately when getting the `posted_at`.
+* Limit the db pool to 20 connections (default is too large for my server).
 * Make the decoration of the comment hr visible again.
 
 

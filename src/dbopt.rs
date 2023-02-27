@@ -31,6 +31,6 @@ impl DbOpt {
     /// Since this is mainly for the web server, the pooled connections are async.
     pub fn build_pool(&self) -> Result<Pool> {
         let config = AsyncDieselConnectionManager::new(&self.db_url);
-        Ok(Pool::builder(config).build()?)
+        Ok(Pool::builder(config).max_size(20).build()?)
     }
 }
