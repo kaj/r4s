@@ -7,7 +7,8 @@ project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased
+## Release 0.3.2
+2023-02-28 20:20 CST
 
 * Clean up diesel usage (PR #8).
   - Use `belonging_to` and (rust-side) `grouped_by` to replace 1+n
