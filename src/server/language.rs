@@ -32,8 +32,9 @@ pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
 }
 
 /// Either "sv" or "en".
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub enum MyLang {
+    #[default]
     En,
     Sv,
 }
@@ -69,11 +70,6 @@ impl FromStr for MyLang {
             "sv" => Ok(MyLang::Sv),
             _ => Err(()),
         }
-    }
-}
-impl Default for MyLang {
-    fn default() -> Self {
-        MyLang::En
     }
 }
 impl AsRef<str> for MyLang {
