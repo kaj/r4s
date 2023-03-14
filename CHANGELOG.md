@@ -6,6 +6,10 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* Improved how common headers are added to responses.
+
 
 ## Release 0.3.2
 2023-02-28 20:20 CST

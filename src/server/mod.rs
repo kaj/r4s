@@ -27,7 +27,7 @@ use diesel::prelude::*;
 use diesel::BelongingToDsl;
 use diesel_async::pooled_connection::deadpool::PoolError;
 use diesel_async::RunQueryDsl;
-use reqwest::header::{CONTENT_SECURITY_POLICY, SERVER};
+use reqwest::header::{HeaderMap, CONTENT_SECURITY_POLICY, SERVER};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -175,9 +175,11 @@ impl Args {
                 .map(wrap)
                 .boxed());
 
-        warp::serve(routes.recover(error::for_rejection).boxed())
-            .run(self.bind)
-            .await;
+        let server = routes
+            .with(warp::reply::with::headers(common_headers()?))
+            .recover(error::for_rejection)
+            .boxed();
+        warp::serve(server).run(self.bind).await;
         Ok(())
     }
 }
@@ -250,17 +252,26 @@ fn goh() -> BoxedFilter<()> {
 
 fn response() -> Builder {
     Builder::new()
-        .header(
+}
+
+/// Create a map of common headers for all served responses.
+fn common_headers() -> anyhow::Result<HeaderMap> {
+    Ok(HeaderMap::from_iter([
+        (
             SERVER,
-            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
-        )
-        .header(
+            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))
+                .parse()?,
+        ),
+        (
             CONTENT_SECURITY_POLICY,
             // Note: should use default-src and img-src, but dev server,
             // image server, and lefalet makes that a bit hard.
-            "frame-ancestors 'none';",
-        )
+            "frame-ancestors 'none';".parse()?,
+        ),
+        ("x-clacks-overhead".parse()?, "GNU Terry Pratchett".parse()?),
+    ]))
 }
+
 
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
