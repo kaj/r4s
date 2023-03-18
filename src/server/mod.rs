@@ -272,7 +272,6 @@ fn common_headers() -> anyhow::Result<HeaderMap> {
     ]))
 }
 
-
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
