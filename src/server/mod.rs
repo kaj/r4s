@@ -32,7 +32,7 @@ use serde::Deserialize;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use tracing::{event, instrument, Level};
+use tracing::{info, instrument, warn};
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::http::Uri;
@@ -70,6 +70,10 @@ pub struct Args {
 
 impl Args {
     pub async fn run(self) -> Result<(), anyhow::Error> {
+        let quit_sig = async {
+            _ = tokio::signal::ctrl_c().await;
+            warn!("Initiating graceful shutdown");
+        };
         use warp::path::{end, param, path, tail};
         use warp::query;
         let app = AppData::new(&self)?;
@@ -179,7 +183,10 @@ impl Args {
             .with(warp::reply::with::headers(common_headers()?))
             .recover(error::for_rejection)
             .boxed();
-        warp::serve(server).run(self.bind).await;
+        let (addr, future) = warp::serve(server)
+            .bind_with_graceful_shutdown(self.bind, quit_sig);
+        info!("Running on http://{addr}/");
+        future.await;
         Ok(())
     }
 }
@@ -212,7 +219,7 @@ impl AppData {
     fn verify_csrf(&self, token: &str, cookie: &str) -> Result<()> {
         use base64::prelude::*;
         fn fail<E: std::fmt::Display>(e: E) -> ViewError {
-            event!(Level::INFO, "Csrf verification error: {}", e);
+            info!("Csrf verification error: {}", e);
             ViewError::BadRequest("CSRF Verification Failed".into())
         }
         let token = BASE64_STANDARD.decode(token).map_err(fail)?;
