@@ -8,6 +8,7 @@ project more or less adheres to
 
 ## Unreleased
 
+* Implemented graceful shutdown.
 * Improved how common headers are added to responses.
 * Updated `rust_icu_ucol` to 4.0.0.
 
