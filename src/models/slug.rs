@@ -1,4 +1,4 @@
-use diesel::backend::RawValue;
+use diesel::backend::Backend;
 use diesel::deserialize::FromSql;
 use diesel::pg::Pg;
 use diesel::sql_types::Text;
@@ -13,7 +13,7 @@ impl AsRef<str> for Slug {
 }
 impl FromSql<Text, Pg> for Slug {
     fn from_sql(
-        value: RawValue<'_, Pg>,
+        value: <Pg as Backend>::RawValue<'_>,
     ) -> diesel::deserialize::Result<Self> {
         let s = <String as FromSql<Text, Pg>>::from_sql(value)?;
         Slug::from_str(&s).map_err(|_| format!("Bad slug {:?}", s).into())

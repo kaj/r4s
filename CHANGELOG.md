@@ -10,6 +10,7 @@ project more or less adheres to
 
 * Implemented graceful shutdown.
 * Improved how common headers are added to responses.
+* Updated for disel 2.1.0 and diesel-async 0.3.1.
 * Updated `rust_icu_ucol` to 4.0.0.
 
 
