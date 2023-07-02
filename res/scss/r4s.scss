@@ -660,8 +660,18 @@ button {
 }
 
 #recentcomments {
-    p {
+    ul {
+        margin: 0;
+        padding: 0;
+    }
+    li {
         clear: both;
+        list-style: none;
+        margin: 0 0 1ex;
+        padding: 0;
+        p:first-of-type {
+            display: inline;
+        }
     }
 }
 #comments {

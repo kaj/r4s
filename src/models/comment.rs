@@ -2,7 +2,7 @@ use super::{DateTime, Post, PostLink, Result};
 use crate::dbopt::Connection;
 use crate::schema::comments::{self, dsl as c};
 use crate::schema::posts::dsl as p;
-use crate::server::ToHtml;
+use crate::server::templates::{Html, HtmlBuffer, ToHtml};
 use diesel::prelude::*;
 use diesel::{dsl::sql, sql_types::Bool};
 use diesel_async::RunQueryDsl;
@@ -93,20 +93,20 @@ impl PostComment {
     pub fn post_title(&self) -> &str {
         &self.post.title
     }
-    pub fn text_start(&self) -> String {
+    pub fn text_start(&self) -> HtmlBuffer {
         // Note: content here is the raw markdown.
         // maybe it should be "rendered" here, and if so, the short version
         // should probably be pre-baked, like the teaser for a post.
         let text = &self.comment.content;
-        if text.len() < 100 {
-            text.to_string()
+        if text.len() < 200 {
+            Html(text).to_buffer().unwrap()
         } else {
-            let mut end = 90;
+            let mut end = 120;
             while !text.is_char_boundary(end) {
                 end -= 1;
             }
             let end = text[..end].rfind(' ').unwrap_or(end);
-            format!("{} …", &text[..end])
+            format!("{} …", &text[..end]).to_buffer().unwrap()
         }
     }
 }

@@ -37,14 +37,14 @@
     @if !comments.is_empty() {
     <aside id="recentcomments">
       <h2>@fl!(fluent, "recent-comments")</h2>
-      @for c in comments {<p>
+      <ul>@for c in comments {<li>
         <a href="@c.url()">
           <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
           @fl!(fluent, "byon", by=c.name(), date=c.posted_at())
-          @fl!(fluent, "on") @c.post_title()</a>
+          @fl!(fluent, "on") @c.post_title()</a>:
         @c.text_start()
-      </p>
-      }
+      </li>
+      }</ul>
     </aside>
     }
     @:footer_html(fluent)
