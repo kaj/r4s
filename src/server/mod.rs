@@ -183,6 +183,7 @@ impl Args {
             .with(warp::reply::with::headers(common_headers()?))
             .recover(error::for_rejection)
             .boxed();
+        // TODO: Use try_bind_with_graceful_shutdown when warp#717 is released.
         let (addr, future) = warp::serve(server)
             .bind_with_graceful_shutdown(self.bind, quit_sig);
         info!("Running on http://{addr}/");
