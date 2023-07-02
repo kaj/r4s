@@ -6,6 +6,7 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, Eq, PartialEq, FromSqlRow)]
 pub struct Slug(String);
+
 impl AsRef<str> for Slug {
     fn as_ref(&self) -> &str {
         &self.0
