@@ -6,7 +6,8 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.3.4
+2023-07-02 15:40 CST
 
 * Implemented graceful shutdown.
 * Improved how common headers are added to responses.
