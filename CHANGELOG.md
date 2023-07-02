@@ -11,7 +11,8 @@ project more or less adheres to
 * Implemented graceful shutdown.
 * Improved how common headers are added to responses.
 * Updated to `disel` 2.1.0 and `diesel-async` 0.3.1.
-* Updated to `rust_icu_ucol` 4.0.0 and `qr_code` 2.0.0.
+* Updated to `rust_icu_ucol` 4.0.0, `qr_code` 2.0.0, and
+  `accept-language` to 3.0.1.
 
 
 ## Release 0.3.2
