@@ -8,7 +8,9 @@ project more or less adheres to
 
 ## Unreleased
 
+* Refactored asset handling in server to a separate module.
 * Updated to `lazy-regex` 3.0.0.
+
 
 ## Release 0.3.4
 2023-07-02 15:40 CST

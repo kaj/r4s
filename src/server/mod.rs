@@ -1,3 +1,4 @@
+mod assets;
 mod comment;
 mod error;
 mod feeds;
@@ -13,7 +14,6 @@ use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{
     year_of_date, Comment, FullPost, PostComment, PostTag, Slug, Tag, Teaser,
 };
-use crate::schema::assets::dsl as a;
 use crate::schema::comments::dsl as c;
 use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
@@ -36,7 +36,6 @@ use tracing::{info, instrument, warn};
 use warp::filters::BoxedFilter;
 use warp::http::response::Builder;
 use warp::http::Uri;
-use warp::path::Tail;
 use warp::reply::Response;
 use warp::{self, header, redirect, Filter, Reply};
 
@@ -74,7 +73,7 @@ impl Args {
             _ = tokio::signal::ctrl_c().await;
             warn!("Initiating graceful shutdown");
         };
-        use warp::path::{end, param, path, tail};
+        use warp::path::{end, param, path};
         use warp::query;
         let app = AppData::new(&self)?;
         let s = warp::any().map(move || app.clone()).boxed();
@@ -82,19 +81,9 @@ impl Args {
         let lang_filt = header::optional("accept-language").map(
             |l: Option<AcceptLang>| l.map(|l| l.lang()).unwrap_or_default(),
         );
-        let asset_routes = goh()
-            .and(param())
-            .and(param())
-            .and(end())
-            .and(goh())
-            .and(s())
-            .then(asset_file)
-            .map(wrap)
-            .or(tail().and(goh()).map(static_file).map(wrap))
-            .unify();
 
         let routes = warp::any()
-            .and(path("s").and(asset_routes).boxed())
+            .and(path("s").and(assets::routes(s())))
             .or(path("comment").and(comment::route(self.is_proxied, s())))
             .or(end()
                 .and(goh())
@@ -278,46 +267,6 @@ fn common_headers() -> anyhow::Result<HeaderMap> {
         ),
         ("x-clacks-overhead".parse()?, "GNU Terry Pratchett".parse()?),
     ]))
-}
-
-/// Handler for static files.
-/// Create a response from the file data with a correct content type
-/// and a far expires header (or a 404 if the file does not exist).
-#[instrument]
-fn static_file(name: Tail) -> Result<impl Reply> {
-    use chrono::{Duration, Utc};
-    use templates::statics::StaticFile;
-    use warp::http::header::{CONTENT_TYPE, EXPIRES};
-    let data = StaticFile::get(name.as_str()).ok_or(ViewError::NotFound)?;
-    let far_expires = Utc::now() + Duration::days(180);
-    response()
-        .header(CONTENT_TYPE, data.mime.as_ref())
-        .header(EXPIRES, far_expires.to_rfc2822())
-        .body(data.content)
-        .or_ise()
-}
-
-#[instrument]
-async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
-    use chrono::{Duration, Utc};
-    use warp::http::header::{CONTENT_TYPE, EXPIRES};
-    let mut db = app.db().await?;
-    let far_expires = Utc::now() + Duration::days(180);
-
-    let (mime, content) = a::assets
-        .select((a::mime, a::content))
-        .filter(a::year.eq(year))
-        .filter(a::name.eq(name))
-        .first::<(String, Vec<u8>)>(&mut db)
-        .await
-        .optional()?
-        .ok_or(ViewError::NotFound)?;
-
-    response()
-        .header(CONTENT_TYPE, mime)
-        .header(EXPIRES, far_expires.to_rfc2822())
-        .body(content.into())
-        .or_ise()
 }
 
 #[instrument]
