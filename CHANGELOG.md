@@ -9,7 +9,8 @@ project more or less adheres to
 ## Unreleased
 
 * Refactored asset handling in server to a separate module.
-* Updated to `lazy-regex` 3.0.0 and `ructe` 0.17.0.
+* Updated to `diesel-async` 0.4.1, `lazy-regex` 3.0.0, and
+  `ructe` 0.17.0.
 
 
 ## Release 0.3.4
