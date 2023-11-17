@@ -17,7 +17,11 @@ impl FromSql<Text, Pg> for Slug {
         value: <Pg as Backend>::RawValue<'_>,
     ) -> diesel::deserialize::Result<Self> {
         let s = <String as FromSql<Text, Pg>>::from_sql(value)?;
-        Slug::from_str(&s).map_err(|_| format!("Bad slug {:?}", s).into())
+        if verify(&s) {
+            Ok(Slug(s))
+        } else {
+            Err(format!("Bad slug {s:?}").into())
+        }
     }
 }
 impl std::fmt::Display for Slug {
@@ -34,10 +38,16 @@ impl std::ops::Deref for Slug {
 impl FromStr for Slug {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') {
+        if verify(s) {
             Ok(Slug(s.to_string()))
         } else {
             Err(())
         }
     }
+}
+
+fn verify(s: &str) -> bool {
+    let mut b = s.bytes();
+    b.next().map_or(false, |c| c.is_ascii_alphanumeric()) &&
+        b.all(|c| c.is_ascii_alphanumeric() || c == b'-')
 }
