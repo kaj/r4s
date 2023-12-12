@@ -18,9 +18,9 @@ use lazy_regex::regex_captures;
 use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
 use slug::slugify;
-use tracing::{info, debug, trace};
 use std::fs::{read, read_to_string};
 use std::path::{Path, PathBuf};
+use tracing::{debug, info, trace};
 use warp::hyper::body::Bytes;
 
 type DateTime = chrono::DateTime<chrono::FixedOffset>;
