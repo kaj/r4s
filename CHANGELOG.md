@@ -9,6 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Refactored asset handling in server to a separate module.
+* Somewhat improved logging, mainly in read-files subcommand.
 * Updated to `diesel-async` 0.4.1, `lazy-regex` 3.0.0, and
   `ructe` 0.17.0.
 

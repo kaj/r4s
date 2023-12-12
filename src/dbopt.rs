@@ -22,6 +22,7 @@ impl DbOpt {
     /// Get a single database connection from the configured url.
     ///
     /// Since this is for one-of admin tasks, it is an ordinary synchronous connection.
+    #[tracing::instrument(skip(self), err)]
     pub fn get_db(&self) -> Result<PgConnection, ConnectionError> {
         PgConnection::establish(&self.db_url)
     }

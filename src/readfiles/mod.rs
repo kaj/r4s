@@ -18,6 +18,7 @@ use lazy_regex::regex_captures;
 use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
 use slug::slugify;
+use tracing::{info, debug, trace};
 use std::fs::{read, read_to_string};
 use std::path::{Path, PathBuf};
 use warp::hyper::body::Bytes;
@@ -64,6 +65,7 @@ impl Args {
             web,
         };
         for path in &self.files {
+            debug!("Searching path {path:?}");
             if path.is_file() {
                 loader
                     .read_file(path)
@@ -123,7 +125,7 @@ impl Loader {
             .transpose()?;
 
         if pubdate.is_none() && !self.include_drafts {
-            println!("Skipping draft {:?}", path);
+            debug!("Skipping draft {:?}", path);
             return Ok(());
         }
 
@@ -150,6 +152,7 @@ impl Loader {
             .transpose()?;
 
         let files = if let Some(res) = metadata.get("res") {
+            debug!("Handle assets {res:?}");
             res.split(',')
                 .map(|s| s.trim())
                 .map(|s| {
@@ -170,7 +173,7 @@ impl Loader {
             .optional()?
         {
             if old_md != contents || self.force {
-                println!(
+                info!(
                     "Post #{} /{}/{}.{} exists, but should be updated.",
                     id, year, slug, lang
                 );
@@ -210,9 +213,11 @@ impl Loader {
                 if let Some(tags) = metadata.get("tags") {
                     tag_post(id, tags, &mut self.db)?;
                 }
+            } else {
+                trace!("No change in #{id} /{year}/{slug}.{lang}");
             }
         } else {
-            println!("New post /{}/{}.{}", year, slug, lang);
+            info!("New post /{}/{}.{}", year, slug, lang);
             let (
                 mut title,
                 teaser,
@@ -285,7 +290,7 @@ impl Loader {
                     .filter(m::id.eq(id))
                     .execute(&mut self.db)
                     .context("Upadte metapage")?;
-                println!("Updated metadata page /{}.{}", slug, lang);
+                info!("Updated metadata page /{}.{}", slug, lang);
             }
         } else {
             let (title, body, _) =
@@ -300,7 +305,7 @@ impl Loader {
                 ))
                 .execute(&mut self.db)
                 .context("Insert metapage")?;
-            println!("Created metapage /{}.{}: {}", slug, lang, title);
+            info!("Created metapage /{}.{}: {}", slug, lang, title);
         }
         Ok(())
     }

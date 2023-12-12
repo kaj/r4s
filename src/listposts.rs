@@ -18,7 +18,7 @@ impl Args {
     pub fn run(self) -> Result<()> {
         for post in PostLink::all().load(&mut self.db.get_db()?)? {
             println!(
-                "{:4}. {}{:18} {}",
+                "{:4}. {}{:20} {}",
                 post.id,
                 self.public_base,
                 post.url(),
