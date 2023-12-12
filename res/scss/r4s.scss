@@ -167,6 +167,7 @@ body {
 
 a.cc-by {
     display: inline-block;
+    font-variant-caps: all-small-caps;
     &:after {
         content: "🅭 🅯";
         display: inline-block;
