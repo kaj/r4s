@@ -18,6 +18,8 @@ posted-at = Posted { $date }.
 updated-at = Last updated { $date }.
 update-at = Updated { $date }:
 tagged = Tagged
+old-post-pub = Please note that this post is { $age } years old.
+    The information herein may be outdated.
 related = Related posts
 morefrom = More from <a href="/{$year}/en">{$year}</a>.
 
@@ -39,6 +41,7 @@ fbshare = Share on facebook
 comments = Comments
 write-comments = Write a comment
 recent-comments = New comments
+old-post-comment = This post is { $age } years old, comments are disabled.
 on = on
 byon = { $by }, { $date }
 signed = Signed,

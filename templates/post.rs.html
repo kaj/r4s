@@ -23,6 +23,9 @@
     <main>
       <h1>@Html(&post.title)</h1>
       <p class="publine">@Html(post.publine(fluent, tags))</p>
+      @if let Some(age) = post.updated_at.old_age() {
+        <div class="publine oldpost">@fl!(fluent, "old-post-pub", age=age)</div>
+      }
       @Html(&post.content)
 
       <footer>
@@ -51,6 +54,9 @@
             @fl!(fluent, "date", date = (&c.posted_at))</p>
         </section>
         }
+        @if let Some(age) = post.updated_at.old_age() {
+        <p id="old_no_comments">@fl!(fluent, "old-post-comment", age=age)
+        } else {
         <section id="writecomment">
           <h3>@fl!(fluent, "write-comments")</h3>
           <form action="/comment" method="post">
@@ -73,6 +79,7 @@
             </p>
           </form>
         </section>
+        }
       </section>
     </main>
     @if !similar.is_empty() {

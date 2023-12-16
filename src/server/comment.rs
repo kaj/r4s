@@ -1,8 +1,8 @@
-use super::error::{ViewError, ViewResult};
+use super::error::ViewError;
 use super::{wrap, App, Result};
-use crate::models::{safe_md2html, PostLink};
+use crate::models::{safe_md2html, DateTime, PostLink};
 use crate::schema::comments::dsl as c;
-use crate::schema::posts::dsl as p;
+use crate::schema::posts::{self, dsl as p};
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -41,10 +41,18 @@ async fn postcomment(
     app.verify_csrf(&form.csrftoken, &csrf_cookie)?;
     let mut db = app.db().await?;
 
-    let post = PostLink::all()
+    let (post, updated) = posts::table
+        .select((PostLink::as_select(), p::updated_at))
         .filter(p::id.eq(form.post))
-        .first(&mut db)
+        .first::<(PostLink, DateTime)>(&mut db)
         .await?;
+
+    if updated.old_age().is_some() {
+        tracing::info!(post = post.url(), "Reject comment on old post.");
+        return Err(ViewError::BadRequest(
+            "This post is too old to comment.".into(),
+        ));
+    }
 
     let url = form
         .url
@@ -95,22 +103,16 @@ async fn postcomment(
         .await?;
 
     tracing::info!("Comment accepted.  Public? {}", public);
-    my_found(&post, public, id)
+    Ok(my_found(&post, public, id))
 }
 
-pub fn my_found(
-    post: &PostLink,
-    public: bool,
-    comment: i32,
-) -> Result<impl Reply> {
-    use std::fmt::Write;
-    let mut url = post.url();
-    if public {
-        write!(&mut url, "#c{:x}", comment).or_ise()?
+pub fn my_found(post: &PostLink, public: bool, comment: i32) -> impl Reply {
+    let url = post.url();
+    super::found(&if public {
+        format!("{url}#c{comment:x}")
     } else {
-        write!(&mut url, "?c={}#cxmod", comment).or_ise()?
-    }
-    Ok(super::found(&url))
+        format!("{url}?c={}#cxmod", comment)
+    })
 }
 
 #[derive(Debug, Deserialize)]

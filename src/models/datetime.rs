@@ -1,4 +1,4 @@
-use chrono::Datelike;
+use chrono::{Datelike, Utc};
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Timestamptz;
@@ -22,6 +22,19 @@ impl DateTime {
 
     pub(crate) fn year(&self) -> i16 {
         self.0.year() as i16
+    }
+
+    /// Returns the age since a post was updated in years if the post
+    /// is considere old, or None if the post is considered not so
+    /// old.
+    pub fn old_age(&self) -> Option<i64> {
+        let age = Utc::now() - self.raw();
+        let age = age.num_days() * 1000 / 365_240;
+        if age >= 10 {
+            Some(age)
+        } else {
+            None
+        }
     }
 }
 

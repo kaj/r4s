@@ -18,6 +18,8 @@ posted-at = Publicerad { $date }.
 updated-at = Senast uppdaterad { $date }.
 update-at = Uppdaterat { $date }:
 tagged = Taggat
+old-post-pub = Notera att detta inlägg är { $age } år gammalt.
+    Innehållet kan vara inaktuellt.
 related = Liknande inlägg
 morefrom = Mer från <a href="/{$year}/sv">{$year}</a>.
 
@@ -39,6 +41,8 @@ fbshare = Dela på facebook
 comments = Kommentarer
 write-comments = Skriv en kommentar
 recent-comments = Nya kommentarer
+old-post-comment = Det här inlägget är { $age } år gammalt,
+    det kan inte längre kommenteras.
 on = på
 byon = { $by }, { $date }
 signed = Undertecknat,

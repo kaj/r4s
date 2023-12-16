@@ -339,6 +339,14 @@ code.key {
 
 p.publine {
     font-family: Cocanut;
+    margin-bottom: .2em;
+}
+div.publine.oldpost {
+  background: no-repeat calc(100% - 1ex) calc(20% + .3em) / 2.6em auto url(/s/kaj-g8kJnwri.svg) var(--col-bv);
+  border-radius: 0 1ex 1ex 1em;
+  font-weight: 100;
+  min-height: 2em;
+  padding: 1ex 4em 1ex 1em;
 }
 
 main aside {
@@ -894,8 +902,9 @@ button.themeswitch {
     }
 }
 
-p.publine + p,
-p.publine + figure.sidebar + p {
+.publine + p,
+.publine + figure.sidebar + p {
+    margin-top: 1em;
     position: relative;
     $cb: var(--col-fv);
     $c1: var(--col-flare);

@@ -8,6 +8,7 @@ project more or less adheres to
 
 ## Unreleased
 
+* Note on old comments that they are old, and disable comments there.
 * Refactored asset handling in server to a separate module.
 * Somewhat improved logging, mainly in read-files subcommand.
 * Updated to `diesel-async` 0.4.1, `lazy-regex` 3.0.0, and
