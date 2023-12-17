@@ -628,6 +628,24 @@ menu.social {
         display: inline-block;
         margin: 0 1em 1em 0;
         padding: 0;
+        &.fedishare button.open:after {
+            background: no-repeat 50% / contain url(static_name("fedi.svg"));
+            content: ' ';
+            display: inline-block;
+            height: 1.8em;
+            margin: -.4em 0 -.4em .4em;
+            vertical-align: middle;
+            width: 1.8em;
+        }
+        &.fedishare button.open:before {
+            background: no-repeat 50% / contain url(static_name("masto.svg"));
+            content: ' ';
+            display: inline-block;
+            height: 1.4em;
+            margin: -.4em .4em -.4em 0;
+            vertical-align: middle;
+            width: 1.3em;
+        }
         a.twitter:before {
             background: url(static_name("twitter.svg"));
             content: ' ';
@@ -938,5 +956,27 @@ button.themeswitch {
         top: -1ex;
         width: 7em;
         z-index: -1;
+    }
+}
+
+dialog {
+    background: var(--col-b);
+    color: var(--col-f);
+    border: 0;
+    border-radius: .5ex;
+    box-shadow: 0 0 1ex var(--col-fh), 0 1ex 2ex var(--col-fh);
+    width: min(25em, 80%);
+
+    form[method="dialog"] {
+        display: flex;
+        flex-flow: column;
+        gap: 1em;
+        justify-content: space-between;
+
+        div {
+            display: flex;
+            gap: 1em;
+            justify-content: flex-end;
+        }
     }
 }
