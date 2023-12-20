@@ -50,6 +50,10 @@ html.theme-dark { @include darktheme; }
     html:not(.theme-light) { @include darktheme; }
 }
 
+@function myshadow($size: 1px) {
+    @return 0 0 $size var(--col-fh), calc($size / 2) $size calc($size * 2) var(--col-fh);
+}
+
 body {
     background:
         linear-gradient(166deg, transparent 10em, var(--col-flare) 17em, transparent 40em),
@@ -331,10 +335,10 @@ code {
 }
 code.key {
   background: var(--col-bx);
-  padding: .2em .5em;
-  margin: -.2em .1em;
+  padding: .1em .4em;
+  margin: -.1em .1em;
   border-radius: .4em;
-  box-shadow: .1em .1em .05em var(--col-fh);
+  box-shadow: myshadow(.1em);
 }
 
 p.publine {
@@ -479,7 +483,7 @@ div.gallery {
     figcaption {
         background: var(--col-bt);
         border-radius: 0 1ex 1ex 0;
-        box-shadow: 2px 1px 4px var(--col-fh);
+        box-shadow: myshadow();
         padding: 1ex 2em;
         width: fit-content;
         margin-right: 1ex;
@@ -510,7 +514,7 @@ div.gallery {
 
         p {
             background: var(--col-bt);
-            box-shadow: 1px 2px 5px -1px var(--col-fh);
+            box-shadow: myshadow();
             border-radius: 1ex;
             padding: 1ex;
             margin: 0 auto;
@@ -662,7 +666,8 @@ menu.social a,
 button {
     background: linear-gradient(var(--col-b) 40%, var(--col-b2));
     border-radius: .3em;
-    border: solid .7px var(--col-fl);
+    border: 0;
+    box-shadow: myshadow();
     color: var(--col-fh);
     display: inline-block;
     font-family: cocanut;
@@ -673,7 +678,7 @@ button {
     &:focus, &:hover {
         background: linear-gradient(var(--col-b1), var(--col-b) 30%, var(--col-b) 75%, var(--col-b2));
         color: var(--col-f);
-        box-shadow: 0 0 1em -.4em var(--col-fh);
+        box-shadow: myshadow(), myshadow(.3em);
     }
 }
 
@@ -818,8 +823,8 @@ button.themeswitch {
     &:hover, &:focus {
         &:after {
             background: var(--col-b);
-            border: solid .6px var(--col-fh);
-            box-shadow: 0 0 1em -.4em var(--col-fh);
+            border: 0;
+            box-shadow: myshadow();
             max-width: max-content;
             padding: 0 1ex;
             position: absolute;
@@ -955,7 +960,7 @@ dialog {
     color: var(--col-f);
     border: 0;
     border-radius: .5ex;
-    box-shadow: 0 0 1ex var(--col-fh), 0 1ex 2ex var(--col-fh);
+    box-shadow: myshadow(1ex);
     width: min(25em, 80%);
 
     form[method="dialog"] {
