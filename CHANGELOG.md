@@ -13,8 +13,8 @@ project more or less adheres to
 * Note on old posts that they are old, and disable comments there.
 * Refactored asset handling in server to a separate module.
 * Somewhat improved logging, mainly in read-files subcommand.
-* Updated to `diesel-async` 0.4.1, `lazy-regex` 3.0.0, and
-  `ructe` 0.17.0.
+* Updated to `diesel-async` 0.4.1, `lazy-regex` 3.0.0, `ructe` 0.17.0,
+  and `i18n-embed-fl` to 0.7.0.
 
 
 ## Release 0.3.4
