@@ -646,15 +646,6 @@ menu.social {
             vertical-align: middle;
             width: 1.3em;
         }
-        a.twitter:before {
-            background: url(static_name("twitter.svg"));
-            content: ' ';
-            display: inline-block;
-            height: 1em;
-            margin-right: .4em;
-            vertical-align: -.15em;
-            width: 1.216em;
-        }
         a.fb:before {
             background: url(static_name("fb.svg"));
             content: ' ';

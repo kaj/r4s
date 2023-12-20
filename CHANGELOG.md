@@ -9,6 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Added a share on fediverse / mastodon button (PR #9).
+* Removed twitter links.
 * Note on old posts that they are old, and disable comments there.
 * Refactored asset handling in server to a separate module.
 * Somewhat improved logging, mainly in read-files subcommand.
