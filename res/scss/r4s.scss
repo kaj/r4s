@@ -420,6 +420,9 @@ figure {
                 width: $paspect * $width;
             }
         }
+        .publine + &.sidebar {
+            margin-top: 3em;
+        }
     }
     &.gallery {
         display: inline-block;
