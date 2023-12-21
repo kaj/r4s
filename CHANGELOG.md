@@ -6,7 +6,8 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.3.6
+2023-12-21 14:43 CST
 
 * Added a share on fediverse / mastodon button (PR #9).
 * Removed twitter links.
