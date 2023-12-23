@@ -1,5 +1,5 @@
 use super::error::ViewError;
-use super::{wrap, App, Result};
+use super::{App, Result};
 use crate::models::{safe_md2html, DateTime, PostLink};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::{self, dsl as p};
@@ -27,7 +27,6 @@ pub fn route(
         .and(body::form())
         .and(s)
         .then(postcomment)
-        .map(wrap)
         .boxed()
 }
 

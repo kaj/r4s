@@ -1,5 +1,5 @@
 use super::error::{ViewError, ViewResult};
-use super::{fl, response, wrap, App, MyLang, Result};
+use super::{fl, response, App, MyLang, Result};
 use crate::models::{Slug, Tag, Teaser};
 use atom_syndication::*;
 use std::str::FromStr;
@@ -10,7 +10,7 @@ use warp::path::{end, param};
 use warp::{self, Filter, Reply};
 
 pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
-    param().and(end()).and(s).then(do_feed).map(wrap).boxed()
+    param().and(end()).and(s).then(do_feed).boxed()
 }
 
 #[instrument]

@@ -1,6 +1,6 @@
 [package]
 name = "r4s"
-version = "0.3.6"
+version = "0.3.7-PRE"
 description = "Manage and serve my blog"
 authors = ["Rasmus Kaj <kaj@kth.se>"]
 edition = "2021"
@@ -47,4 +47,4 @@ textwrap = { version = "0.16.0", features = ["terminal_size"] }
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "signal"] }
 tracing = "0.1.29"
 tracing-subscriber = { version = "0.3.4", features = ["env-filter"] }
-warp = "0.3.2"
+warp = "0.3.6"

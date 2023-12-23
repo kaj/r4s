@@ -89,13 +89,11 @@ impl Args {
                 .and(goh())
                 .and(lang_filt)
                 .map(|lang| {
-                    wrap(
-                        Uri::builder()
-                            .path_and_query(&format!("/{}", lang))
-                            .build()
-                            .or_ise()
-                            .map(redirect::see_other),
-                    )
+                    Uri::builder()
+                        .path_and_query(&format!("/{}", lang))
+                        .build()
+                        .or_ise()
+                        .map(redirect::see_other)
                 })
                 .boxed())
             .or(path("tag").and(tag::routes(s())).boxed())
@@ -104,13 +102,11 @@ impl Args {
                 .and(goh())
                 .and(lang_filt)
                 .map(|year: i16, lang| {
-                    wrap(
-                        Uri::builder()
-                            .path_and_query(&format!("/{}/{}", year, lang))
-                            .build()
-                            .map(redirect::see_other)
-                            .or_ise(),
-                    )
+                    Uri::builder()
+                        .path_and_query(&format!("/{}/{}", year, lang))
+                        .build()
+                        .map(redirect::see_other)
+                        .or_ise()
                 })
                 .boxed())
             .or(param()
@@ -119,14 +115,12 @@ impl Args {
                 .and(goh())
                 .and(s())
                 .then(yearpage)
-                .map(wrap)
                 .boxed())
             .or(param()
                 .and(end())
                 .and(goh())
                 .and(s())
                 .then(frontpage)
-                .map(wrap)
                 .boxed())
             .or(param()
                 .and(param())
@@ -135,7 +129,6 @@ impl Args {
                 .and(goh())
                 .and(s())
                 .then(page)
-                .map(wrap)
                 .boxed())
             .or(param()
                 .and(param())
@@ -144,28 +137,21 @@ impl Args {
                 .and(goh())
                 .and(s())
                 .then(page_fallback)
-                .map(wrap)
                 .boxed())
             .or(param()
                 .and(end())
                 .and(goh())
                 .and(s())
                 .then(metapage)
-                .map(wrap)
                 .boxed())
             .or(feeds::routes(s()))
-            .or(path("robots.txt")
-                .and(end())
-                .and(goh())
-                .map(robots_txt)
-                .map(wrap))
+            .or(path("robots.txt").and(end()).and(goh()).map(robots_txt))
             .or(param()
                 .and(end())
                 .and(lang_filt)
                 .and(goh())
                 .and(s())
                 .then(metafallback)
-                .map(wrap)
                 .boxed());
 
         let server = routes
@@ -231,13 +217,6 @@ impl AppData {
     }
     fn csrf_protection(&self) -> impl CsrfProtection {
         AesGcmCsrfProtection::from_key(self.csrf_secret)
-    }
-}
-
-fn wrap(result: Result<impl Reply>) -> Response {
-    match result {
-        Ok(reply) => reply.into_response(),
-        Err(err) => err.into_response(),
     }
 }
 

@@ -1,7 +1,5 @@
 use super::templates::{self, RenderRucte};
-use super::{
-    goh, response, wrap, App, MyLang, Result, SlugAndLang, ViewError,
-};
+use super::{goh, response, App, MyLang, Result, SlugAndLang, ViewError};
 use crate::models::{Tag, Teaser};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
@@ -18,7 +16,7 @@ use warp::{Filter, Reply};
 pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
     let cloud = param().and(end()).and(goh()).and(s.clone()).then(tagcloud);
     let page = param().and(end()).and(goh()).and(s).then(tagpage);
-    cloud.or(page).unify().map(wrap).boxed()
+    cloud.or(page).unify().boxed()
 }
 
 #[instrument]

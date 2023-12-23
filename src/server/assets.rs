@@ -1,4 +1,4 @@
-use super::{goh, response, wrap, App, Result, ViewError, ViewResult};
+use super::{goh, response, App, Result, ViewError, ViewResult};
 use crate::schema::assets::dsl as a;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -24,7 +24,6 @@ pub fn routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
         .then(asset_file)
         .or(tail().and(goh()).map(static_file))
         .unify()
-        .map(wrap)
         .boxed()
 }
 
