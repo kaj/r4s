@@ -89,9 +89,8 @@ impl Args {
                 .and(goh())
                 .and(lang_filt)
                 .map(|lang| {
-                    Uri::builder()
-                        .path_and_query(&format!("/{}", lang))
-                        .build()
+                    format!("/{lang}")
+                        .parse::<Uri>()
                         .or_ise()
                         .map(redirect::see_other)
                 })
@@ -102,11 +101,10 @@ impl Args {
                 .and(goh())
                 .and(lang_filt)
                 .map(|year: i16, lang| {
-                    Uri::builder()
-                        .path_and_query(&format!("/{}/{}", year, lang))
-                        .build()
-                        .map(redirect::see_other)
+                    format!("/{year}/{lang}")
+                        .parse::<Uri>()
                         .or_ise()
+                        .map(redirect::see_other)
                 })
                 .boxed())
             .or(param()
@@ -158,9 +156,8 @@ impl Args {
             .with(warp::reply::with::headers(common_headers()?))
             .recover(error::for_rejection)
             .boxed();
-        // TODO: Use try_bind_with_graceful_shutdown when warp#717 is released.
         let (addr, future) = warp::serve(server)
-            .bind_with_graceful_shutdown(self.bind, quit_sig);
+            .try_bind_with_graceful_shutdown(self.bind, quit_sig)?;
         info!("Running on http://{addr}/");
         future.await;
         Ok(())
@@ -232,6 +229,8 @@ fn response() -> Builder {
 
 /// Create a map of common headers for all served responses.
 fn common_headers() -> anyhow::Result<HeaderMap> {
+    // This method is only called once, when initiating the router, so
+    // don't bother about performance here.
     Ok(HeaderMap::from_iter([
         (
             SERVER,
@@ -530,7 +529,7 @@ async fn metafallback(
                 .iter()
                 .find(|l| lang.as_ref() == *l)
                 .unwrap_or(&existing_langs[0]);
-            Ok(found(&format!("/{}.{}", slug, lang)))
+            Ok(found(&format!("/{slug}.{lang}")))
         }
     }
 }
