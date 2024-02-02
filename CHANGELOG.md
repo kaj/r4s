@@ -8,6 +8,8 @@ project more or less adheres to
 
 ## Unreleased
 
+* Fixed background gradients for some browsers that handled
+  `transparent` strangely.
 * Require `warp` 0.3.6, which handles results directly (so I can
   remove a wrapper function).
 

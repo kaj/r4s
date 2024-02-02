@@ -19,6 +19,7 @@ html {
     --col-fv: #{$purple};
     --col-fh: #{$dark};
     --col-b: #{$paper};
+    --col-b0: #{rgba($paper, 0)};
     --col-bt: #{rgba($paper2, 0.9)};  // background, transparent
     --col-bx: #{wheat};
     --col-bl: #{color.mix($paper, $purple, 65%)};
@@ -35,6 +36,7 @@ html {
     --col-fv: #{color.mix($purple, $paper, 30%)};
     --col-fh: #{wheat};
     --col-b: #{$darker};
+    --col-b0: #{rgba($darker, 0)};
     --col-bt: #{rgba($darker, 0.8)};
     --col-bx: #{$purple};
     --col-bl: #{color.mix($purple, blue)};
@@ -56,7 +58,7 @@ html.theme-dark { @include darktheme; }
 
 body {
     background:
-        linear-gradient(166deg, transparent 10em, var(--col-flare) 17em, transparent 40em),
+        linear-gradient(166deg, var(--col-b0) 10em, var(--col-flare) 17em, var(--col-b0) 40em),
         linear-gradient(90deg, var(--col-b1), var(--col-b) 40%, var(--col-b) 80%, var(--col-b2));
     background-color: var(--col-b);
     color: var(--col-f);
