@@ -6,6 +6,8 @@ use diesel::Connection as _;
 use diesel_async::pooled_connection::deadpool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::AsyncPgConnection;
+use std::time::{Duration, Instant};
+use tracing::{debug, warn};
 
 /// An asynchronous postgres database connection pool.
 pub type Pool = deadpool::Pool<AsyncPgConnection>;
@@ -24,7 +26,15 @@ impl DbOpt {
     /// Since this is for one-of admin tasks, it is an ordinary synchronous connection.
     #[tracing::instrument(skip(self), err)]
     pub fn get_db(&self) -> Result<PgConnection, ConnectionError> {
-        PgConnection::establish(&self.db_url)
+        let time = Instant::now();
+        let connection = PgConnection::establish(&self.db_url)?;
+        let time = time.elapsed();
+        if time > Duration::from_millis(50) {
+            warn!("Got a db connection in {time:.1?}.  Why so slow?");
+        } else {
+            debug!("Got a connection in {time:.1?}.");
+        }
+        Ok(connection)
     }
 
     /// Get a database connection pool from the configured url.
