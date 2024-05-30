@@ -6,6 +6,9 @@ $purple: mix(rebeccapurple, purple);
 $dark: color.mix($purple, black, 70%);
 $darker: color.mix($purple, black, 33%);
 
+$pwidth: 66ch;
+$outdent: 1.2rem;
+
 @use "kratsbox";
 
 html, body {
@@ -83,14 +86,6 @@ body {
             grid-column: 1 / 3;
         }
     }
-    @media screen and (min-width: 98em) {
-        grid-template-columns: 60% 40%;
-
-        > header, > footer, > main, > aside {
-            padding-left: 7vw;
-            padding-right: 7vw;
-        }
-    }
 
     > header {
         border-bottom: .1em solid $purple;
@@ -103,8 +98,11 @@ body {
         p:first-of-type {
             font-size: 1.4em;
         }
+        p {
+            margin: 0 0 1em auto;
+        }
         p:not(.tagline) {
-            margin: 0;
+            margin-bottom: 0;
         }
         p:not(:first-of-type) {
             display: inline-block;
@@ -121,7 +119,6 @@ body {
                 margin: 0;
                 padding: 0;
                 position: absolute;
-                left: 10%;
                 bottom: 0;
                 width: calc(50px * 1.33);
             }
@@ -129,7 +126,6 @@ body {
     }
     > main {
         grid-row: 2 / 8;
-        max-width: 54em;
         margin: 0;
     }
     > aside {
@@ -299,9 +295,29 @@ h4, h6 {
 }
 p {
     margin: 0 0 1em;
+    max-width: $pwidth;
 }
-main p {
-    text-align: justify;
+main {
+    & > section:not(#comments) {
+        h2, h3, h4, h5, h6 {
+            padding-left: $outdent;
+        }
+    }
+    p:not(li p) {
+        text-align: justify;
+        padding-inline-start: $outdent;
+    }
+    ul, ol {
+        padding-inline-start: calc($outdent + 3ch);
+        max-width: calc($pwidth - 3ch);
+    }
+    dl {
+        padding-inline-start: $outdent;
+        max-width: $pwidth;
+    }
+    footer {
+        max-width: calc($pwidth + $outdent);
+    }
 }
 
 blockquote {
@@ -346,6 +362,8 @@ code.key {
 p.publine {
     font-family: Cocanut;
     margin-bottom: .2em;
+    max-width: initial;
+    padding: 0;
 }
 div.publine.oldpost {
   background: no-repeat calc(100% - 1ex) calc(20% + .3em) / 2.6em auto url(/s/kaj-g8kJnwri.svg) var(--col-bv);
@@ -353,6 +371,7 @@ div.publine.oldpost {
   font-weight: 100;
   min-height: 2em;
   padding: 1ex 4em 1ex 1em;
+  max-width: calc(#{$pwidth} - 5em);
 }
 
 main aside {
@@ -429,7 +448,7 @@ figure {
     &.gallery {
         display: inline-block;
         margin: 0 1em 1em 0;
-        max-width: calc(50% - 1.2em);
+        max-width: calc(50% - .5em);
         width: 16.7em;
         vertical-align: top;
         &.portrait {
@@ -531,49 +550,44 @@ div.gallery {
 
 article {
     margin: 5vmin 0;
+    --deco-mask: #{url(static_name("deco1.svg"))};
+    --deco-ar: 1280 / calc(640/2);
 
     &:first-child {
         margin-top: 0;
     }
     &:after {
-        clear: both;
-        mask: url(static_name("deco1.svg"));
-        -webkit-mask: url(static_name("deco1.svg"));
+        aspect-ratio: var(--deco-ar);
         background: $purple;
+        clear: both;
         content: "";
         display: block;
-        aspect-ratio: 1280 / 640;
-        margin: 0 auto;
-        width: 40%;
         height: auto;
+        mask: var(--deco-mask) center no-repeat;
+        -webkit-mask: var(--deco-mask) center no-repeat;
+        max-width: $pwidth;
+        margin-inline-start: $outdent;
     }
-    &:nth-child(2n):after {
-        mask: url(static_name("deco2.svg"));
-        -webkit-mask: url(static_name("deco2.svg"));
-        width: 50%;
+    &:nth-child(2n) {
+        --deco-mask: #{url(static_name("deco2.svg"))};
     }
-    &:nth-child(3n):after {
-        mask: url(static_name("deco3.svg"));
-        -webkit-mask: url(static_name("deco3.svg"));
-        width: 40%;
+    &:nth-child(3n) {
+        --deco-mask: #{url(static_name("deco3.svg"))};
     }
-    &:nth-child(5n - 2):after {
-        mask: url(static_name("deco4.svg"));
-        -webkit-mask: url(static_name("deco4.svg"));
-        aspect-ratio: 2654 / 988;
-        width: 36%;
+    &:nth-child(5n - 2) {
+        --deco-mask: #{url(static_name("deco4.svg"))};
+        --deco-ar: 2654 / calc(988/2);
     }
-    &:nth-child(7n - 6):after {
-        mask: url(static_name("deco5.svg"));
-        -webkit-mask: url(static_name("deco5.svg"));
-        width: 50%;
-        aspect-ratio: 2606 / 909;
-        margin: 1em auto;
+    &:nth-child(7n - 6) {
+        --deco-mask: #{url(static_name("deco5.svg"))};
+        --deco-ar: 2606 / calc(909/2);
     }
     .readmore {
         text-align: right;
-        font-family: cocanut;
-        font-style: italic;
+        a {
+            font-family: cocanut;
+            font-style: italic;
+        }
     }
 }
 
@@ -582,7 +596,7 @@ pre {
     border: solid 1px var(--col-bx);
     color: var(--col-f);
     font-variant: lining-nums;
-    margin: 1em 1ex;
+    margin: 1em auto;
     overflow: auto;
     padding: 1ex;
 
@@ -625,6 +639,7 @@ pre {
 main footer address {
   text-align: right;
   font-family: cocanut;
+  font-weight: bold;
   &::after {
       content: "🖋";
       font-size: 2em;
@@ -706,14 +721,13 @@ button {
     section {
         clear: both;
     }
-
+    section:not(#writecomment) {
+        max-width: calc($pwidth + $outdent + 8em);
+    }
     p.signed {
         text-align: right;
-        margin-right: 12%;
-        font-family: cocanut;
-        font-style: italic;
         &:first-line {
-            font-weight: bold;
+            font: bold italic 1em cocanut;
         }
     }
 
@@ -826,7 +840,7 @@ button.themeswitch {
     position: relative;
     padding: 0 1ex;
     &:hover, &:focus {
-        &:after {
+        &::after {
             background: var(--col-b);
             border: 0;
             box-shadow: myshadow();
@@ -925,6 +939,7 @@ button.themeswitch {
 .publine + figure.sidebar + p {
     margin-top: 1em;
     position: relative;
+    text-indent: -$outdent;
     $cb: var(--col-fv);
     $c1: var(--col-flare);
     &::first-letter {
