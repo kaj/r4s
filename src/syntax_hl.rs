@@ -6,6 +6,7 @@ use syntect::html::css_for_theme_with_class_style;
 use syntect::html::ClassStyle;
 pub use syntect::html::ClassedHTMLGenerator;
 use syntect::parsing::SyntaxSet;
+#[allow(unused)]
 pub use syntect::util::LinesWithEndings;
 
 const STYLE: ClassStyle = ClassStyle::SpacedPrefixed { prefix: "syh" };
