@@ -1,8 +1,8 @@
 //! How to serialize parsed markdown into my kind of html
 use anyhow::{bail, Result};
 use lazy_regex::regex_replace_all;
-use pulldown_cmark::escape::escape_html;
-use pulldown_cmark::{Event, Tag};
+use pulldown_cmark::{Event, Tag, TagEnd};
+use pulldown_cmark_escape::escape_html;
 
 pub fn collect<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
@@ -14,25 +14,25 @@ pub fn collect<'a>(
             Event::Text(text) => {
                 escape_html(&mut result, &text)?;
             }
-            Event::Start(Tag::Heading(..)) => (),
-            Event::End(Tag::Heading(..)) => {
+            Event::Start(Tag::Heading { .. }) => (),
+            Event::End(TagEnd::Heading(_)) => {
                 result.push_str(": ");
             }
             Event::Start(Tag::CodeBlock(_blocktype)) => {
                 for event in &mut data {
                     match event {
-                        Event::End(Tag::CodeBlock(_blocktype)) => break,
+                        Event::End(TagEnd::CodeBlock) => break,
                         Event::Text(code) => escape_html(&mut result, &code)?,
                         x => bail!("Unexpeted in code: {:?}", x),
                     }
                 }
             }
-            Event::End(Tag::CodeBlock(_blocktype)) => {
+            Event::End(TagEnd::CodeBlock) => {
                 unreachable!();
             }
-            Event::Start(Tag::Image(..)) => {
+            Event::Start(Tag::Image { .. }) => {
                 for event in &mut data {
-                    if let Event::End(Tag::Image(..)) = event {
+                    if let Event::End(TagEnd::Image) = event {
                         break;
                     }
                 }
@@ -51,11 +51,11 @@ pub fn collect<'a>(
                 _ => (),
             },
             Event::End(tag) => match tag {
-                Tag::Item
-                | Tag::Paragraph
-                | Tag::TableHead
-                | Tag::TableCell
-                | Tag::TableRow => {
+                TagEnd::Item
+                | TagEnd::Paragraph
+                | TagEnd::TableHead
+                | TagEnd::TableCell
+                | TagEnd::TableRow => {
                     result.push(' ');
                 }
                 _ => (),

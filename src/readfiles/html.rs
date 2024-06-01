@@ -3,8 +3,8 @@ use super::codeblocks::{BlockHandler, DynBlock};
 use super::{FaRef, Loader};
 use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
-use pulldown_cmark::escape::{escape_href, escape_html};
-use pulldown_cmark::{CodeBlockKind, Event, Tag};
+use pulldown_cmark::{CodeBlockKind, Event, Tag, TagEnd};
+use pulldown_cmark_escape::{escape_href, escape_html};
 use std::fmt::Write;
 
 pub(super) fn collect<'a>(
@@ -21,7 +21,12 @@ pub(super) fn collect<'a>(
             Event::Text(text) => {
                 escape_html(&mut result, &text)?;
             }
-            Event::Start(Tag::Heading(level, id, classes)) => {
+            Event::Start(Tag::Heading {
+                level,
+                id,
+                classes,
+                attrs: _,
+            }) => {
                 {
                     let level = level as u32;
                     while section_level >= level {
@@ -37,7 +42,7 @@ pub(super) fn collect<'a>(
                 result.push_str("<section");
                 if let Some(id) = id {
                     result.push_str(" id=\"");
-                    escape_html(&mut result, id)?;
+                    escape_html(&mut result, &id)?;
                     result.push('"');
                 }
                 if !classes.is_empty() {
@@ -49,7 +54,7 @@ pub(super) fn collect<'a>(
                 section_level += 1;
                 result.push_str(&format!("<{}>", level));
             }
-            Event::End(Tag::Heading(level, _, _)) => {
+            Event::End(TagEnd::Heading(level)) => {
                 if !remove_end(&mut result, &format!("<{}>", level)) {
                     result.push_str(&format!("</{}>\n", level));
                 }
@@ -70,24 +75,30 @@ pub(super) fn collect<'a>(
                 )?;
                 for event in &mut data {
                     match event {
-                        Event::End(Tag::CodeBlock(_blocktype)) => break,
+                        Event::End(TagEnd::CodeBlock) => break,
                         Event::Text(code) => handler.push(&code)?,
                         x => bail!("Unexpeted in code: {:?}", x),
                     }
                 }
                 handler.end()?;
             }
-            Event::End(Tag::CodeBlock(_blocktype)) => {
+            Event::End(TagEnd::CodeBlock) => {
                 unreachable!();
             }
-            Event::Start(Tag::Image(imgtype, imgref, title)) => {
+            Event::Start(Tag::Image {
+                link_type,
+                dest_url,
+                title,
+                id: _,
+            }) => {
+                // TODO: Respect id.
                 let _ = remove_end(&mut result, "<p>")
                     || remove_end(&mut result, "<p><!--no-p-->")
                     || remove_end(&mut result, "<p><!--no-p-->\n");
                 let mut inner = String::new();
                 for tag in &mut data {
                     match tag {
-                        Event::End(Tag::Image(..)) => break,
+                        Event::End(TagEnd::Image) => break,
                         Event::Text(text) => inner.push_str(&text),
                         Event::SoftBreak => inner.push(' '),
                         _ => inner.push_str(&format!("\n{:?}", tag)),
@@ -95,10 +106,10 @@ pub(super) fn collect<'a>(
                 }
                 let (_all, imgref, _, classes, attrs, caption) = regex_captures!(
                     r#"^([A-Za-z0-9/._-]*)\s*(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*([^{]*)$"#m,
-                    &imgref,
+                    &dest_url,
                 )
                 .with_context(|| {
-                    format!("Bad image ref: {:?}", imgref.as_ref())
+                    format!("Bad image ref: {:?}", dest_url.as_ref())
                 })?;
 
                 if classes.split_ascii_whitespace().any(|w| w == "gallery")
@@ -144,7 +155,7 @@ pub(super) fn collect<'a>(
                         classes,
                         class2,
                         attrs,
-                        imgtype,
+                        link_type, // TODO: Skip this!
                         imgtag,
                         caption,
                         title,
@@ -156,7 +167,7 @@ pub(super) fn collect<'a>(
                 }
                 result.push_str("<p><!--no-p-->");
             }
-            Event::End(Tag::Paragraph)
+            Event::End(TagEnd::Paragraph)
                 if result.ends_with("<p><!--no-p-->") =>
             {
                 result.truncate(result.len() - 14);
@@ -164,7 +175,7 @@ pub(super) fn collect<'a>(
             Event::Start(Tag::TableHead) => {
                 result.push_str("<thead><tr>");
             }
-            Event::End(Tag::TableHead) => {
+            Event::End(TagEnd::TableHead) => {
                 result.push_str("</tr></thead>\n");
             }
             Event::TaskListMarker(done) => {
@@ -174,6 +185,9 @@ pub(super) fn collect<'a>(
                 }
                 result.push_str("/>\n");
             }
+            // Content of htmlblock is Event::Html, below.
+            Event::Start(Tag::HtmlBlock) => (),
+            Event::End(TagEnd::HtmlBlock) => (),
             Event::Start(tag) => {
                 result.push('<');
                 result.push_str(tag_name(&tag));
@@ -185,10 +199,20 @@ pub(super) fn collect<'a>(
                         result.push_str(&format!(" start='{}'", start));
                     }
                     Tag::Item => (),
-                    Tag::Link(linktype, href, title) => {
-                        if !href.is_empty() {
+                    Tag::Link {
+                        link_type,
+                        dest_url,
+                        title,
+                        id,
+                    } => {
+                        if !dest_url.is_empty() {
                             result.push_str(" href=\"");
-                            escape_href(&mut result, &href)?;
+                            escape_href(&mut result, &dest_url)?;
+                            result.push('"');
+                        }
+                        if !id.is_empty() {
+                            result.push_str(" id=\"");
+                            escape_html(&mut result, &id)?;
                             result.push('"');
                         }
                         if !title.is_empty() {
@@ -196,9 +220,10 @@ pub(super) fn collect<'a>(
                             escape_html(&mut result, &title)?;
                             result.push('"');
                         }
+                        // TODO: Skip this:
                         result.push_str(&format!(
                             " data-type='{:?}'",
-                            linktype
+                            link_type
                         ));
                     }
                     t => result.push_str(&format!("><!-- {:?} --", t)),
@@ -207,14 +232,14 @@ pub(super) fn collect<'a>(
             }
             Event::End(tag) => {
                 result.push_str("</");
-                result.push_str(tag_name(&tag));
+                result.push_str(tag_name_e(&tag));
                 result.push('>');
                 if matches!(
                     tag,
-                    Tag::Paragraph
-                        | Tag::Table(..)
-                        | Tag::Item
-                        | Tag::List(_)
+                    TagEnd::Paragraph
+                        | TagEnd::Table
+                        | TagEnd::Item
+                        | TagEnd::List(_)
                 ) {
                     // Maybe more?
                     result.push('\n');
@@ -260,10 +285,10 @@ fn remove_end(s: &mut String, tail: &str) -> bool {
 
 fn tag_name(tag: &Tag) -> &'static str {
     match tag {
-        Tag::BlockQuote => "blockquote",
+        Tag::BlockQuote(..) => "blockquote",
         Tag::Emphasis => "em",
         Tag::Item => "li",
-        Tag::Link(..) => "a",
+        Tag::Link { .. } => "a",
         Tag::List(None) => "ul",
         Tag::List(Some(_)) => "ol",
         Tag::Paragraph => "p",
@@ -271,6 +296,22 @@ fn tag_name(tag: &Tag) -> &'static str {
         Tag::Table(..) => "table",
         Tag::TableCell => "td",
         Tag::TableRow => "tr",
+        tag => panic!("Not a simple tag: {:?}", tag),
+    }
+}
+fn tag_name_e(tag: &TagEnd) -> &'static str {
+    match tag {
+        TagEnd::BlockQuote => "blockquote",
+        TagEnd::Emphasis => "em",
+        TagEnd::Item => "li",
+        TagEnd::Link => "a",
+        TagEnd::List(true) => "ul",
+        TagEnd::List(false) => "ol",
+        TagEnd::Paragraph => "p",
+        TagEnd::Strong => "strong",
+        TagEnd::Table => "table",
+        TagEnd::TableCell => "td",
+        TagEnd::TableRow => "tr",
         tag => panic!("Not a simple tag: {:?}", tag),
     }
 }

@@ -3,7 +3,7 @@ use crate::syntax_hl::ClassedHTMLGenerator;
 use crate::syntax_hl::LinesWithEndings;
 use anyhow::{bail, Result};
 use base64::prelude::*;
-use pulldown_cmark::escape::escape_html;
+use pulldown_cmark_escape::escape_html;
 use qr_code::QrCode;
 use serde::Deserialize;
 use std::fmt::Write;

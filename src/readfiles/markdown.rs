@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use i18n_embed_fl::fl;
 use lazy_regex::{regex_captures, regex_find, regex_replace_all};
 use pulldown_cmark::{
-    BrokenLink, CowStr, Event, HeadingLevel, Options, Parser, Tag,
+    BrokenLink, CowStr, Event, Options, Parser, Tag, TagEnd,
 };
 use std::collections::BTreeMap;
 
@@ -166,18 +166,16 @@ impl<'a> Ctx<'a> {
         )
         .collect::<Vec<_>>();
 
-        let prefix = items_until(
-            &mut items,
-            &Event::Start(Tag::Heading(HeadingLevel::H1, None, vec![])),
-        )
-        .ok_or_else(|| anyhow!("No start of h1"))?;
+        let prefix = items_until(&mut items, |e| {
+            matches!(e, Event::Start(Tag::Heading { .. }))
+        })
+        .ok_or_else(|| anyhow!("No starting header"))?;
         anyhow::ensure!(prefix.is_empty(), "Unexpected prefix: {:?}", prefix);
 
-        let title = items_until(
-            &mut items,
-            &Event::End(Tag::Heading(HeadingLevel::H1, None, vec![])),
-        )
-        .ok_or_else(|| anyhow!("No end of h1"))?;
+        let title = items_until(&mut items, |e| {
+            matches!(e, Event::End(TagEnd::Heading(_)))
+        })
+        .ok_or_else(|| anyhow!("No end of header"))?;
 
         let title = html::collect(title, loader, self.year, self.lang)?;
         let summary = summary::collect(items.clone().into_iter())?;
@@ -189,9 +187,9 @@ impl<'a> Ctx<'a> {
 
 fn items_until<'a>(
     all: &mut Vec<Event<'a>>,
-    delimiter: &Event,
+    end: impl Fn(&Event<'a>) -> bool,
 ) -> Option<Vec<Event<'a>>> {
-    let pos = all.iter().position(|e| e == delimiter)?;
+    let pos = all.iter().position(end)?;
     let mut prefix = all.split_off(pos + 1);
     std::mem::swap(all, &mut prefix);
     prefix.pop(); // get rid of the delimiter itself

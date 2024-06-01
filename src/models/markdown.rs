@@ -1,17 +1,29 @@
-use pulldown_cmark::{html::push_html, Event, HeadingLevel, Parser, Tag};
+use pulldown_cmark::html::push_html;
+use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
 
 pub fn safe_md2html(raw: &str) -> String {
     let below_level = lh(HeadingLevel::H3);
     let mut hdiff = 0;
     let markdown = Parser::new(raw).map(|e| match e {
         Event::Html(s) => Event::Text(s),
-        Event::Start(Tag::Heading(h, id, cls)) => {
-            let level = lh(h);
+        Event::InlineHtml(s) => Event::Text(s),
+        Event::Start(Tag::Heading {
+            level,
+            id,
+            classes,
+            attrs,
+        }) => {
+            let level = lh(level);
             hdiff = std::cmp::max(hdiff, below_level - level);
-            Event::Start(Tag::Heading(hl(level + hdiff), id, cls))
+            Event::Start(Tag::Heading {
+                level: hl(level + hdiff),
+                id,
+                classes,
+                attrs,
+            })
         }
-        Event::End(Tag::Heading(h, id, cls)) => {
-            Event::End(Tag::Heading(hl(lh(h) + hdiff), id, cls))
+        Event::End(TagEnd::Heading(level)) => {
+            Event::End(TagEnd::Heading(hl(lh(level) + hdiff)))
         }
         e => e,
     });
@@ -47,11 +59,13 @@ fn markdown_no_html() {
         safe_md2html(
             "Hej!\
              \r\n\r\nHär är <em>en</em> _kommentar_.\
-             \r\n\r\n<script>evil</script>"
+             \r\n\r\n<script>evil</script>\
+             \r\n\r\n<p>Hello.</p>"
         ),
         "<p>Hej!</p>\
          \n<p>Här är &lt;em&gt;en&lt;/em&gt; <em>kommentar</em>.</p>\
-         \n&lt;script&gt;evil&lt;/script&gt;",
+         \n&lt;script&gt;evil&lt;/script&gt;\
+         \n&lt;p&gt;Hello.&lt;/p&gt;",
     );
 }
 
