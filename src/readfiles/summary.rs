@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 use lazy_regex::regex_replace_all;
 use pulldown_cmark::{Event, Tag, TagEnd};
 use pulldown_cmark_escape::escape_html;
+use tracing::warn;
 
 pub fn collect<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
@@ -68,6 +69,10 @@ pub fn collect<'a>(
             }
             Event::HardBreak => {
                 result.push(' ');
+            }
+            Event::InlineHtml(code) => {
+                warn!("Found raw html: {code:?}.");
+                result.push_str(&code)
             }
             e => bail!("Unhandled: {:?}", e),
         }

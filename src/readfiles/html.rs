@@ -5,6 +5,7 @@ use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
 use pulldown_cmark::{CodeBlockKind, Event, Tag, TagEnd};
 use pulldown_cmark_escape::{escape_href, escape_html};
+use tracing::warn;
 use std::fmt::Write;
 
 pub(super) fn collect<'a>(
@@ -258,6 +259,10 @@ pub(super) fn collect<'a>(
             }
             Event::HardBreak => {
                 result.push_str("<br/>\n");
+            }
+            Event::InlineHtml(code) => {
+                warn!("Found raw html: {code:?}.");
+                result.push_str(&code)
             }
             e => bail!("Unhandled: {:?}", e),
         }
