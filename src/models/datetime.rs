@@ -8,6 +8,8 @@ use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
 use intl_memoizer::IntlLangMemoizer;
 use std::borrow::Cow;
 use std::error::Error as StdError;
+use std::fmt::Display;
+use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
 pub struct DateTime(chrono::DateTime<chrono::Utc>);
@@ -38,6 +40,20 @@ impl DateTime {
     }
 }
 
+impl Display for DateTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.format("%Y-%m-%d %H:%M").fmt(f)
+    }
+}
+
+impl FromStr for DateTime {
+    type Err = chrono::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::wrap(s.parse()?))
+    }
+}
+
 impl Queryable<Timestamptz, Pg> for DateTime {
     type Row =
         <chrono::DateTime<chrono::Utc> as Queryable<Timestamptz, Pg>>::Row;
@@ -59,12 +75,12 @@ impl FluentType for DateTime {
         Box::new(*self)
     }
     fn as_string(&self, _intls: &IntlLangMemoizer) -> Cow<'static, str> {
-        self.0.format("%Y-%m-%d %H:%M").to_string().into()
+        self.to_string().into()
     }
     fn as_string_threadsafe(
         &self,
         _intls: &CcIntlLangMemoizer,
     ) -> Cow<'static, str> {
-        self.0.format("%Y-%m-%d %H:%M").to_string().into()
+        self.to_string().into()
     }
 }

@@ -45,6 +45,8 @@ enum R4s {
     ReadFiles(readfiles::Args),
     /// Read comments from a json dump.
     ReadComments(readcomments::Args),
+    /// Dump comments to json for use with read-comments.
+    DumpComments(readcomments::DumpArgs),
     /// Run the web server
     RunServer(server::Args),
 }
@@ -56,6 +58,7 @@ impl R4s {
             R4s::ModerateComments(args) => args.run(),
             R4s::ReadFiles(args) => args.run(),
             R4s::ReadComments(args) => args.run(),
+            R4s::DumpComments(args) => args.run(),
             R4s::RunServer(args) => run_async(args.run()),
         }
     }

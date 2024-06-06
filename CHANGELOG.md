@@ -12,9 +12,10 @@ project more or less adheres to
   for improved readability.
 * Fixed background gradients for some browsers that handled
   `transparent` strangely.
+* Implemented a command to dump comments to json (for backup or debugging).
 * Require `warp` 0.3.6, which handles results directly (so I can
   remove a wrapper function).
-* Upate `pulldown-cmark` to 0.11.0, `syntect` to 5.2.0, `base64` to
+* Updated `pulldown-cmark` to 0.11.0, `syntect` to 5.2.0, `base64` to
   0.22.1, `clap` to 4.5.4, `i18n-embed-fl` to 0.8.0, and
   `rust_icu_ucol` to 5.0.0.
 

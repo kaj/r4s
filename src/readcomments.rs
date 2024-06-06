@@ -1,15 +1,16 @@
 //! Read comments from a json dump.  This is kind of a one-time operation.
 use crate::dbopt::DbOpt;
-use crate::models::{safe_md2html, year_of_date};
+use crate::models::{safe_md2html, year_of_date, DateTime};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
+use crate::schema::{comments, posts};
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use diesel::prelude::*;
 use ipnetwork::IpNetwork;
-use serde::{self, Deserialize, Deserializer};
+use lazy_regex::regex_captures;
+use serde::{self, Deserialize, Serialize};
 use std::fs::File;
-use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -18,6 +19,7 @@ pub struct Args {
     #[clap(flatten)]
     db: DbOpt,
 
+    /// Path name of json file to read comments from.
     path: PathBuf,
 }
 
@@ -35,18 +37,15 @@ impl Args {
                 .filter(p::lang.eq(&post.lang))
                 .first(&mut db)?;
 
-            let ip: IpAddr =
-                comment.by_ip.as_deref().unwrap_or("127.0.0.17").parse()?;
-
             diesel::insert_into(c::comments)
                 .values((
                     c::post_id.eq(post),
                     c::content.eq(comment.html()),
-                    c::posted_at.eq(localdate(&comment.date)?),
+                    c::posted_at.eq(&comment.date.raw()),
                     c::name.eq(&comment.by_name),
                     c::email.eq(&comment.by_email),
                     comment.by_url.as_ref().map(|u| c::url.eq(u)),
-                    c::from_host.eq(IpNetwork::from(ip)),
+                    c::from_host.eq(comment.by_ip),
                     c::raw_md.eq(&comment.comment),
                     c::is_public.eq(true),
                 ))
@@ -56,28 +55,44 @@ impl Args {
     }
 }
 
-fn localdate(date: &str) -> Result<DateTime> {
-    use chrono::{Local, TimeZone};
-    date.parse::<chrono::NaiveDateTime>()
-        .with_context(|| format!("Bad pubdate: {:?}", date))
-        .and_then(|d| {
-            Ok(Local
-                .from_local_datetime(&d)
-                .earliest()
-                .ok_or_else(|| anyhow!("Impossible local date"))?
-                .into())
-        })
+#[derive(Parser)]
+pub struct DumpArgs {
+    #[clap(flatten)]
+    db: DbOpt,
+
+    /// Path name to write comments json data to.
+    path: PathBuf,
 }
 
-#[derive(Debug, Deserialize)]
+impl DumpArgs {
+    pub fn run(self) -> Result<()> {
+        let comments = comments::table
+            .inner_join(posts::table)
+            .select(Dumped::as_select())
+            .load(&mut self.db.get_db()?)?;
+        std::fs::write(&self.path, serde_json::to_string_pretty(&comments)?)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Queryable, Selectable)]
+#[diesel(table_name = comments)]
 struct Dumped {
+    #[diesel(column_name = name)]
     by_name: String,
+    #[diesel(column_name = email)]
     by_email: String,
+    #[diesel(column_name = url)]
     by_url: Option<String>,
-    by_ip: Option<String>,
+    #[diesel(column_name = from_host)]
+    by_ip: IpNetwork,
+    #[diesel(column_name = raw_md)]
     comment: String,
-    date: String,
-    #[serde(deserialize_with = "deserialize_post")]
+    #[diesel(column_name = posted_at)]
+    #[serde(with = "serde_date")]
+    date: DateTime,
+    #[diesel(embed, column_name = post_id)]
+    #[serde(with = "serde_post")]
     on: PostRef,
 }
 
@@ -87,13 +102,15 @@ impl Dumped {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = posts)]
 struct PostRef {
+    #[diesel(select_expression = year_of_date(p::posted_at),
+             select_expression_type=year_of_date::year_of_date<p::posted_at>)]
     year: i16,
     slug: String,
     lang: String,
 }
-use lazy_regex::regex_captures;
 
 impl FromStr for PostRef {
     type Err = anyhow::Error;
@@ -110,12 +127,44 @@ impl FromStr for PostRef {
     }
 }
 
-fn deserialize_post<'de, D>(deserializer: D) -> Result<PostRef, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    PostRef::from_str(&s).map_err(serde::de::Error::custom)
+mod serde_post {
+    use super::PostRef;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S>(p: &PostRef, dest: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        format!("/{}/{}.{}", p.year, p.slug, p.lang).serialize(dest)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<PostRef, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde::de::Error::custom)
+    }
 }
 
-type DateTime = chrono::DateTime<chrono::FixedOffset>;
+mod serde_date {
+    use super::DateTime;
+    use serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S>(d: &DateTime, dest: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        d.raw().format("%Y-%m-%d %H:%M:%S%Z").to_string().serialize(dest)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde::de::Error::custom)
+    }
+}
