@@ -5,8 +5,8 @@ use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
 use pulldown_cmark::{CodeBlockKind, Event, Tag, TagEnd};
 use pulldown_cmark_escape::{escape_href, escape_html};
-use tracing::warn;
 use std::fmt::Write;
+use tracing::warn;
 
 pub(super) fn collect<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
@@ -153,12 +153,7 @@ pub(super) fn collect<'a>(
                         &mut result,
                         "<figure class='{}{}'{}>{}\
                          <figcaption>{} {}</figcaption></figure>",
-                        classes,
-                        class2,
-                        attrs,
-                        imgtag,
-                        caption,
-                        title,
+                        classes, class2, attrs, imgtag, caption, title,
                     )
                     .unwrap();
                 }
