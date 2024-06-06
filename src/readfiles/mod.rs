@@ -116,7 +116,7 @@ impl Loader {
         let contents = read_to_string(path)?;
         let (metadata, contents_md) = markdown::extract_metadata(&contents);
 
-        if metadata.get("meta").is_some() {
+        if metadata.contains_key("meta") {
             return self.read_meta_page(slug, lang, contents_md);
         }
         let pubdate = metadata
