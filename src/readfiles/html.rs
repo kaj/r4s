@@ -86,7 +86,7 @@ pub(super) fn collect<'a>(
                 unreachable!();
             }
             Event::Start(Tag::Image {
-                link_type,
+                link_type: _,
                 dest_url,
                 title,
                 id: _,
@@ -150,12 +150,11 @@ pub(super) fn collect<'a>(
                     };
                     writeln!(
                         &mut result,
-                        "<figure class='{}{}'{} data-type='{:?}'>{}\
+                        "<figure class='{}{}'{}>{}\
                          <figcaption>{} {}</figcaption></figure>",
                         classes,
                         class2,
                         attrs,
-                        link_type, // TODO: Skip this!
                         imgtag,
                         caption,
                         title,
@@ -200,7 +199,7 @@ pub(super) fn collect<'a>(
                     }
                     Tag::Item => (),
                     Tag::Link {
-                        link_type,
+                        link_type: _,
                         dest_url,
                         title,
                         id,
@@ -220,11 +219,6 @@ pub(super) fn collect<'a>(
                             escape_html(&mut result, &title)?;
                             result.push('"');
                         }
-                        // TODO: Skip this:
-                        result.push_str(&format!(
-                            " data-type='{:?}'",
-                            link_type
-                        ));
                     }
                     t => result.push_str(&format!("><!-- {:?} --", t)),
                 }
