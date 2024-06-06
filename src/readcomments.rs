@@ -19,6 +19,12 @@ pub struct Args {
     #[clap(flatten)]
     db: DbOpt,
 
+    /// Remove all pre-existing comments.
+    ///
+    /// Avoids duplicates when restoring from a backup.
+    #[clap(long)]
+    purge: bool,
+
     /// Path name of json file to read comments from.
     path: PathBuf,
 }
@@ -28,7 +34,14 @@ impl Args {
         let mut db = self.db.get_db()?;
         let file = File::open(&self.path)
             .with_context(|| format!("Failed to read {:?}", self.path))?;
-        for comment in serde_json::from_reader::<_, Vec<Dumped>>(file)? {
+
+        let comments = serde_json::from_reader::<_, Vec<Dumped>>(file)?;
+
+        if self.purge {
+            diesel::delete(c::comments).execute(&mut db)?;
+        }
+
+        for comment in comments {
             let post = &comment.on;
             let post: i32 = p::posts
                 .select(p::id)
@@ -156,7 +169,10 @@ mod serde_date {
     where
         S: Serializer,
     {
-        d.raw().format("%Y-%m-%d %H:%M:%S%Z").to_string().serialize(dest)
+        d.raw()
+            .format("%Y-%m-%d %H:%M:%S%Z")
+            .to_string()
+            .serialize(dest)
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime, D::Error>
