@@ -601,9 +601,11 @@ pre {
     color: var(--col-f);
     font-variant: lining-nums;
     margin: 1em auto;
-    overflow: auto;
-    padding: 1ex;
-
+    &:not(:has(code)), code {
+        display: block;
+        overflow: auto;
+        padding: 1ex;
+    }
     &[data-lang] {
         position: relative;
 

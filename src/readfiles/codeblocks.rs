@@ -267,6 +267,7 @@ struct EmbedData {
 pub struct CodeBlock<'a> {
     out: &'a mut String,
     gen: Option<ClassedHTMLGenerator<'a>>,
+    code: bool,
 }
 impl<'a> CodeBlock<'a> {
     fn open(
@@ -280,9 +281,13 @@ impl<'a> CodeBlock<'a> {
             out.push('"');
         }
         out.push('>');
+        if lang.is_some() {
+            out.push_str("<code>");
+        }
         Ok(CodeBlock {
             out,
             gen: lang.and_then(crate::syntax_hl::for_lang),
+            code: lang.is_some(),
         })
     }
 }
@@ -300,6 +305,9 @@ impl<'a> BlockHandler for CodeBlock<'a> {
     fn end(self) -> Result<()> {
         if let Some(gen) = self.gen {
             self.out.push_str(&gen.finalize())
+        }
+        if self.code {
+            self.out.push_str("</code>");
         }
         self.out.push_str("</pre>\n");
         Ok(())
