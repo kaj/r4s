@@ -53,7 +53,7 @@
         </section>
         }
         @if let Some(age) = post.updated_at.old_age() {
-        <p id="old_no_comments">@fl!(fluent, "old-post-comment", age=age)
+        <p id="old_no_comments" class="publine">@fl!(fluent, "old-post-comment", age=age)
         } else {
         <section id="writecomment">
           <h3>@fl!(fluent, "write-comments")</h3>

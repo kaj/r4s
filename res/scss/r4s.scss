@@ -303,7 +303,7 @@ main {
             padding-left: $outdent;
         }
     }
-    p:not(li p) {
+    p:not(li p, blockquote p) {
         text-align: justify;
         padding-inline-start: $outdent;
     }
@@ -343,6 +343,10 @@ blockquote {
         left: -.27em;
     }
 
+    p {
+        max-width: 56ch;
+    }
+
     *:last-child {
         margin-bottom: 0;
     }
@@ -360,7 +364,6 @@ code.key {
 }
 
 p.publine {
-    font-family: Cocanut;
     margin-bottom: .2em;
     max-width: initial;
     padding: 0;
@@ -370,8 +373,8 @@ div.publine.oldpost {
   border-radius: 0 1ex 1ex 1em;
   font-weight: 100;
   min-height: 2em;
-  padding: 1ex 4em 1ex 1em;
-  max-width: calc(#{$pwidth} - 5em);
+  padding: 1ex 4em 1ex $outdent;
+  max-width: calc(#{$pwidth} - 4em);
 }
 
 main aside {
@@ -404,6 +407,7 @@ ul.tagcloud {
     padding: 0;
     text-align: center;
     line-height: 1;
+    max-width: none;
 
     li {
         display: inline-block;
@@ -936,6 +940,7 @@ button.themeswitch {
 }
 
 .publine + p,
+.publine + aside + p,
 .publine + figure.sidebar + p {
     margin-top: 1em;
     position: relative;
