@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use super::templates::{self, RenderRucte};
 use super::{goh, response, App, MyLang, Result, SlugAndLang, ViewError};
 use crate::models::{Tag, Teaser};
@@ -26,20 +28,27 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
         .left_join(pt::post_tags)
         .group_by(t::tags::all_columns())
         .select((Tag::as_select(), count_star()))
-        .order(count_star().desc())
+        .order(t::name)
         .load::<(Tag, i64)>(&mut db)
         .await?;
-    let n = tags.len();
-    let m = 6;
-    let mut tags = tags
+
+    let m = 6; // Matches number of .wN classes in css.
+
+    let mut counts = BTreeMap::<i64, usize>::new();
+    for (_, n) in &tags {
+        *counts.entry(*n).or_default() += 1;
+    }
+    //eprintln!("{counts:?}");
+    let bin = (counts.len() + m) / (m - 1);
+    for (i, (_key, value)) in counts.iter_mut().enumerate() {
+        *value = (i + bin - 1) / bin;
+    }
+    //eprintln!("{counts:?}");
+
+    let tags = tags
         .into_iter()
-        .enumerate()
-        .map(|(i, (tag, j))| (tag, j, ((n - i - 1) * m) / n))
+        .map(|(tag, j)| (tag, j, counts.get(&j).cloned().unwrap_or_default()))
         .collect::<Vec<_>>();
-    let col = lang.collator()?;
-    tags.sort_by(|(a, _, _), (b, _, _)| {
-        col.strcoll_utf8(&a.name, &b.name).unwrap()
-    });
 
     let fluent = lang.fluent()?;
     let other_langs = lang.other(|_, lang, name| {
