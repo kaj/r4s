@@ -129,8 +129,8 @@ struct PostRef {
 impl FromStr for PostRef {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        regex_captures!(r"^/([0-9]{4})/([a-z-]+)\.([a-z]+)$", s)
-            .ok_or_else(|| anyhow!("Bad post"))
+        regex_captures!(r"^/([0-9]{4})/([a-z][\w-]*)\.([a-z]+)$", s)
+            .ok_or_else(|| anyhow!("Bad post: {s:?}"))
             .and_then(|(_, year, slug, lang)| {
                 Ok(PostRef {
                     year: year.parse()?,
