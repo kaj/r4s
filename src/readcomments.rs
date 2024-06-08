@@ -80,6 +80,7 @@ pub struct DumpArgs {
 impl DumpArgs {
     pub fn run(self) -> Result<()> {
         let comments = comments::table
+            .filter(c::is_public.eq(true))
             .inner_join(posts::table)
             .select(Dumped::as_select())
             .load(&mut self.db.get_db()?)?;
