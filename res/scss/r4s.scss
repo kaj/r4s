@@ -512,7 +512,7 @@ div.gallery {
         background: var(--col-bt);
         border-radius: 0 1ex 1ex 0;
         box-shadow: myshadow();
-        padding: 1ex 2em;
+        padding: 1ex $outdent;
         width: fit-content;
         margin-right: 1ex;
         top: 2%;
@@ -542,12 +542,14 @@ div.gallery {
 
         p {
             background: var(--col-bt);
-            box-shadow: myshadow();
             border-radius: 1ex;
-            padding: 1ex;
+            box-shadow: myshadow();
             margin: 0 auto;
-            width: 28em;
             max-width: 95%;
+            padding: 1ex;
+            text-align: center;
+            text-wrap: balance;
+            width: 40ch;
         }
     }
 }
@@ -963,8 +965,7 @@ button.themeswitch {
         ;
     }
     &::first-line {
-        letter-spacing: .03em;
-        word-spacing: 0.2em;
+        letter-spacing: .1em;
         text-shadow: -.1ex .1ex $c1, .1ex -.1ex $c1, -.1ex -.1ex $c1, .1ex .1ex $c1;;
     }
     &::after {

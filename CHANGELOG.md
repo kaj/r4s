@@ -9,12 +9,13 @@ project more or less adheres to
 ## Unreleased
 
 * More usefull dumpcomments: Only include public comments.
+* Minor follow-up styleing improvements.
 
 
 ## Release 0.3.10
 2023-06-08 01:54 CST
 
-* Fix a bug in markdown lists handling.
+* Fixed a bug in markdown lists handling.
 
 
 ## Release 0.3.8
