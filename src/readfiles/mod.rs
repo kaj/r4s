@@ -4,6 +4,7 @@ mod imgcli;
 mod markdown;
 mod summary;
 
+use self::markdown::{Body, ContentParser, Ctx};
 use crate::dbopt::DbOpt;
 use crate::models::year_of_date;
 use crate::schema::assets::dsl as a;
@@ -11,16 +12,16 @@ use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
-use anyhow::{anyhow, Context, Result};
-use chrono::{Datelike, Local};
+use anyhow::{anyhow, bail, Context, Result};
 use diesel::prelude::*;
 use lazy_regex::regex_captures;
 use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
 use slug::slugify;
+use std::fmt;
 use std::fs::{read, read_to_string};
 use std::path::{Path, PathBuf};
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 use warp::hyper::body::Bytes;
 
 type DateTime = chrono::DateTime<chrono::FixedOffset>;
@@ -114,151 +115,97 @@ impl Loader {
             .split_once('.')
             .context("No language in file name")?;
         let contents = read_to_string(path)?;
-        let (metadata, contents_md) = markdown::extract_metadata(&contents);
 
-        if metadata.contains_key("meta") {
-            return self.read_meta_page(slug, lang, contents_md);
-        }
-        let pubdate = metadata
-            .get("pubdate")
-            .map(|v| v.parse::<DateTime>().context("pubdate"))
-            .transpose()?;
+        let ctx = Ctx::new(&contents, slug, lang);
+        let post_src = ctx.parser()?;
 
-        if pubdate.is_none() && !self.include_drafts {
+        if post_src.meta().is_meta {
+            return self
+                .read_meta_page(post_src, path, slug, lang, &contents);
+        } else if post_src.meta().pubdate.is_none() && !self.include_drafts {
             debug!("Skipping draft {:?}", path);
             return Ok(());
         }
 
-        let current_year: i16 = Local::now().year().try_into()?;
-        let year: i16 = pubdate
-            .and_then(|d| d.year().try_into().ok())
-            .unwrap_or(current_year);
+        diesel::delete(
+            p::posts
+                .filter(p::slug.eq(slug))
+                .filter(p::lang.eq(lang))
+                .filter(p::title.like("% \u{1f58b}"))
+                .filter(p::orig_md.ne(&contents)),
+        )
+        .execute(&mut self.db)?;
 
-        if year == current_year {
-            // Recent or draft
-            diesel::delete(
-                p::posts
-                    .filter(p::slug.eq(slug))
-                    .filter(p::lang.eq(lang))
-                    .filter(p::title.like("% \u{1f58b}"))
-                    .filter(p::orig_md.ne(&contents)),
-            )
-            .execute(&mut self.db)?;
-        }
-
-        let update = metadata
-            .get("update")
-            .map(|v| v.parse::<UpdateInfo>().context("update"))
-            .transpose()?;
-
-        let files = if let Some(res) = metadata.get("res") {
-            debug!("Handle assets {res:?}");
-            res.split(',')
-                .map(|s| s.trim())
-                .map(|s| {
-                    self.handle_asset(path, s, year)
-                        .with_context(|| format!("Asset {:?}", s))
-                })
-                .collect::<Result<Vec<_>, _>>()?
-        } else {
-            Vec::new()
-        };
+        let pubdate = &post_src.meta().pubdate.clone();
+        let update = post_src.meta().update.as_ref().map(|u| u.date);
 
         if let Some((id, old_md)) = p::posts
             .select((p::id, p::orig_md))
-            .filter(year_of_date(p::posted_at).eq(&year))
+            .filter(year_of_date(p::posted_at).eq(&post_src.year))
             .filter(p::slug.eq(slug))
             .filter(p::lang.eq(lang))
             .first::<(i32, String)>(&mut self.db)
             .optional()?
         {
-            if old_md != contents || self.force {
+            if has_changed(&old_md, &contents) || self.force {
                 info!(
-                    "Post #{} /{}/{}.{} exists, but should be updated.",
-                    id, year, slug, lang
+                    "Post #{} {} exists, but should be updated.",
+                    id,
+                    post_src.get_url(),
                 );
-                let (
-                    mut title,
-                    teaser,
-                    body,
-                    front_image,
-                    description,
-                    use_leaflet,
-                ) = markdown::extract_parts(
-                    year,
-                    slug,
-                    lang,
-                    contents_md,
-                    update.as_ref(),
-                    &files,
-                    self,
-                )?;
-                if pubdate.is_none() {
-                    title.push_str(" \u{1f58b}");
-                }
+                post_src.load_assets(path, self)?;
+                let tags = post_src.meta().tags.clone();
+                let post = Body::load(post_src, self)?;
+
                 diesel::update(p::posts)
                     .filter(p::id.eq(id))
                     .set((
-                        update.as_ref().map(|u| p::updated_at.eq(&u.date)),
-                        p::title.eq(&title),
-                        p::teaser.eq(&teaser),
-                        p::content.eq(&body),
-                        p::front_image.eq(front_image),
-                        p::description.eq(description),
-                        p::use_leaflet.eq(use_leaflet),
+                        update.map(|u| p::updated_at.eq(u)),
+                        p::title.eq(&post.title),
+                        p::teaser.eq(&post.teaser),
+                        p::content.eq(&post.body),
+                        p::front_image.eq(post.front_image),
+                        p::description.eq(post.summary),
+                        p::use_leaflet.eq(post.use_leaflet),
                         p::orig_md.eq(&contents),
                     ))
                     .execute(&mut self.db)
                     .with_context(|| format!("Update #{}", id))?;
-                if let Some(tags) = metadata.get("tags") {
+
+                if let Some(tags) = &tags {
                     tag_post(id, tags, &mut self.db)?;
                 }
             } else {
-                trace!("No change in #{id} /{year}/{slug}.{lang}");
+                trace!("No change in #{id} {}", post_src.get_url());
             }
         } else {
-            info!("New post /{}/{}.{}", year, slug, lang);
-            let (
-                mut title,
-                teaser,
-                body,
-                front_image,
-                description,
-                use_leaflet,
-            ) = markdown::extract_parts(
-                year,
-                slug,
-                lang,
-                contents_md,
-                update.as_ref(),
-                &files,
-                self,
-            )?;
-            if pubdate.is_none() {
-                title.push_str(" \u{1f58b}");
-            }
+            info!("New post {}", post_src.get_url());
+
+            post_src.load_assets(path, self)?;
+            let tags = post_src.meta().tags.clone();
+            let post = Body::load(post_src, self)?;
+
             let post_id = diesel::insert_into(p::posts)
                 .values((
                     pubdate.map(|date| p::posted_at.eq(date)),
                     update
                         .as_ref()
-                        .map(|u| &u.date)
                         .or(pubdate.as_ref())
                         .map(|date| p::updated_at.eq(date)),
                     p::slug.eq(slug),
                     p::lang.eq(lang),
-                    p::title.eq(&title),
-                    p::teaser.eq(&teaser),
-                    p::content.eq(&body),
-                    p::front_image.eq(front_image),
-                    p::description.eq(description),
-                    p::use_leaflet.eq(use_leaflet),
+                    p::title.eq(&post.title),
+                    p::teaser.eq(&post.teaser),
+                    p::content.eq(&post.body),
+                    p::front_image.eq(&post.front_image),
+                    p::description.eq(&post.summary),
+                    p::use_leaflet.eq(post.use_leaflet),
                     p::orig_md.eq(&contents),
                 ))
                 .returning(p::id)
                 .get_result::<i32>(&mut self.db)
                 .context("Insert post")?;
-            if let Some(tags) = metadata.get("tags") {
+            if let Some(tags) = &tags {
                 tag_post(post_id, tags, &mut self.db)?;
             }
         }
@@ -267,10 +214,15 @@ impl Loader {
 
     fn read_meta_page(
         &mut self,
+        mut src: ContentParser,
+        path: &Path,
         slug: &str,
         lang: &str,
         contents: &str,
     ) -> Result<()> {
+        if let Some(tags) = &src.meta().tags {
+            bail!("Meta pages should not have tags, got {tags:?}");
+        }
         if let Some((id, old_md)) = m::metapages
             .select((m::id, m::orig_md))
             .filter(m::slug.eq(slug))
@@ -278,14 +230,16 @@ impl Loader {
             .first::<(i32, String)>(&mut self.db)
             .optional()?
         {
-            if old_md != contents || self.force {
-                let (title, body, _) =
-                    markdown::Ctx::new(contents, 0, lang).md_to_html(self)?;
+            if has_changed(&old_md, contents) || self.force {
+                src.load_assets(path, self)?;
+                let title = src.load_title(self)?;
+                let body = src.into_html(self)?;
+
                 diesel::update(m::metapages)
                     .set((
                         m::title.eq(&title),
                         m::content.eq(&body),
-                        m::orig_md.eq(&contents),
+                        m::orig_md.eq(contents),
                     ))
                     .filter(m::id.eq(id))
                     .execute(&mut self.db)
@@ -293,8 +247,10 @@ impl Loader {
                 info!("Updated metadata page /{}.{}", slug, lang);
             }
         } else {
-            let (title, body, _) =
-                markdown::Ctx::new(contents, 0, lang).md_to_html(self)?;
+            src.load_assets(path, self)?;
+            let title = src.load_title(self)?;
+            let body = src.into_html(self)?;
+
             diesel::insert_into(m::metapages)
                 .values((
                     m::slug.eq(slug),
@@ -386,6 +342,7 @@ fn is_dotfile(path: &Path) -> bool {
         .map_or(false, |name| name.starts_with('.'))
 }
 
+#[derive(Clone, Debug)]
 struct UpdateInfo {
     date: DateTime,
     info: String,
@@ -594,6 +551,33 @@ impl ImgClient {
             cli.fetch_image(imgref).map_err(|e| {
                 anyhow!("Failed to fetch image {:?}: {}", imgref, e)
             })
+        }
+    }
+}
+
+fn has_changed(old: &str, new: &str) -> bool {
+    fn nometa(t: &str) -> &str {
+        if let Some(i) = t.find("\n\n# ") {
+            &t[i + 2..]
+        } else {
+            t
+        }
+    }
+    nometa(old) != nometa(new)
+}
+
+struct PageRef {
+    year: i16,
+    slug: String,
+    lang: String,
+}
+
+impl fmt::Display for PageRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.year != 0 {
+            write!(f, "/{}/{}.{}", self.year, self.slug, self.lang)
+        } else {
+            write!(f, "/{}.{}", self.slug, self.lang)
         }
     }
 }

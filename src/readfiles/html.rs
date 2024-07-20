@@ -1,18 +1,17 @@
 //! How to serialize parsed markdown into my kind of html
 use super::codeblocks::{BlockHandler, DynBlock};
-use super::{FaRef, Loader};
+use super::{FaRef, Loader, PageRef};
 use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
 use pulldown_cmark::{CodeBlockKind, Event, Tag, TagEnd};
 use pulldown_cmark_escape::{escape_href, escape_html};
-use std::fmt::Write;
-use tracing::warn;
+use std::fmt::{self, Write};
+use tracing::{info, warn};
 
 pub(super) fn collect<'a>(
     data: impl IntoIterator<Item = Event<'a>>,
     loader: &mut Loader,
-    year: i16,
-    lang: &str,
+    url: &PageRef,
 ) -> Result<String> {
     let mut result = String::new();
     let mut data = data.into_iter();
@@ -71,8 +70,8 @@ pub(super) fn collect<'a>(
                     &mut result,
                     fence,
                     loader,
-                    year,
-                    lang,
+                    url.year,
+                    &url.lang,
                 )?;
                 for event in &mut data {
                     match event {
@@ -92,75 +91,14 @@ pub(super) fn collect<'a>(
                 title,
                 id: _,
             }) => {
-                // TODO: Respect id.
-                let _ = remove_end(&mut result, "<p>")
-                    || remove_end(&mut result, "<p><!--no-p-->")
-                    || remove_end(&mut result, "<p><!--no-p-->\n");
-                let mut inner = String::new();
-                for tag in &mut data {
-                    match tag {
-                        Event::End(TagEnd::Image) => break,
-                        Event::Text(text) => inner.push_str(&text),
-                        Event::SoftBreak => inner.push(' '),
-                        _ => inner.push_str(&format!("\n{:?}", tag)),
-                    }
-                }
-                let (_all, imgref, _, classes, attrs, caption) = regex_captures!(
-                    r#"^([A-Za-z0-9/._-]*)\s*(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*([^{]*)$"#m,
+                write_image(
+                    &mut result,
                     &dest_url,
-                )
-                .with_context(|| {
-                    format!("Bad image ref: {:?}", dest_url.as_ref())
-                })?;
-
-                if classes.split_ascii_whitespace().any(|w| w == "gallery")
-                    && !remove_end(&mut result, "</div><!--gallery-->\n")
-                {
-                    result.push_str("<div class='gallery'>");
-                }
-
-                if imgref == "cover" {
-                    let url = inner.parse::<FaRef>().unwrap().cover();
-                    writeln!(
-                        &mut result,
-                        "<figure class='fa-cover {}'>\
-                         <a href='{url}'><img alt='Omslagsbild {}' src='{url}' width='150'/></a>\
-                         <figcaption>{} {} {}</figcaption></figure>",
-                        classes, inner, inner, caption, title,
-                        url = url,
-                    )
-                        .unwrap();
-                } else {
-                    let imgdata = loader.imgcli.fetch(imgref)?;
-                    if !imgdata.is_public() {
-                        tracing::warn!("Image {:?} is not public", imgref);
-                    }
-                    let alt = inner.trim();
-                    let imgtag = if classes
-                        .split_ascii_whitespace()
-                        .any(|w| w == "scaled")
-                    {
-                        imgdata.markup_large(alt)
-                    } else {
-                        imgdata.markup(alt)
-                    };
-                    let class2 = if imgdata.is_portrait() {
-                        " portrait"
-                    } else {
-                        ""
-                    };
-                    writeln!(
-                        &mut result,
-                        "<figure class='{}{}'{}>{}\
-                         <figcaption>{} {}</figcaption></figure>",
-                        classes, class2, attrs, imgtag, caption, title,
-                    )
-                    .unwrap();
-                }
-                if classes.split_ascii_whitespace().any(|w| w == "gallery") {
-                    result.push_str("</div><!--gallery-->\n");
-                }
-                result.push_str("<p><!--no-p-->");
+                    &title,
+                    loader,
+                    &mut data,
+                    true,
+                )?;
             }
             Event::End(TagEnd::Paragraph)
                 if result.ends_with("<p><!--no-p-->") =>
@@ -202,6 +140,10 @@ pub(super) fn collect<'a>(
                     } => {
                         if !dest_url.is_empty() {
                             result.push_str(" href=\"");
+                            if dest_url.starts_with('#') {
+                                info!("Got local link {dest_url:?}");
+                                escape_href(&mut result, &url.to_string())?;
+                            }
                             escape_href(&mut result, &dest_url)?;
                             result.push('"');
                         }
@@ -266,6 +208,123 @@ pub(super) fn collect<'a>(
         result.push_str("</section>");
     }
     Ok(result)
+}
+
+pub fn write_image<'a>(
+    result: &mut String,
+    dest_url: &str,
+    title: &str,
+    loader: &mut Loader,
+    data: &mut impl Iterator<Item = Event<'a>>,
+    allow_gallery: bool,
+) -> Result<()> {
+    // TODO: Respect id.
+    let _ = remove_end(result, "<p>")
+        || remove_end(result, "<p><!--no-p-->")
+        || remove_end(result, "<p><!--no-p-->\n");
+    let mut inner = String::new();
+    for tag in data {
+        match tag {
+            Event::End(TagEnd::Image) => break,
+            Event::Text(text) => inner.push_str(&text),
+            Event::SoftBreak => inner.push(' '),
+            // Inner is mainly the alt, so no inline html.
+            Event::InlineHtml(_) => (),
+            _ => bail!("Unexpected {tag:?} in image"),
+        }
+    }
+    let (_all, imgref, _, classes, attrs, caption) = regex_captures!(
+        r#"^([A-Za-z0-9/._-]*)\s*(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*([^{]*)$"#m,
+        &dest_url,
+    )
+        .with_context(|| {
+            format!("Bad image ref: {:?}", dest_url)
+        })?;
+
+    let mut classes = ClassList::from(classes);
+    if !allow_gallery {
+        classes.replace("gallery", "sidebar");
+    }
+    let do_gallery = allow_gallery && classes.has("gallery");
+    if do_gallery && !remove_end(result, "</div><!--gallery-->\n") {
+        result.push_str("<div class='gallery'>");
+    }
+
+    if imgref == "cover" {
+        let url = inner.parse::<FaRef>().unwrap().cover();
+        classes.add("fa-cover");
+        writeln!(
+            result,
+            "<figure class='{}'>\
+             <a href='{url}'><img alt='Omslagsbild {}' src='{url}' width='150'/></a>\
+             <figcaption>{} {} {}</figcaption></figure>",
+            classes, inner, inner, caption, title,
+            url = url,
+        )
+                        .unwrap();
+    } else {
+        let imgdata = loader.imgcli.fetch(imgref)?;
+        if !imgdata.is_public() {
+            tracing::warn!("Image {:?} is not public", imgref);
+        }
+        let alt = inner.trim();
+        let imgtag = if classes.has("scaled") {
+            imgdata.markup_large(alt)
+        } else {
+            imgdata.markup(alt)
+        };
+        if imgdata.is_portrait() {
+            classes.add("portrait");
+        };
+        writeln!(
+            result,
+            "<figure class='{}'{}>{}\
+             <figcaption>{} {}</figcaption></figure>",
+            classes, attrs, imgtag, caption, title,
+        )
+        .unwrap();
+    }
+    if allow_gallery {
+        if do_gallery {
+            result.push_str("</div><!--gallery-->\n");
+        }
+        result.push_str("<p><!--no-p-->");
+    }
+    Ok(())
+}
+
+struct ClassList<'a>(Vec<&'a str>);
+impl<'a> From<&'a str> for ClassList<'a> {
+    fn from(value: &'a str) -> Self {
+        Self(value.split_ascii_whitespace().collect())
+    }
+}
+impl<'a> ClassList<'a> {
+    fn has(&self, cls: &str) -> bool {
+        self.0.iter().any(|c| *c == cls)
+    }
+    fn add(&mut self, cls: &'a str) {
+        self.0.push(cls);
+    }
+    fn replace(&mut self, from: &str, to: &'a str) {
+        for cls in &mut self.0 {
+            if *cls == from {
+                *cls = to;
+            }
+        }
+    }
+}
+impl<'a> fmt::Display for ClassList<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some((first, rest)) = self.0.split_first() {
+            f.write_str(first)?;
+            for c in rest {
+                f.write_char(' ')?;
+                f.write_str(c)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn remove_end(s: &mut String, tail: &str) -> bool {

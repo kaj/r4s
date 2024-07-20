@@ -8,6 +8,13 @@ project more or less adheres to
 
 ## Unreleased
 
+* Major refactor of reading blog source files.
+  - Use the markdown parser events more, and do less stuff by regex
+    and string manipulation directly on the source.
+  - Change behaviour to more type-state.
+  - The "fenced yaml" kind of metainformation seems more or less
+    standard and is supported by `pulldown-cmark` now, so switch to
+    use that (currently with some fallback support for unfenced).
 * More usefull dumpcomments: Only include public comments.
 * Minor follow-up styleing improvements.
 
