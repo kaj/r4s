@@ -8,8 +8,7 @@ use diesel::prelude::*;
 #[diesel(table_name = posts)]
 pub struct PostLink {
     pub id: i32,
-    #[diesel(select_expression = year_of_date(posts::posted_at),
-             select_expression_type=year_of_date::year_of_date<posts::posted_at>)]
+    #[diesel(select_expression = year_of_date(posts::posted_at))]
     pub year: i16,
     pub slug: Slug,
     pub lang: String,

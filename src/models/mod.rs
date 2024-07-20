@@ -22,10 +22,10 @@ pub use self::teaser::Teaser;
 
 type Result<T, E = diesel::result::Error> = std::result::Result<T, E>;
 
-sql_function! {
+define_sql_function! {
     fn year_of_date(arg: Timestamptz) -> Smallint;
 }
 
-sql_function! {
+define_sql_function! {
     fn has_lang(yearp: Smallint, slugp: Varchar, langp: Varchar) -> Bool;
 }

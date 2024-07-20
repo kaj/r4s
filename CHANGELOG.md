@@ -17,6 +17,7 @@ project more or less adheres to
     use that (currently with some fallback support for unfenced).
 * More usefull dumpcomments: Only include public comments.
 * Minor follow-up styleing improvements.
+* Update `disel-async` to 0.5 and `disel` itself to 0.2.2.
 
 
 ## Release 0.3.10

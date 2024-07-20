@@ -119,8 +119,7 @@ impl Dumped {
 #[derive(Debug, Queryable, Selectable)]
 #[diesel(table_name = posts)]
 struct PostRef {
-    #[diesel(select_expression = year_of_date(p::posted_at),
-             select_expression_type=year_of_date::year_of_date<p::posted_at>)]
+    #[diesel(select_expression = year_of_date(p::posted_at))]
     year: i16,
     slug: String,
     lang: String,
