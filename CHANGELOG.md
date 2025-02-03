@@ -18,6 +18,7 @@ project more or less adheres to
 * More usefull dumpcomments: Only include public comments.
 * Minor follow-up styleing improvements.
 * Update `disel-async` to 0.5 and `disel` itself to 0.2.2.
+* Update `ructe` to 0.18.0.
 
 
 ## Release 0.3.10
