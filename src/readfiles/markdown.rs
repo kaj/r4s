@@ -369,7 +369,7 @@ fn img_is_front(title: &str, dest_url: &str) -> bool {
     title.contains("front") || dest_url.contains("front")
 }
 
-fn find_teaser<'a>(all: &'a [Event<'a>]) -> Option<&[Event<'a>]> {
+fn find_teaser<'a>(all: &'a [Event<'a>]) -> Option<&'a [Event<'a>]> {
     all.iter()
         .position(|e| {
             matches!(e, Event::Html(s) if s.as_ref() == "<!-- more -->\n")

@@ -198,11 +198,9 @@ impl AppData {
         let protect = self.csrf_protection();
         let token = protect.parse_token(&token).map_err(fail)?;
         let cookie = protect.parse_cookie(&cookie).map_err(fail)?;
-        if protect.verify_token_pair(&token, &cookie) {
-            Ok(())
-        } else {
-            Err(fail("invalid pair"))
-        }
+        protect
+            .verify_token_pair(&token, &cookie)
+            .map_err(|e| fail(e.to_string()))
     }
     fn generate_csrf_pair(&self) -> Result<(CsrfToken, CsrfCookie)> {
         let ttl = 4 * 3600;

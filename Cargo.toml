@@ -20,7 +20,7 @@ atom_syndication = "0.12.0"
 base64 = "0.22.1"
 chrono = { version = "0.4.19", default-features = false }
 clap = { version = "4.5.4", features = ["derive", "env", "wrap_help"] }
-csrf = "0.4.1"
+csrf = "0.4.2"
 diesel = { version = "2.2.2", features = ["chrono", "postgres", "network-address"] }
 diesel-async = { version = "0.5", features = ["deadpool", "postgres"] }
 dotenv = "0.15.0"
@@ -29,7 +29,7 @@ gravatar = "0.2.0"
 i18n-embed = { version = "*", features = ["fluent-system"] }
 i18n-embed-fl = "0.8.0"
 intl-memoizer =  "0.5.1"
-ipnetwork = "0.20.0" # must match version supported by diesel
+ipnetwork = { version = "0.21.1", features = ["serde"] }
 lazy-regex = "3.0.0"
 lazy_static = "1.4.0"
 mime = "0.3.0"

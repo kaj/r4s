@@ -21,7 +21,10 @@ pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
     })?;
     let loader: FluentLanguageLoader = fluent_language_loader!();
     loader
-        .load_languages(&Localizations, &[&lang, loader.fallback_language()])
+        .load_languages(
+            &Localizations,
+            &[lang, loader.fallback_language().clone()],
+        )
         .map_err(|e| {
             tracing::error!("Missing language: {}", e);
             ViewError::BadRequest("Unknown language".into())
