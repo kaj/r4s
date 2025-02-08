@@ -349,12 +349,15 @@ fn tag_name(tag: &Tag) -> &'static str {
         Tag::Table(..) => "table",
         Tag::TableCell => "td",
         Tag::TableRow => "tr",
+        Tag::DefinitionList => "dl",
+        Tag::DefinitionListTitle => "dt",
+        Tag::DefinitionListDefinition => "dd",
         tag => panic!("Not a simple tag: {:?}", tag),
     }
 }
 fn tag_name_e(tag: &TagEnd) -> &'static str {
     match tag {
-        TagEnd::BlockQuote => "blockquote",
+        TagEnd::BlockQuote(_) => "blockquote",
         TagEnd::Emphasis => "em",
         TagEnd::Item => "li",
         TagEnd::Link => "a",
@@ -365,6 +368,9 @@ fn tag_name_e(tag: &TagEnd) -> &'static str {
         TagEnd::Table => "table",
         TagEnd::TableCell => "td",
         TagEnd::TableRow => "tr",
+        TagEnd::DefinitionList => "dl",
+        TagEnd::DefinitionListTitle => "dt",
+        TagEnd::DefinitionListDefinition => "dd",
         tag => panic!("Not a simple tag: {:?}", tag),
     }
 }

@@ -407,9 +407,11 @@ fn find_teaser_by_size<'a>(all: &'a [Event<'a>]) -> Option<usize> {
                     return Some(i - 1);
                 }
             }
-            Event::Start(Tag::BlockQuote(_)) => {
-                let (_ii, mut w, _) =
-                    inline_until(enumerated.by_ref(), TagEnd::BlockQuote);
+            Event::Start(Tag::BlockQuote(kind)) => {
+                let (_ii, mut w, _) = inline_until(
+                    enumerated.by_ref(),
+                    TagEnd::BlockQuote(*kind),
+                );
                 w += 150;
                 debug!("Blockquote at {i} (after {weight}) is {w}");
                 weight += w;
