@@ -17,6 +17,7 @@ project more or less adheres to
     use that (currently with some fallback support for unfenced).
 * More usefull dumpcomments: Only include public comments.
 * Minor follow-up styleing improvements.
+* I'm no longer at KTH.
 * Updated to `disel` 0.2.2, `disel-async` 0.5, `ructe` to 0.18.0,
   and `csrf` 0.5.0.
 
