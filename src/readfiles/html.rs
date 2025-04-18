@@ -314,7 +314,7 @@ impl<'a> ClassList<'a> {
         }
     }
 }
-impl<'a> fmt::Display for ClassList<'a> {
+impl fmt::Display for ClassList<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some((first, rest)) = self.0.split_first() {
             f.write_str(first)?;

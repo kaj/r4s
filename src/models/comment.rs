@@ -51,7 +51,7 @@ impl Comment {
 
 pub struct LinkName<'a>(&'a Comment);
 
-impl<'a> ToHtml for LinkName<'a> {
+impl ToHtml for LinkName<'_> {
     fn to_html(&self, out: &mut dyn std::io::Write) -> std::io::Result<()> {
         if let Some(url) = &self.0.url {
             write!(out, "<a href='")?;

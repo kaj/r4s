@@ -48,6 +48,6 @@ impl FromStr for Slug {
 
 fn verify(s: &str) -> bool {
     let mut b = s.bytes();
-    b.next().map_or(false, |c| c.is_ascii_alphanumeric())
+    b.next().is_some_and(|c| c.is_ascii_alphanumeric())
         && b.all(|c| c.is_ascii_alphanumeric() || c == b'-')
 }

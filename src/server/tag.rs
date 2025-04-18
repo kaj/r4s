@@ -41,7 +41,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
     //eprintln!("{counts:?}");
     let bin = (counts.len() + m) / (m - 1);
     for (i, (_key, value)) in counts.iter_mut().enumerate() {
-        *value = (i + bin - 1) / bin;
+        *value = i.div_ceil(bin);
     }
     //eprintln!("{counts:?}");
 

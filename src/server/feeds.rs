@@ -38,7 +38,7 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
 
     let feed = FeedBuilder::default()
         .title(Text::plain(if let Some(ref tag) = tag {
-            fl!(fluent, "taggedhead", tag = AsRef::<str>::as_ref(&tag.name))
+            fl!(fluent, "taggedhead", tag = tag.name.as_str())
         } else {
             fl!(fluent, "sitename")
         }))

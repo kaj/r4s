@@ -338,8 +338,7 @@ impl Loader {
 
 fn is_dotfile(path: &Path) -> bool {
     path.file_name()
-        .and_then(std::ffi::OsStr::to_str)
-        .map_or(false, |name| name.starts_with('.'))
+        .is_some_and(|n| n.as_encoded_bytes().starts_with(b"."))
 }
 
 #[derive(Clone, Debug)]

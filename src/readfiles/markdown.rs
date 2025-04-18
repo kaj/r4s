@@ -92,7 +92,7 @@ pub struct ContentParser<'src> {
     meta: ContentMeta,
 }
 
-impl<'src> ContentParser<'src> {
+impl ContentParser<'_> {
     pub fn meta(&self) -> &ContentMeta {
         &self.meta
     }

@@ -48,7 +48,7 @@ impl<'a> DynBlock<'a> {
     }
 }
 
-impl<'a> BlockHandler for DynBlock<'a> {
+impl BlockHandler for DynBlock<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
         match self {
             DynBlock::Leaflet(x) => x.push(content),
@@ -71,7 +71,7 @@ pub struct LeafletHandler<'a> {
     out: &'a mut String,
 }
 
-impl<'a> LeafletHandler<'a> {
+impl LeafletHandler<'_> {
     fn open(out: &mut String) -> LeafletHandler {
         out.push_str(r#"
 <div id="llmap">
@@ -87,7 +87,7 @@ impl<'a> LeafletHandler<'a> {
         LeafletHandler { out }
     }
 }
-impl<'a> BlockHandler for LeafletHandler<'a> {
+impl BlockHandler for LeafletHandler<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
         self.out.push_str(content);
         Ok(())
@@ -114,7 +114,7 @@ impl<'a> QrHandler<'a> {
         }
     }
 }
-impl<'a> BlockHandler for QrHandler<'a> {
+impl BlockHandler for QrHandler<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
         self.data.push_str(content);
         Ok(())
@@ -186,7 +186,7 @@ impl<'a> EmbedHandler<'a> {
         }
     }
 }
-impl<'a> BlockHandler for EmbedHandler<'a> {
+impl BlockHandler for EmbedHandler<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
         self.data.push_str(content);
         Ok(())
@@ -291,7 +291,7 @@ impl<'a> CodeBlock<'a> {
         })
     }
 }
-impl<'a> BlockHandler for CodeBlock<'a> {
+impl BlockHandler for CodeBlock<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
         if let Some(gen) = &mut self.gen {
             for line in LinesWithEndings::from(content) {
