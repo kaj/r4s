@@ -9,7 +9,6 @@ build = "src/build.rs"
 
 [build-dependencies]
 anyhow = "1.0.44"
-lazy_static = "1.4.0"
 ructe = { version = "0.18.0", features = ["sass", "warp03"] }
 syntect = { version = "5.2.0", default-features = false, features = ["default-fancy"]}
 
@@ -31,7 +30,6 @@ i18n-embed-fl = "0.8.0"
 intl-memoizer =  "0.5.1"
 ipnetwork = { version = "0.21.1", features = ["serde"] }
 lazy-regex = "3.0.0"
-lazy_static = "1.4.0"
 mime = "0.3.0"
 png = "0.17.2"
 pulldown-cmark = "0.12.2"

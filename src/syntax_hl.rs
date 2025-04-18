@@ -1,6 +1,6 @@
 //! This module is used both by the builder and by the program!
 use anyhow::{bail, Context, Result};
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 use syntect::highlighting::ThemeSet;
 use syntect::html::css_for_theme_with_class_style;
 use syntect::html::ClassStyle;
@@ -10,9 +10,8 @@ use syntect::parsing::SyntaxSet;
 pub use syntect::util::LinesWithEndings;
 
 const STYLE: ClassStyle = ClassStyle::SpacedPrefixed { prefix: "syh" };
-lazy_static! {
-    static ref SYNSET: SyntaxSet = SyntaxSet::load_defaults_newlines();
-}
+static SYNSET: LazyLock<SyntaxSet> =
+    LazyLock::new(|| SyntaxSet::load_defaults_newlines());
 
 #[allow(unused)]
 pub fn for_lang(lang: &str) -> Option<ClassedHTMLGenerator> {

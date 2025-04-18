@@ -18,6 +18,7 @@ project more or less adheres to
 * More usefull dumpcomments: Only include public comments.
 * Minor follow-up styleing improvements.
 * I'm no longer at KTH.
+* Use std `LazyLock` instead of macro-based `lazy_static`.
 * Updated to `disel` 0.2.2, `disel-async` 0.5, `ructe` to 0.18.0,
   and `csrf` 0.5.0.
 
