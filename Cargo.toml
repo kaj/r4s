@@ -20,7 +20,7 @@ atom_syndication = "0.12.0"
 base64 = "0.22.1"
 chrono = { version = "0.4.19", default-features = false }
 clap = { version = "4.5.4", features = ["derive", "env", "wrap_help"] }
-csrf = "0.4.2"
+csrf = "0.5.0"
 diesel = { version = "2.2.2", features = ["chrono", "postgres", "network-address"] }
 diesel-async = { version = "0.5", features = ["deadpool", "postgres"] }
 dotenv = "0.15.0"

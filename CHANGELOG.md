@@ -17,8 +17,8 @@ project more or less adheres to
     use that (currently with some fallback support for unfenced).
 * More usefull dumpcomments: Only include public comments.
 * Minor follow-up styleing improvements.
-* Update `disel-async` to 0.5 and `disel` itself to 0.2.2.
-* Update `ructe` to 0.18.0.
+* Updated to `disel` 0.2.2, `disel-async` 0.5, `ructe` to 0.18.0,
+  and `csrf` 0.5.0.
 
 
 ## Release 0.3.10
