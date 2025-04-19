@@ -36,7 +36,7 @@ impl Comment {
             .image_url()
             .to_string()
     }
-    /// Get a thing that implemnts ToHtml displaying the poster
+    /// Get a thing that implemnts [`ToHtml`] displaying the poster
     /// name of this comment, linked to the url if there is an url.
     pub fn link_name(&self) -> LinkName {
         LinkName(self)

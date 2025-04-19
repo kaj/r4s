@@ -30,10 +30,12 @@ use diesel_async::RunQueryDsl;
 use reqwest::header::{HeaderMap, CONTENT_SECURITY_POLICY, SERVER};
 use serde::Deserialize;
 use std::net::SocketAddr;
+use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::{info, instrument, warn};
 use warp::filters::BoxedFilter;
+use warp::http::header::SET_COOKIE;
 use warp::http::response::Builder;
 use warp::http::Uri;
 use warp::reply::Response;
@@ -67,12 +69,12 @@ pub struct Args {
 
 impl Args {
     pub async fn run(self) -> Result<(), anyhow::Error> {
+        use warp::path::{end, param, path};
+        use warp::query;
         let quit_sig = async {
             _ = tokio::signal::ctrl_c().await;
             warn!("Initiating graceful shutdown");
         };
-        use warp::path::{end, param, path};
-        use warp::query;
         let app = AppData::new(&self)?;
         let s = warp::any().map(move || app.clone()).boxed();
         let s = move || s.clone();
@@ -264,7 +266,6 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     let other_langs = langc.other(|_, lang, name| {
         format!(
             "<a href='/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-            lang=lang, name=name,
         )});
 
     Ok(response().html(|o| {
@@ -316,8 +317,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
     let h1 = fl!(fluent, "posts-year", year = year);
     let other_langs = langc.other(|_, lang, name| {
         format!(
-            "<a href='/{}/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-            year, lang=lang, name=name,
+            "<a href='/{year}/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
         )});
 
     Ok(response().html(|o| {
@@ -387,7 +387,6 @@ async fn page(
         None => false,
     };
 
-    use std::ops::Deref;
     let tags = PostTag::belonging_to(post.deref())
         .inner_join(Tag::table())
         .select(Tag::as_select())
@@ -411,7 +410,6 @@ async fn page(
 
     let (token, cookie) = app.generate_csrf_pair()?;
 
-    use warp::http::header::SET_COOKIE;
     Ok(response()
         .header(
             SET_COOKIE,

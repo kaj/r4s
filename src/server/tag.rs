@@ -47,7 +47,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
 
     let tags = tags
         .into_iter()
-        .map(|(tag, j)| (tag, j, counts.get(&j).cloned().unwrap_or_default()))
+        .map(|(tag, j)| (tag, j, counts.get(&j).copied().unwrap_or_default()))
         .collect::<Vec<_>>();
 
     let fluent = lang.fluent()?;

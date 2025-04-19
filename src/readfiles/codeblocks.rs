@@ -304,7 +304,7 @@ impl BlockHandler for CodeBlock<'_> {
     }
     fn end(self) -> Result<()> {
         if let Some(gen) = self.gen {
-            self.out.push_str(&gen.finalize())
+            self.out.push_str(&gen.finalize());
         }
         if self.code {
             self.out.push_str("</code>");

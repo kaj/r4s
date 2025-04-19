@@ -110,7 +110,7 @@ pub fn my_found(post: &PostLink, public: bool, comment: i32) -> impl Reply {
     super::found(&if public {
         format!("{url}#c{comment:x}")
     } else {
-        format!("{url}?c={}#cxmod", comment)
+        format!("{url}?c={comment}#cxmod")
     })
 }
 

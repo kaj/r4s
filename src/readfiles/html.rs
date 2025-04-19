@@ -53,11 +53,11 @@ pub(super) fn collect<'a>(
                 }
                 result.push('>');
                 section_level += 1;
-                result.push_str(&format!("<{}>", level));
+                result.push_str(&format!("<{level}>"));
             }
             Event::End(TagEnd::Heading(level)) => {
-                if !remove_end(&mut result, &format!("<{}>", level)) {
-                    result.push_str(&format!("</{}>\n", level));
+                if !remove_end(&mut result, &format!("<{level}>")) {
+                    result.push_str(&format!("</{level}>\n"));
                 }
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
@@ -78,7 +78,7 @@ pub(super) fn collect<'a>(
                     match event {
                         Event::End(TagEnd::CodeBlock) => break,
                         Event::Text(code) => handler.push(&code)?,
-                        x => bail!("Unexpeted in code: {:?}", x),
+                        x => bail!("Unexpeted in code: {x:?}"),
                     }
                 }
                 handler.end()?;
@@ -120,19 +120,25 @@ pub(super) fn collect<'a>(
                 result.push_str("/>\n");
             }
             // Content of htmlblock is Event::Html, below.
-            Event::Start(Tag::HtmlBlock) => (),
-            Event::End(TagEnd::HtmlBlock) => (),
+            Event::Start(Tag::HtmlBlock) | Event::End(TagEnd::HtmlBlock) => {
+                ()
+            }
             Event::Start(tag) => {
                 result.push('<');
                 result.push_str(tag_name(&tag));
                 match tag {
-                    Tag::Paragraph | Tag::Emphasis => (),
-                    Tag::TableCell | Tag::TableRow => (),
-                    Tag::List(None) => (),
                     Tag::List(Some(start)) => {
-                        result.push_str(&format!(" start='{}'", start));
+                        result.push_str(&format!(" start='{start}'"));
                     }
-                    Tag::Item => (),
+                    Tag::List(None)
+                    | Tag::Item
+                    | Tag::DefinitionList
+                    | Tag::DefinitionListTitle
+                    | Tag::DefinitionListDefinition
+                    | Tag::Paragraph
+                    | Tag::Emphasis
+                    | Tag::TableCell
+                    | Tag::TableRow => (),
                     Tag::Link {
                         link_type: _,
                         dest_url,
@@ -159,13 +165,13 @@ pub(super) fn collect<'a>(
                             result.push('"');
                         }
                     }
-                    t => result.push_str(&format!("><!-- {:?} --", t)),
+                    t => result.push_str(&format!("><!-- {t:?} --")),
                 }
                 result.push('>');
             }
             Event::End(tag) => {
                 result.push_str("</");
-                result.push_str(tag_name_e(&tag));
+                result.push_str(tag_name_e(tag));
                 result.push('>');
                 if matches!(
                     tag,
@@ -200,7 +206,7 @@ pub(super) fn collect<'a>(
             }
             Event::InlineHtml(code) => {
                 warn!("Found raw html: {code:?}.");
-                result.push_str(&code)
+                result.push_str(&code);
             }
             e => bail!("Unhandled: {:?}", e),
         }
@@ -229,10 +235,10 @@ pub fn write_image<'a>(
             Event::End(TagEnd::Image) => break,
             Event::Text(text) => inner.push_str(&text),
             Event::SoftBreak => inner.push(' '),
-            Event::Start(Tag::Emphasis | Tag::Strong) => (),
-            Event::End(TagEnd::Emphasis | TagEnd::Strong) => (),
             // Inner is mainly the alt, so no inline html.
-            Event::InlineHtml(_) => (),
+            Event::InlineHtml(_)
+            | Event::Start(Tag::Emphasis | Tag::Strong)
+            | Event::End(TagEnd::Emphasis | TagEnd::Strong) => (),
             _ => bail!("Unexpected {tag:?} in image"),
         }
     }
@@ -245,7 +251,7 @@ pub fn write_image<'a>(
         .map(|(_all, _, classes, attrs, caption)| {
             (dest_url, classes, attrs, safe_md2html(caption))
         })
-        .with_context(|| format!("Bad image ref: {:?}", dest_url))?
+        .with_context(|| format!("Bad image ref: {dest_url:?}"))?
     } else {
         tracing::warn!("Found old-format image.");
         regex_captures!(
@@ -254,7 +260,7 @@ pub fn write_image<'a>(
         )
             .map(|(_all, imgref, _, classes, attrs, caption)| (imgref, classes, attrs, caption.to_string()))
             .with_context(|| {
-                format!("Bad image ref: {:?}", dest_url)
+                format!("Bad image ref: {dest_url:?}")
             })?
     };
     let mut classes = ClassList::from(classes);
@@ -271,13 +277,11 @@ pub fn write_image<'a>(
         classes.add("fa-cover");
         writeln!(
             result,
-            "<figure class='{}'>\
-             <a href='{url}'><img alt='Omslagsbild {}' src='{url}' width='150'/></a>\
-             <figcaption>{} {} {}</figcaption></figure>",
-            classes, inner, inner, caption, title,
-            url = url,
+            "<figure class='{classes}'>\
+             <a href='{url}'><img alt='Omslagsbild {inner}' src='{url}' width='150'/></a>\
+             <figcaption>{inner} {caption} {title}</figcaption></figure>",
         )
-                        .unwrap();
+            .unwrap();
     } else {
         let imgdata = loader.imgcli.fetch(imgref)?;
         if !imgdata.is_public() {
@@ -291,7 +295,7 @@ pub fn write_image<'a>(
         };
         if imgdata.is_portrait() {
             classes.add("portrait");
-        };
+        }
         writeln!(
             result,
             "<figure class='{classes}'{attrs}>{imgtag}\
@@ -367,10 +371,10 @@ fn tag_name(tag: &Tag) -> &'static str {
         Tag::DefinitionList => "dl",
         Tag::DefinitionListTitle => "dt",
         Tag::DefinitionListDefinition => "dd",
-        tag => panic!("Not a simple tag: {:?}", tag),
+        tag => panic!("Not a simple tag: {tag:?}"),
     }
 }
-fn tag_name_e(tag: &TagEnd) -> &'static str {
+fn tag_name_e(tag: TagEnd) -> &'static str {
     match tag {
         TagEnd::BlockQuote(_) => "blockquote",
         TagEnd::Emphasis => "em",
@@ -386,6 +390,6 @@ fn tag_name_e(tag: &TagEnd) -> &'static str {
         TagEnd::DefinitionList => "dl",
         TagEnd::DefinitionListTitle => "dt",
         TagEnd::DefinitionListDefinition => "dd",
-        tag => panic!("Not a simple tag: {:?}", tag),
+        tag => panic!("Not a simple tag: {tag:?}"),
     }
 }

@@ -52,8 +52,8 @@ impl Args {
 
         if pending > 0 || !self.silent {
             println!(
-                "There are {} pending, {} public, and {} spam comments.",
-                pending, public, spam
+                "There are {pending} pending, {public} public, \
+                 and {spam} spam comments."
             );
         }
 
@@ -73,7 +73,7 @@ impl Args {
                 p.year
             );
             for line in wrap(&comment.content, &wrap_opt) {
-                println!("{}", line);
+                println!("{line}");
             }
 
             if !self.list {
@@ -122,7 +122,7 @@ impl Display for Ago {
         if elapsed_mins == 0 {
             out.write_str("Now")
         } else if elapsed_mins < 45 {
-            write!(out, "{} min ago", elapsed_mins)
+            write!(out, "{elapsed_mins} min ago")
         } else if elapsed_mins < 60 * 18 {
             date.format("%H:%M").fmt(out)
         } else {
@@ -147,13 +147,13 @@ fn prompt<'v>(prompt: &str, alternatives: &[&'v str]) -> Result<&'v str> {
     let input = stdin();
     let mut buf = String::new();
     loop {
-        print!("{} {:?} ", prompt, alternatives);
+        print!("{prompt} {alternatives:?} ");
         stdout().flush()?;
         buf.clear();
         ensure!(input.read_line(&mut buf)? > 0, "Expected some input");
         let buf = buf.trim();
         if !buf.is_empty() {
-            for alt in alternatives.iter() {
+            for alt in alternatives {
                 if alt.starts_with(buf) {
                     return Ok(alt);
                 }

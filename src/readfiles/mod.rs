@@ -70,11 +70,11 @@ impl Args {
             if path.is_file() {
                 loader
                     .read_file(path)
-                    .with_context(|| format!("Reading file {:?}", path))?;
+                    .with_context(|| format!("Reading file {path:?}"))?;
             } else {
                 loader
                     .read_dir(path)
-                    .with_context(|| format!("Reading dir {:?}", path))?;
+                    .with_context(|| format!("Reading dir {path:?}"))?;
             }
         }
         Ok(())
@@ -100,7 +100,7 @@ impl Loader {
                 self.read_dir(&path)?;
             } else if path.extension().unwrap_or_default() == "md" {
                 self.read_file(&path)
-                    .with_context(|| format!("Reading file {:?}", path))?;
+                    .with_context(|| format!("Reading file {path:?}"))?;
             }
         }
         Ok(())
@@ -170,7 +170,7 @@ impl Loader {
                         p::orig_md.eq(&contents),
                     ))
                     .execute(&mut self.db)
-                    .with_context(|| format!("Update #{}", id))?;
+                    .with_context(|| format!("Update #{id}"))?;
 
                 if let Some(tags) = &tags {
                     tag_post(id, tags, &mut self.db)?;
@@ -307,7 +307,7 @@ impl Loader {
             .optional()?
         {
             if mime != old_mime || content != old_content {
-                println!("Content #{} ({}) updating", id, name);
+                println!("Content #{id} ({name}) updating");
                 diesel::update(a::assets)
                     .filter(a::id.eq(id))
                     .set((
@@ -318,7 +318,7 @@ impl Loader {
                     ))
                     .execute(&mut self.db)
                     .with_context(|| {
-                        format!("Update asset #{} {}/{}", id, year, name)
+                        format!("Update asset #{id} {year}/{name}")
                     })?;
             }
         } else {
@@ -330,9 +330,9 @@ impl Loader {
                     a::content.eq(content),
                 ))
                 .execute(&mut self.db)
-                .with_context(|| format!("Create asset {}/{}", year, name))?;
+                .with_context(|| format!("Create asset {year}/{name}"))?;
         }
-        Ok(format!("/s/{}/{}", year, name))
+        Ok(format!("/s/{year}/{name}"))
     }
 }
 
@@ -354,7 +354,7 @@ impl FromStr for UpdateInfo {
         let date = date
             .trim()
             .parse()
-            .with_context(|| format!("Bad date: {:?}", date))?;
+            .with_context(|| format!("Bad date: {date:?}"))?;
         let info = info.trim().to_string();
         Ok(UpdateInfo { date, info })
     }
@@ -462,18 +462,18 @@ fn link_data(
                 "https://seriewikin.serieframjandet.se/index.php/{}",
                 text.replace(' ', "_")
             ),
-            format!("Se {} på seriewikin", text),
+            format!("Se {text} på seriewikin"),
         )),
         "cargo" => {
-            Some((format!("https://lib.rs/crates/{}", text), String::new()))
+            Some((format!("https://lib.rs/crates/{text}"), String::new()))
         }
         "foldoc" => Some((
-            format!("https://foldoc.org/{}", text),
-            format!("Se {} i free online dictionary of computing", text),
+            format!("https://foldoc.org/{text}"),
+            format!("Se {text} i free online dictionary of computing"),
         )),
         "rfc" => Some((
-            format!("http://www.faqs.org/rfcs/rfc{}.html", attr_0),
-            format!("RFC {}", attr_0),
+            format!("http://www.faqs.org/rfcs/rfc{attr_0}.html"),
+            format!("RFC {attr_0}"),
         )),
         _ => None,
     }
@@ -483,7 +483,7 @@ fn wikilink(text: &str, lang: &str, disambig: &str) -> (String, String) {
     let t = if disambig.is_empty() {
         text.to_string()
     } else {
-        format!("{} ({})", text, disambig)
+        format!("{text} ({disambig})")
     };
     (
         format!(
@@ -492,7 +492,7 @@ fn wikilink(text: &str, lang: &str, disambig: &str) -> (String, String) {
             t.replace(' ', "_").replace('\u{ad}', ""),
         ),
         // TODO: Translate this to page (not link) language!
-        format!("Se {} på wikipedia", t),
+        format!("Se {t} på wikipedia"),
     )
 }
 

@@ -43,8 +43,7 @@ impl<'a> Ctx<'a> {
             0
         } else {
             meta.pubdate
-                .map(|d| d.year())
-                .unwrap_or_else(|| Local::now().year())
+                .map_or_else(|| Local::now().year(), |d| d.year())
                 .try_into()?
         };
         Ok(ContentParser {
@@ -109,7 +108,7 @@ impl ContentParser<'_> {
                 info!("Loading assed data for {s:?}");
                 loader
                     .handle_asset(path, s, self.year)
-                    .with_context(|| format!("Asset {:?}", s))
+                    .with_context(|| format!("Asset {s:?}"))
             })
             .collect::<Result<Vec<_>, _>>()?;
         self.ctx.set_files(files)?;
@@ -128,7 +127,7 @@ impl ContentParser<'_> {
         for e in &mut self.items {
             if matches!(e, Event::End(TagEnd::Heading(_))) {
                 break;
-            };
+            }
             events.push(e);
         }
         let mut title = html::collect(events, loader, &self.get_url())?;
@@ -357,9 +356,9 @@ impl Body {
         Ok(Self {
             title,
             teaser,
+            body,
             summary,
             front_image,
-            body,
             use_leaflet,
         })
     }
