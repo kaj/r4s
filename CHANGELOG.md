@@ -15,6 +15,8 @@ project more or less adheres to
   - The "fenced yaml" kind of metainformation seems more or less
     standard and is supported by `pulldown-cmark` now, so switch to
     use that (currently with some fallback support for unfenced).
+  - New markdown for my figures / images, closer to standard markdown.
+    (currently with fallback to my old figures).
 * More usefull dumpcomments: Only include public comments.
 * Minor follow-up styleing improvements.
 * I'm no longer at KTH.

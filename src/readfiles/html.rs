@@ -1,6 +1,7 @@
 //! How to serialize parsed markdown into my kind of html
 use super::codeblocks::{BlockHandler, DynBlock};
 use super::{FaRef, Loader, PageRef};
+use crate::models::safe_md2html;
 use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
 use pulldown_cmark::{CodeBlockKind, Event, Tag, TagEnd};
@@ -228,19 +229,34 @@ pub fn write_image<'a>(
             Event::End(TagEnd::Image) => break,
             Event::Text(text) => inner.push_str(&text),
             Event::SoftBreak => inner.push(' '),
+            Event::Start(Tag::Emphasis | Tag::Strong) => (),
+            Event::End(TagEnd::Emphasis | TagEnd::Strong) => (),
             // Inner is mainly the alt, so no inline html.
             Event::InlineHtml(_) => (),
             _ => bail!("Unexpected {tag:?} in image"),
         }
     }
-    let (_all, imgref, _, classes, attrs, caption) = regex_captures!(
-        r#"^([A-Za-z0-9/._-]*)\s*(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*([^{]*)$"#m,
-        &dest_url,
-    )
-        .with_context(|| {
-            format!("Bad image ref: {:?}", dest_url)
-        })?;
 
+    let (imgref, classes, attrs, caption) = if !title.is_empty() {
+        regex_captures!(
+            r#"^(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*(.*)$"#,
+            &title,
+        )
+        .map(|(_all, _, classes, attrs, caption)| {
+            (dest_url, classes, attrs, safe_md2html(caption))
+        })
+        .with_context(|| format!("Bad image ref: {:?}", dest_url))?
+    } else {
+        tracing::warn!("Found old-format image.");
+        regex_captures!(
+            r#"^([A-Za-z0-9/._-]*)\s*(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*([^{]*)$"#m,
+            &dest_url,
+        )
+            .map(|(_all, imgref, _, classes, attrs, caption)| (imgref, classes, attrs, caption.to_string()))
+            .with_context(|| {
+                format!("Bad image ref: {:?}", dest_url)
+            })?
+    };
     let mut classes = ClassList::from(classes);
     if !allow_gallery {
         classes.replace("gallery", "sidebar");
@@ -278,9 +294,8 @@ pub fn write_image<'a>(
         };
         writeln!(
             result,
-            "<figure class='{}'{}>{}\
-             <figcaption>{} {}</figcaption></figure>",
-            classes, attrs, imgtag, caption, title,
+            "<figure class='{classes}'{attrs}>{imgtag}\
+             <figcaption>{caption}</figcaption></figure>",
         )
         .unwrap();
     }
