@@ -11,7 +11,7 @@ pub use syntect::util::LinesWithEndings;
 
 const STYLE: ClassStyle = ClassStyle::SpacedPrefixed { prefix: "syh" };
 static SYNSET: LazyLock<SyntaxSet> =
-    LazyLock::new(|| SyntaxSet::load_defaults_newlines());
+    LazyLock::new(SyntaxSet::load_defaults_newlines);
 
 #[allow(unused)]
 pub fn for_lang(lang: &str) -> Option<ClassedHTMLGenerator> {
