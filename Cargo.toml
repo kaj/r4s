@@ -1,6 +1,6 @@
 [package]
 name = "r4s"
-version = "0.3.11-PRE"
+version = "0.4.0"
 description = "Manage and serve my blog"
 authors = ["Rasmus Kaj <rasmus@krats.se>"]
 edition = "2021"
