@@ -303,7 +303,7 @@ main {
             padding-left: $outdent;
         }
     }
-    p:not(li p, blockquote p) {
+    & > p, section > p {
         text-align: justify;
         padding-inline-start: $outdent;
     }
@@ -314,6 +314,12 @@ main {
     dl {
         padding-inline-start: $outdent;
         max-width: $pwidth;
+    }
+    dt {
+        margin-top: 1ex;
+    }
+    dd {
+        margin: 0 auto 1em 3ch;
     }
     footer {
         max-width: calc($pwidth + $outdent);
