@@ -562,8 +562,8 @@ impl ImgClient {
 
 fn has_changed(old: &str, new: &str) -> bool {
     fn nometa(t: &str) -> &str {
-        if let Some(i) = t.find("\n\n# ") {
-            &t[i + 2..]
+        if let Some(i) = t.find("\n# ") {
+            &t[i + 1..]
         } else {
             t
         }
