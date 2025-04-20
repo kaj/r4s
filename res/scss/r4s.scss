@@ -303,7 +303,7 @@ main {
             padding-left: $outdent;
         }
     }
-    & > p, section > p {
+    & > p, article > p, section > p {
         text-align: justify;
         padding-inline-start: $outdent;
     }
