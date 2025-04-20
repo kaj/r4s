@@ -8,6 +8,8 @@ project more or less adheres to
 
 ## Unreleased
 
+* Drafts with the same slug as a post is now cleared only for
+  reasonably new posts.
 
 ## Release 0.4.2
 

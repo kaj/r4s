@@ -13,6 +13,7 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
 use anyhow::{anyhow, bail, Context, Result};
+use chrono::Utc;
 use diesel::prelude::*;
 use lazy_regex::regex_captures;
 use reqwest::blocking::Client;
@@ -127,17 +128,22 @@ impl Loader {
             return Ok(());
         }
 
-        diesel::delete(
-            p::posts
-                .filter(p::slug.eq(slug))
-                .filter(p::lang.eq(lang))
-                .filter(p::title.like("% \u{1f58b}"))
-                .filter(p::orig_md.ne(&contents)),
-        )
-        .execute(&mut self.db)?;
-
-        let pubdate = &post_src.meta().pubdate.clone();
+        let pubdate = post_src.meta().pubdate;
         let update = post_src.meta().update.as_ref().map(|u| u.date);
+
+        if update
+            .or(pubdate)
+            .is_none_or(|d| (Utc::now() - d.to_utc()).num_days() < 200)
+        {
+            diesel::delete(
+                p::posts
+                    .filter(p::slug.eq(slug))
+                    .filter(p::lang.eq(lang))
+                    .filter(p::title.like("% \u{1f58b}"))
+                    .filter(p::orig_md.ne(&contents)),
+            )
+            .execute(&mut self.db)?;
+        }
 
         if let Some((id, old_md)) = p::posts
             .select((p::id, p::orig_md))
