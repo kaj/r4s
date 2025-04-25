@@ -16,7 +16,7 @@
     @if let Some(ref image_url) = post.front_image {
     <meta property="og:image" content="@image_url"/>}
     <meta property="og:type" content="article"/>
-    <meta property="og:description" name="Description" content="@post.description"/>
+    <meta property="og:description" name="description" content="@post.description"/>
   </head>
   <body>
     @:header_html(fluent, other_langs)
