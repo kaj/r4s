@@ -10,6 +10,8 @@ project more or less adheres to
 
 * Drafts with the same slug as a post is now cleared only for
   reasonably new posts.
+* Added a `fediverse:creator` meta tag.
+
 
 ## Release 0.4.2
 
