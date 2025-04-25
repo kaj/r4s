@@ -1,14 +1,18 @@
 use super::Loader;
 use crate::models::MyLang;
-use crate::syntax_hl::ClassedHTMLGenerator;
-use crate::syntax_hl::LinesWithEndings;
 use anyhow::{bail, Result};
 use base64::prelude::*;
 use i18n_embed_fl::fl;
 use pulldown_cmark_escape::escape_html;
 use qr_code::QrCode;
 use serde::Deserialize;
-use std::fmt::Write;
+use std::{collections::BTreeMap, fmt::Write, sync::LazyLock, time::Instant};
+use tree_sitter_collection::{
+    tree_sitter::QueryError,
+    tree_sitter_highlight::{
+        Highlight, HighlightConfiguration, HighlightEvent, Highlighter,
+    },
+};
 
 pub(super) trait BlockHandler {
     fn push(&mut self, content: &str) -> Result<()>;
@@ -262,8 +266,9 @@ struct EmbedData {
 
 pub struct CodeBlock<'a> {
     out: &'a mut String,
-    gen: Option<ClassedHTMLGenerator<'a>>,
+    lang: Option<&'static Lang>,
     code: bool,
+    source: String,
 }
 impl<'a> CodeBlock<'a> {
     fn open(
@@ -282,25 +287,67 @@ impl<'a> CodeBlock<'a> {
         }
         Ok(CodeBlock {
             out,
-            gen: lang.and_then(crate::syntax_hl::for_lang),
+            lang: lang.and_then(|l| LANGS.get(l)),
             code: lang.is_some(),
+            source: String::new(),
         })
     }
 }
 impl BlockHandler for CodeBlock<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
-        if let Some(gen) = &mut self.gen {
-            for line in LinesWithEndings::from(content) {
-                gen.parse_html_for_line_which_includes_newline(line)?;
-            }
+        if self.lang.is_some() {
+            self.source.push_str(content)
         } else {
             escape_html(&mut *self.out, content)?;
         }
         Ok(())
     }
     fn end(self) -> Result<()> {
-        if let Some(gen) = self.gen {
-            self.out.push_str(&gen.finalize());
+        if let Some(conf) = self.lang {
+            let mut highlighter = Highlighter::new();
+            let highlights = highlighter.highlight(
+                conf,
+                self.source.as_bytes(),
+                None,
+                |lang_name| {
+                    let res: Option<&Lang> = LANGS.get(lang_name);
+                    match &res {
+                        Some(_) => {
+                            tracing::trace!("💉 Injecting {lang_name}")
+                        }
+                        None => tracing::trace!(
+                            "No language found for {lang_name} injection"
+                        ),
+                    }
+                    res
+                },
+            )?;
+
+            for highlight in highlights {
+                let highlight = highlight.unwrap();
+                match highlight {
+                    HighlightEvent::Source { start, end } => {
+                        tracing::trace!(
+                            "Escaping code from {start} to {end}"
+                        );
+                        escape_html(&mut *self.out, &self.source[start..end])
+                            .unwrap();
+                    }
+                    HighlightEvent::HighlightStart(Highlight(i)) => {
+                        tracing::trace!(
+                            "Starting highlight {} (.hh{i})",
+                            HIGHLIGHT_NAMES[i]
+                        );
+                        write!(&mut *self.out, r#"<i class=hh{i}>"#).unwrap();
+                    }
+                    HighlightEvent::HighlightEnd => {
+                        tracing::trace!("Ending highlight");
+                        write!(&mut *self.out, r#"</i>"#).unwrap();
+                    }
+                }
+            }
+        } else {
+            self.out.push_str(&self.source);
         }
         if self.code {
             self.out.push_str("</code>");
@@ -309,3 +356,107 @@ impl BlockHandler for CodeBlock<'_> {
         Ok(())
     }
 }
+
+use HighlightConfiguration as Lang;
+
+static LANGS: LazyLock<LangFinder> = LazyLock::new(LangFinder::new);
+
+#[derive(Default)]
+struct LangFinder {
+    known: BTreeMap<&'static str, &'static Lang>,
+}
+
+impl LangFinder {
+    fn new() -> Self {
+        let start = Instant::now();
+        let mut slf = Self {
+            known: BTreeMap::new(),
+        };
+        use tree_sitter_collection as tsc;
+        slf.add("css", tsc::css);
+        slf.add("html", tsc::html);
+        slf.add("json", tsc::javascript);
+        slf.add("markdown", tsc::markdown);
+        slf.known.insert("md", slf.known.get("markdown").unwrap());
+        slf.add("scss", tsc::scss);
+        slf.add("bash", tsc::bash);
+        // Note: Not sure about this, a shell session also contains output!
+        // Fasterthanlime somehow uses ascii escapes from shell session!
+        slf.known.insert("sh", slf.known.get("bash").unwrap());
+        slf.add("rust", tsc::rust);
+        tracing::info!(elapsed = ?start.elapsed(), "Loaded language defs");
+        slf
+    }
+    fn get(&self, name: &str) -> Option<&Lang> {
+        self.known.get(name).copied().or_else(|| {
+            tracing::info!("Language {name:?} not found");
+            None
+        })
+    }
+
+    fn add(
+        &mut self,
+        name: &'static str,
+        build: impl Fn() -> Result<Lang, QueryError>,
+    ) {
+        let mut conf = build()
+            .map_err(|e| format!("Failed to build {name}: {e}"))
+            .unwrap();
+        conf.configure(HIGHLIGHT_NAMES);
+        self.known.insert(name, Box::leak(Box::new(conf)));
+    }
+}
+
+const HIGHLIGHT_NAMES: &[&str] = &[
+    "attribute",
+    "constant",
+    "function.builtin",
+    "function",
+    "keyword",
+    "operator",
+    "property",
+    "punctuation",
+    "punctuation.bracket",
+    "punctuation.delimiter",
+    "string",
+    "string.special",
+    "tag",
+    "type",
+    "type.builtin",
+    "variable",
+    "variable.builtin",
+    "variable.parameter",
+    "comment",
+    "macro",
+    "label",
+    "diff.addition",
+    "diff.deletion",
+    // markdown_inline
+    "number",
+    "text.literal",
+    "text.emphasis",
+    "text.strong",
+    "text.uri",
+    "text.reference",
+    "string.escape",
+    // markdown
+    "text.title",
+    "punctuation.special",
+    "text.strikethrough",
+
+    // Added late
+    "character",
+    "character.special",
+    "comment.documentation",
+    "function.call",
+    "function.macro",
+    "function.method.call",
+    "keyword.type",
+    "markup.raw.block",
+    "module",
+    "number.float",
+    "string.special.url",
+    "tag.attribute",
+    "tag.delimiter",
+    "variable.member",
+];
