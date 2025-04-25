@@ -9,6 +9,7 @@ $darker: color.mix($purple, black, 33%);
 $pwidth: 66ch;
 $outdent: 1.2rem;
 
+@use "highlight";
 @use "kratsbox";
 
 html, body {
