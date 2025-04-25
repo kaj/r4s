@@ -1,7 +1,5 @@
 use super::Loader;
 use crate::models::MyLang;
-use crate::syntax_hl::ClassedHTMLGenerator;
-use crate::syntax_hl::LinesWithEndings;
 use anyhow::{bail, Result};
 use base64::prelude::*;
 use i18n_embed_fl::fl;
@@ -9,6 +7,8 @@ use pulldown_cmark_escape::escape_html;
 use qr_code::QrCode;
 use serde::Deserialize;
 use std::fmt::Write;
+use syntastica::{language_set::SupportedLanguage as _, Processor};
+use syntastica_parsers::{Lang, LanguageSetImpl};
 
 pub(super) trait BlockHandler {
     fn push(&mut self, content: &str) -> Result<()>;
@@ -262,8 +262,9 @@ struct EmbedData {
 
 pub struct CodeBlock<'a> {
     out: &'a mut String,
-    gen: Option<ClassedHTMLGenerator<'a>>,
+    lang: Option<Lang>,
     code: bool,
+    source: String,
 }
 impl<'a> CodeBlock<'a> {
     fn open(
@@ -282,25 +283,65 @@ impl<'a> CodeBlock<'a> {
         }
         Ok(CodeBlock {
             out,
-            gen: lang.and_then(crate::syntax_hl::for_lang),
+            lang: lang.and_then(|l| {
+                Lang::for_name(l, &())
+                    .map_err(|e| {
+                        tracing::error!("Failed to load language {l}: {e}");
+                        e
+                    })
+                    .ok()
+            }),
             code: lang.is_some(),
+            source: String::new(),
         })
     }
 }
+
+fn get_lang(l: &str) -> Option<Lang> {
+    if l == "scss" {
+        Some(Lang::Scss)
+    } else {
+        Lang::for_name(l, &())
+            .map_err(|e| {
+                tracing::error!("Failed to load language {l}: {e}");
+                e
+            })
+            .ok()
+    }
+}
+
 impl BlockHandler for CodeBlock<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
-        if let Some(gen) = &mut self.gen {
-            for line in LinesWithEndings::from(content) {
-                gen.parse_html_for_line_which_includes_newline(line)?;
-            }
+        if self.lang.is_some() {
+            self.source.push_str(content)
         } else {
             escape_html(&mut *self.out, content)?;
         }
         Ok(())
     }
     fn end(self) -> Result<()> {
-        if let Some(gen) = self.gen {
-            self.out.push_str(&gen.finalize());
+        if let Some(conf) = self.lang {
+            let language_set = LanguageSetImpl::new();
+            let mut processor = Processor::new(&language_set);
+
+            let highlights = processor.process(&self.source, conf.clone())?;
+
+            for highlight in highlights {
+                for (text, style) in highlight {
+                    if let Some(style) = style {
+                        let style = style.replace('.', " h");
+                        // HNAME_NUM.get(style).copied().expect(style);
+                        write!(&mut *self.out, "<i class=\"hh{style}\">")?;
+                    }
+                    escape_html(&mut *self.out, &text)?;
+                    if let Some(_) = style {
+                        write!(&mut *self.out, "</i>")?;
+                    }
+                }
+                writeln!(&mut *self.out)?;
+            }
+        } else {
+            self.out.push_str(&self.source);
         }
         if self.code {
             self.out.push_str("</code>");
@@ -309,3 +350,63 @@ impl BlockHandler for CodeBlock<'_> {
         Ok(())
     }
 }
+
+/*
+const HNAME_NUM: LazyLock<BTreeMap<&'static str, usize>> = LazyLock::new(|| {
+    HIGHLIGHT_NAMES.iter().enumerate().map(|(i, n)| (*n, i)).collect()
+});
+
+const HIGHLIGHT_NAMES: &[&str] = &[
+    "attribute",
+    "constant",
+    "function.builtin",
+    "function",
+    "keyword",
+    "operator",
+    "property",
+    "punctuation",
+    "punctuation.bracket",
+    "punctuation.delimiter",
+    "string",
+    "string.special",
+    "tag",
+    "type",
+    "type.builtin",
+    "variable",
+    "variable.builtin",
+    "variable.parameter",
+    "comment",
+    "macro",
+    "label",
+    "diff.addition",
+    "diff.deletion",
+    // markdown_inline
+    "number",
+    "text.literal",
+    "text.emphasis",
+    "text.strong",
+    "text.uri",
+    "text.reference",
+    "string.escape",
+    // markdown
+    "text.title",
+    "punctuation.special",
+    "text.strikethrough",
+
+    // Added after writing the style ... fix this ...
+    "character",
+    "character.special",
+    "comment.documentation",
+    "function.call",
+    "function.macro",
+    "function.method.call",
+    "keyword.type",
+    "markup.raw.block",
+    "module",
+    "number.float",
+    "string.special.url",
+    "tag.attribute",
+    "tag.delimiter",
+    "variable.member",
+<];
+*/

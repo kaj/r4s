@@ -1,0 +1,138 @@
+pre code i { font-style: inherit; }
+
+i.hhattribute {}
+i.hhmacro { }
+
+i.hhconstant,
+i.hhnumber {
+    color: var(--peach);
+    &.hfloat {}
+          
+}
+i.hhfunction {
+    color: var(--sapphire);
+    &.hcall {}
+    &.hmacro {}
+    &.hmethod.hcall {}
+}
+i.hhkeyword,
+i.hhfunction.hbuiltin {
+  color:var(--mauve);
+  font-weight:120;
+}
+i.hhkeyword.htype {}
+
+i.hhoperator {
+  color:var(--sky)
+}
+i.hhproperty {
+  color:var(--teal)
+}
+i.hhstring {
+    color: var(--green);
+    &.hspecial {
+        &.hurl {}
+    }
+    &.hescape {
+        color: var(--pink);
+    }
+}
+i.hhtype {
+    color:var(--yellow);
+    &.hbuiltin {}
+}
+i.hhvariable {
+    color:var(--text);
+    &.hmember {}
+    &.hbuiltin {
+        color:var(--red)
+    }
+    &.hparameter {
+        color:var(--maroon)
+    }
+}
+.hhcomment {
+    color: var(--subtext1);
+    font-style: italic;
+    &.hdocumentation {}
+}
+i.hhpunctuation {
+    color: var(--subtext1);
+    &.hdelimiter,
+    &.hbracket {
+        color:var(--lavender)
+    }
+}
+i.hhlabel {
+  color:var(--flamingo)
+}
+i.hhdiff.haddition {
+  color:var(--green)
+}
+i.hhdiff.hdeletion {
+  color:var(--red)
+}
+i.hhtext.hliteral {
+  color:var(--text)
+}
+i.hhtext.hemphasis {
+  font-style:italic
+}
+i.hhtext.hstrong {
+  font-weight:700
+}
+i.hhtext.huri {
+  color:var(--rosewater);
+  text-decoration:underline
+}
+i.hhtext.hreference {
+  color:var(--lavender)
+}
+i.hhtext.htitle {
+  color:var(--sky);
+  font-weight:700
+}
+i.hhpunctuation.hspecial {
+  font-weight:700
+}
+i.hhtext.hstrikethrough {
+  text-decoration:line-through
+}
+
+i.hhtag {
+    color: var(--blue);
+    &.hattribute { color: var(--lavender); }
+    &.hdelimiter { color: var(--sky); }
+}
+
+i.hhcharacter {
+    &.hspecial {}
+}
+
+i.hhmarkup {
+    &.hraw.hblock {}
+}
+
+i.hhmodule {}
+
+
+
+:root {
+    --rosewater: light-dark(#dc8a78, #f5e0dc);
+    --flamingo: light-dark(#dd7878, #f2cdcd);
+    --pink: light-dark(#ea76cb, #f5c2e7);
+    --mauve: light-dark(#8839ef, #cba6f7);
+    --red: light-dark(#d20f39, #f38ba8);
+    --maroon: light-dark(#e64553, #eba0ac);
+    --peach: light-dark(#fe640b, #fab387);
+    --yellow: light-dark(#df8e1d, #f9e2af);
+    --green: light-dark(#40a02b, #a6e3a1);
+    --teal: light-dark(#179299, #94e2d5);
+    --sky: light-dark(#04a5e5, #89dceb);
+    --sapphire: light-dark(#209fb5, #74c7ec);
+    --blue: light-dark(#1e66f5, #89b4fa);
+    --lavender: light-dark(#7287fd, #b4befe);
+    --text: light-dark(#4c4f69, #cdd6f4);
+    --subtext1: light-dark(#5c5f77, #bac2de);
+    --surface1: light-dark(#bcc0cc, #45475a);
+}
