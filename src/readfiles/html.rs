@@ -120,9 +120,7 @@ pub(super) fn collect<'a>(
                 result.push_str("/>\n");
             }
             // Content of htmlblock is Event::Html, below.
-            Event::Start(Tag::HtmlBlock) | Event::End(TagEnd::HtmlBlock) => {
-                ()
-            }
+            Event::Start(Tag::HtmlBlock) | Event::End(TagEnd::HtmlBlock) => {}
             Event::Start(tag) => {
                 result.push('<');
                 result.push_str(tag_name(&tag));
@@ -320,7 +318,7 @@ impl<'a> From<&'a str> for ClassList<'a> {
 }
 impl<'a> ClassList<'a> {
     fn has(&self, cls: &str) -> bool {
-        self.0.iter().any(|c| *c == cls)
+        self.0.contains(&cls)
     }
     fn add(&mut self, cls: &'a str) {
         self.0.push(cls);
