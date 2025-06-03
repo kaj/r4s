@@ -10,6 +10,8 @@ project more or less adheres to
 
 * Drafts with the same slug as a post is now cleared only for
   reasonably new posts.
+* Remove the metadata fallback from 0.4.0, now "fenced yaml" is the
+  only supported metadata format.
 * Added a `fediverse:creator` meta tag.
 
 

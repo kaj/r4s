@@ -162,43 +162,20 @@ pub struct ContentMeta {
 
 impl ContentMeta {
     fn load<'a>(items: &mut impl Iterator<Item = Event<'a>>) -> Result<Self> {
+        use pulldown_cmark::MetadataBlockKind as Kind;
         match items.next() {
-            Some(Event::Start(Tag::MetadataBlock(_))) => {
-                Self::proper_meta(items)
-            }
-            Some(Event::Start(Tag::Paragraph)) => Self::fallback_meta(items),
-            x => bail!("Expteded metadata, got {x:?}"),
+            Some(Event::Start(Tag::MetadataBlock(Kind::YamlStyle))) => (),
+            x => bail!("Expteded start of metadata, got {x:?}"),
         }
-    }
-    fn proper_meta<'a>(
-        items: &mut impl Iterator<Item = Event<'a>>,
-    ) -> Result<Self> {
         let meta = match items.next() {
             Some(Event::Text(data)) => data.parse()?,
             x => bail!("Expteded metadata, got {x:?}"),
         };
         match items.next() {
-            Some(Event::End(TagEnd::MetadataBlock(_))) => (),
+            Some(Event::End(TagEnd::MetadataBlock(Kind::YamlStyle))) => (),
             x => bail!("Expteded end of metadata, got {x:?}"),
         }
         Ok(meta)
-    }
-    fn fallback_meta<'a>(
-        items: &mut impl Iterator<Item = Event<'a>>,
-    ) -> Result<Self> {
-        debug!("Using fallback metadata parser");
-        let mut text = String::new();
-        for e in items.by_ref() {
-            match e {
-                Event::Text(data) => text.push_str(&data),
-                Event::SoftBreak => text.push('\n'),
-                Event::End(TagEnd::Paragraph) => {
-                    return text.parse();
-                }
-                x => bail!("Expteded (end of) metadata, got {x:?}"),
-            }
-        }
-        bail!("Expected end of metadata, got end of file");
     }
 }
 
