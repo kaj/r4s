@@ -16,43 +16,29 @@ html, body {
     padding: 0;
 }
 
-html {
-    --col-f: #{black};
-    --col-fl: #{color.mix($purple, blue)};
-    --col-fv: #{$purple};
-    --col-fh: #{$dark};
-    --col-b: #{$paper};
-    --col-b0: #{rgba($paper, 0)};
-    --col-bt: #{rgba($paper2, 0.9)};  // background, transparent
-    --col-bx: #{wheat};
-    --col-bl: #{color.mix($paper, $purple, 65%)};
-    --col-bv: #{color.mix($paper, $purple, 80%)};
-    --col-bext: #{color.mix($paper, white)};
-    --col-b1: #{$paper2};
-    --col-b2: #{color.mix($paper, wheat, 70%)};
-    --col-flare: #{white};
+:root {
+    color-scheme: light dark;
+    --col-f: light-dark(#{black}, #{$paper});
+    --col-fl: light-dark(#{color.mix($purple, blue)}, #{color.mix($purple, color.mix(blue, white, 30%), 30%)});
+    --col-fv: light-dark(#{$purple}, #{color.mix($purple, $paper, 30%)});
+    --col-fh: light-dark(#{$dark}, #{wheat});
+    --col-b: light-dark(#{$paper}, #{$darker});
+    --col-b0: light-dark(#{rgba($paper, 0)}, #{rgba($darker, 0)});
+    --col-bt: light-dark(#{rgba($paper2, 0.9)}, #{rgba($darker, 0.8)});  // background, transparent
+    --col-bx: light-dark(#{wheat}, #{$purple});
+    --col-bl: light-dark(#{color.mix($paper, $purple, 65%)}, #{color.mix($purple, blue)});
+    --col-bv: light-dark(#{color.mix($paper, $purple, 80%)}, #{$purple});
+    --col-bext: light-dark(#{color.mix($paper, white)}, #{color.mix($darker, black)});
+    --col-b1: light-dark(#{$paper2}, #{color.mix($darker, black, 75%)});
+    --col-b2: light-dark(#{color.mix($paper, wheat, 70%)}, #{color.mix($darker, black)});
+    --col-flare: light-dark(#{white}, #{rgba(black, 0.5)});
 }
 
-@mixin darktheme {
-    --col-f: #{$paper};
-    --col-fl: #{color.mix($purple, color.mix(blue, white, 30%), 30%)};
-    --col-fv: #{color.mix($purple, $paper, 30%)};
-    --col-fh: #{wheat};
-    --col-b: #{$darker};
-    --col-b0: #{rgba($darker, 0)};
-    --col-bt: #{rgba($darker, 0.8)};
-    --col-bx: #{$purple};
-    --col-bl: #{color.mix($purple, blue)};
-    --col-bv: #{$purple};
-    --col-bext: #{color.mix($darker, black)};
-    --col-flare: #{rgba(black, 0.5)};
-    --col-b1: #{color.mix($darker, black, 75%)};
-    --col-b2: #{color.mix($darker, black)};
+html.theme-dark {
+    color-scheme: dark;
 }
-
-html.theme-dark { @include darktheme; }
-@media (prefers-color-scheme: dark) {
-    html:not(.theme-light) { @include darktheme; }
+html.theme-light {
+    color-scheme: light;
 }
 
 @function myshadow($size: 1px) {
