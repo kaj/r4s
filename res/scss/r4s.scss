@@ -41,16 +41,32 @@ html.theme-light {
     color-scheme: light;
 }
 
+@media (prefers-contrast: more) {
+    :root {
+        --col-f: CanvasText;
+        --col-b: canvas;
+        --col-fh: light-dark(#{$darker}, #{color.mix(wheat, white)});
+        --col-fl: light-dark(#{color.mix($dark, blue)}, #{color.mix($purple, color.mix(blue, white, 20%), 20%)});
+        --col-fv: light-dark(#{$dark}, #{color.mix($purple, white, 20%)});
+        --col-bt: rgba(from canvas r g b/0.9);
+    }
+}
+
 @function myshadow($size: 1px) {
     @return 0 0 $size var(--col-fh), calc($size / 2) $size calc($size * 2) var(--col-fh);
 }
 
+@media not (prefers-contrast: more) {
+    body {
+        background:
+            linear-gradient(166deg, var(--col-b0) 10em, var(--col-flare) 17em, var(--col-b0) 40em),
+            linear-gradient(90deg, var(--col-b1), var(--col-b) 40%, var(--col-b) 80%, var(--col-b2));
+        background-color: var(--col-b);
+        color: var(--col-f);
+    }
+}
+
 body {
-    background:
-        linear-gradient(166deg, var(--col-b0) 10em, var(--col-flare) 17em, var(--col-b0) 40em),
-        linear-gradient(90deg, var(--col-b1), var(--col-b) 40%, var(--col-b) 80%, var(--col-b2));
-    background-color: var(--col-b);
-    color: var(--col-f);
     font-family: serif;
     font-variant: oldstyle-nums;
     line-height: 1.4;
