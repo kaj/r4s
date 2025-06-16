@@ -6,7 +6,7 @@ mod summary;
 
 use self::markdown::{Body, ContentParser, Ctx};
 use crate::dbopt::DbOpt;
-use crate::models::year_of_date;
+use crate::models::{year_of_date, MyLang};
 use crate::schema::assets::dsl as a;
 use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
@@ -117,7 +117,7 @@ impl Loader {
             .context("No language in file name")?;
         let contents = read_to_string(path)?;
 
-        let ctx = Ctx::new(&contents, slug, lang);
+        let ctx = Ctx::new(&contents, slug, lang.parse()?);
         let post_src = ctx.parser()?;
 
         if post_src.meta().is_meta {
@@ -456,11 +456,11 @@ fn link_data(
     text: &str,
     attr_0: &str,
     attrs: &str,
-    lang: &str,
+    lang: MyLang,
 ) -> Option<(String, String)> {
     match kind {
         "personname" | "wp" => {
-            let lang = if attr_0.is_empty() { lang } else { attr_0 };
+            let lang = attr_0.parse().unwrap_or(lang); //  .is_empty() { lang } else { attr_0 };
             Some(wikilink(text, lang, attrs))
         }
         "sw" => Some((
@@ -485,7 +485,7 @@ fn link_data(
     }
 }
 
-fn wikilink(text: &str, lang: &str, disambig: &str) -> (String, String) {
+fn wikilink(text: &str, lang: MyLang, disambig: &str) -> (String, String) {
     let t = if disambig.is_empty() {
         text.to_string()
     } else {
@@ -574,7 +574,7 @@ fn has_changed(old: &str, new: &str) -> bool {
 struct PageRef {
     year: i16,
     slug: String,
-    lang: String,
+    lang: MyLang,
 }
 
 impl fmt::Display for PageRef {

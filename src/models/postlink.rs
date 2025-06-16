@@ -1,4 +1,4 @@
-use super::{year_of_date, Slug};
+use super::{year_of_date, MyLang, Slug};
 use crate::schema::posts;
 use diesel::helper_types::{AsSelect, Select};
 use diesel::pg::Pg;
@@ -11,7 +11,7 @@ pub struct PostLink {
     #[diesel(select_expression = year_of_date(posts::posted_at))]
     pub year: i16,
     pub slug: Slug,
-    pub lang: String,
+    pub lang: MyLang,
     pub title: String,
 }
 

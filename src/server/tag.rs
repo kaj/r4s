@@ -1,14 +1,13 @@
-use std::collections::BTreeMap;
-
 use super::templates::{self, RenderRucte};
-use super::{goh, response, App, MyLang, Result, SlugAndLang, ViewError};
-use crate::models::{Tag, Teaser};
+use super::{goh, response, App, Result, SlugAndLang, ViewError};
+use crate::models::{MyLang, Tag, Teaser};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use i18n_embed_fl::fl;
+use std::collections::BTreeMap;
 use tracing::instrument;
 use warp::filters::BoxedFilter;
 use warp::path::{end, param};
@@ -50,14 +49,14 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
         .map(|(tag, j)| (tag, j, counts.get(&j).copied().unwrap_or_default()))
         .collect::<Vec<_>>();
 
-    let fluent = lang.fluent()?;
+    let fluent = lang.fluent();
     let other_langs = lang.other(|_, lang, name| {
         format!(
             "<a href='/tag/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
         )});
 
     Ok(response()
-        .html(|o| templates::tags_html(o, &fluent, &tags, &other_langs))?)
+        .html(|o| templates::tags_html(o, fluent, &tags, &other_langs))?)
 }
 
 #[instrument]
@@ -70,7 +69,7 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
 
     let posts = Teaser::tagged(tag.id, lang.as_ref(), 50, &mut db).await?;
 
-    let fluent = lang.fluent()?;
+    let fluent = lang.fluent();
     let h1 = fl!(fluent, "posts-tagged", tag = tag.name);
     let other_langs = lang.other(|_, lang, name| {
         format!(
@@ -82,7 +81,7 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
     Ok(response().html(|o| {
         templates::posts_html(
             o,
-            &fluent,
+            fluent,
             &h1,
             Some(&feed),
             &posts,

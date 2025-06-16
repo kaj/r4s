@@ -1,4 +1,5 @@
 use super::Loader;
+use crate::models::MyLang;
 use crate::syntax_hl::ClassedHTMLGenerator;
 use crate::syntax_hl::LinesWithEndings;
 use anyhow::{bail, Result};
@@ -25,7 +26,7 @@ impl<'a> DynBlock<'a> {
         fence: Option<&'a str>,
         loader: &'a mut Loader,
         year: i16,
-        lang: &'a str,
+        lang: MyLang,
     ) -> Result<DynBlock<'a>> {
         match fence.and_then(|l| {
             l.strip_prefix('!')
@@ -167,7 +168,7 @@ pub struct EmbedHandler<'a> {
     data: String,
     loader: &'a mut Loader,
     year: i16,
-    lang: &'a str,
+    lang: MyLang,
 }
 
 impl<'a> EmbedHandler<'a> {
@@ -175,7 +176,7 @@ impl<'a> EmbedHandler<'a> {
         out: &'a mut String,
         loader: &'a mut Loader,
         year: i16,
-        lang: &'a str,
+        lang: MyLang,
     ) -> Self {
         EmbedHandler {
             out,
@@ -217,7 +218,7 @@ impl BlockHandler for EmbedHandler<'_> {
                 &img.0,
                 &img.1,
             )?;
-            let notice = if self.lang == "sv" {
+            let notice = if self.lang == MyLang::Sv {
                 "Om du klickar Play bäddas en youtube\u{AD}video in. \
                  Det ger youtube möjlighet att spåra dig."
             } else {

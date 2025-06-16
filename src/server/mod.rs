@@ -7,12 +7,13 @@ mod prelude;
 mod tag;
 
 use self::error::{ViewError, ViewResult};
-use self::language::{AcceptLang, MyLang};
+use self::language::AcceptLang;
 use self::prelude::*;
 use self::templates::RenderRucte;
 use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{
-    year_of_date, Comment, FullPost, PostComment, PostTag, Slug, Tag, Teaser,
+    year_of_date, Comment, FullPost, MyLang, PostComment, PostTag, Slug, Tag,
+    Teaser,
 };
 use crate::schema::comments::dsl as c;
 use crate::schema::metapages::dsl as m;
@@ -249,7 +250,6 @@ fn common_headers() -> anyhow::Result<HeaderMap> {
 async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     let mut db = app.db().await?;
     let limit = 5;
-    let langc = lang.clone();
     let posts = Teaser::recent(lang.as_ref(), limit, &mut db).await?;
 
     let comments = PostComment::recent(&mut db).await?;
@@ -262,8 +262,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
         .load(&mut db)
         .await?;
 
-    let fluent = langc.fluent()?;
-    let other_langs = langc.other(|_, lang, name| {
+    let other_langs = lang.other(|_, lang, name| {
         format!(
             "<a href='/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
         )});
@@ -271,7 +270,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     Ok(response().html(|o| {
         templates::frontpage_html(
             o,
-            &fluent,
+            lang.fluent(),
             &posts,
             &comments,
             &years,
@@ -291,7 +290,7 @@ impl FromStr for SlugAndLang {
         let (slug, lang) = s.split_once('.').ok_or(())?;
         Ok(SlugAndLang {
             slug: slug.parse()?,
-            lang: lang.parse()?,
+            lang: lang.parse().map_err(|_| ())?,
         })
     }
 }
@@ -299,7 +298,6 @@ impl FromStr for SlugAndLang {
 #[instrument]
 async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
     let mut db = app.db().await?;
-    let langc = lang.clone();
     let posts = Teaser::for_year(year, lang.as_ref(), &mut db).await?;
     if posts.is_empty() {
         return Err(ViewError::NotFound);
@@ -313,9 +311,9 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
         .load(&mut db)
         .await?;
 
-    let fluent = langc.fluent()?;
+    let fluent = lang.fluent();
     let h1 = fl!(fluent, "posts-year", year = year);
-    let other_langs = langc.other(|_, lang, name| {
+    let other_langs = lang.other(|_, lang, name| {
         format!(
             "<a href='/{year}/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
         )});
@@ -323,7 +321,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
     Ok(response().html(|o| {
         templates::posts_html(
             o,
-            &fluent,
+            fluent,
             &h1,
             None,
             &posts,
@@ -343,18 +341,18 @@ async fn page(
     use crate::models::{has_lang, PostLink};
     use diesel::dsl::not;
     let mut db = app.db().await?;
-    let fluent = slug.lang.fluent()?;
+    let fluent = slug.lang.fluent();
     let s1 = slug.clone();
     let other_langs = p::posts
         .select((p::lang, p::title))
         .filter(year_of_date(p::posted_at).eq(&year))
         .filter(p::slug.eq(s1.slug.as_ref()))
         .filter(p::lang.ne(s1.lang.as_ref()))
-        .load::<(String, String)>(&mut db)
+        .load::<(MyLang, String)>(&mut db)
         .await?
         .into_iter()
         .map(|(lang, title)| {
-            let fluent = language::load(&lang).unwrap();
+            let fluent = lang.fluent();
             let name = fl!(fluent, "lang-name");
             let title = fl!(fluent, "in-lang", title=title);
 
@@ -395,7 +393,7 @@ async fn page(
 
     let tag_ids = tags.iter().map(|t| t.id).collect::<Vec<_>>();
 
-    let lang = &post.lang;
+    let lang = post.lang.as_ref();
     let p_year = year_of_date(p::posted_at);
     let related = PostLink::all()
         .group_by(p::id)
@@ -421,7 +419,7 @@ async fn page(
         .html(|o| {
             templates::post_html(
                 o,
-                &fluent,
+                fluent,
                 &url,
                 &post,
                 &tags,
@@ -463,17 +461,17 @@ async fn page_fallback(
 #[instrument]
 async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
     let mut db = app.db().await?;
-    let fluent = slug.lang.fluent()?;
+    let fluent = slug.lang.fluent();
     let s1 = slug.clone();
     let other_langs = m::metapages
         .select((m::lang, m::title))
         .filter(m::slug.eq(s1.slug.as_ref()))
         .filter(m::lang.ne(s1.lang.as_ref()))
-        .load::<(String, String)>(&mut db)
+        .load::<(MyLang, String)>(&mut db)
         .await?
         .into_iter()
-        .map(|(lang, title): (String, String)| {
-            let fluent = language::load(&lang).unwrap();
+        .map(|(lang, title)| {
+            let fluent = lang.fluent();
             let name = fl!(fluent, "lang-name");
             let title = fl!(fluent, "in-lang", title=title);
 
@@ -494,7 +492,7 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         .ok_or(ViewError::NotFound)?;
 
     Ok(response().html(|o| {
-        templates::page_html(o, &fluent, &title, &content, &other_langs)
+        templates::page_html(o, fluent, &title, &content, &other_langs)
     })?)
 }
 

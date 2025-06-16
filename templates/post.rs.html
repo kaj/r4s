@@ -22,7 +22,7 @@
     @:header_html(fluent, other_langs)
     <main>
       <h1>@Html(&post.title)</h1>
-      <p class="publine">@Html(post.publine(fluent, tags))</p>
+      <p class="publine">@Html(post.publine(tags))</p>
       @if let Some(age) = post.updated_at.old_age() {
         <div class="publine oldpost">@fl!(fluent, "old-post-pub", age=age)</div>
       }

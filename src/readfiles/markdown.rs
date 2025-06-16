@@ -1,7 +1,7 @@
 //! Handle reading of markdown content.
 use super::{fa_link, html, link_data, summary, PageRef, UpdateInfo};
 use super::{DateTime, Loader};
-use crate::server::language;
+use crate::models::MyLang;
 use anyhow::{anyhow, bail, Context, Result};
 use chrono::{Datelike, Local};
 use i18n_embed_fl::fl;
@@ -18,11 +18,11 @@ use tracing::{debug, info, warn};
 pub struct Ctx<'a> {
     markdown: &'a str,
     slug: &'a str,
-    lang: &'a str,
+    lang: MyLang,
     files: OnceCell<Vec<(String, String)>>,
 }
 impl<'a> Ctx<'a> {
-    pub fn new(markdown: &'a str, slug: &'a str, lang: &'a str) -> Self {
+    pub fn new(markdown: &'a str, slug: &'a str, lang: MyLang) -> Self {
         Ctx {
             markdown,
             slug,
@@ -270,7 +270,7 @@ impl Body {
                 let mut teaser_extra = String::new();
                 let extra_teaser = match &data.meta.update {
                     Some(update) if !update.info.is_empty() => {
-                        let fluent = language::load(&url.lang).unwrap();
+                        let fluent = url.lang.fluent();
                         teaser_extra.push_str("\n\n**");
                         teaser_extra.push_str(&fl!(
                             fluent,
@@ -497,7 +497,7 @@ where
 fn link_ext(
     link: &BrokenLink,
     source: &str,
-    lang: &str,
+    lang: MyLang,
 ) -> Option<(String, String)> {
     let (_all, text, kind, _, attr_0, _, attrs) = regex_captures!(
         r"^\[(.*)\]\[(\w+)(:(\w+))?([,\s]+(.*))?\]$"s,
