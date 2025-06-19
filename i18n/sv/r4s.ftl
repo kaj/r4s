@@ -61,3 +61,6 @@ read-more-comments = Läs hela <q>{ $title }</q> med { $n } kommentarer.
 read-more = Läs hela <q>{ $title }</q>.
 read-comments = Läs { $n } kommentarer.
 comment-first = Bli först att kommentera.
+
+consent-youtube = Om du klickar Play bäddas en youtube­video in.
+    Det ger youtube möjlighet att spåra dig.
