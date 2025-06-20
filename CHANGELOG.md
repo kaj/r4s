@@ -14,6 +14,8 @@ project more or less adheres to
   reasonably new posts.
 * Remove the metadata fallback from 0.4.0, now "fenced yaml" is the
   only supported metadata format.
+* More efficient language handling, using enum `MyLang` rather than a
+  `String` and loding the fluent data only once for each language (PR #10).
 * Added a `fediverse:creator` meta tag.
 
 

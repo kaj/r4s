@@ -28,12 +28,12 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
     };
 
     let fluent = args.lang.fluent();
-    let lang = args.lang.to_string();
+    let lang = args.lang.as_ref();
     let tag_id = tag.as_ref().map(|t| t.id);
     let posts = if let Some(tag_id) = tag_id {
-        Teaser::tagged(tag_id, &lang, 10, &mut db).await?
+        Teaser::tagged(tag_id, lang, 10, &mut db).await?
     } else {
-        Teaser::recent(&lang, 10, &mut db).await?
+        Teaser::recent(lang, 10, &mut db).await?
     };
 
     let feed = FeedBuilder::default()

@@ -460,7 +460,11 @@ fn link_data(
 ) -> Option<(String, String)> {
     match kind {
         "personname" | "wp" => {
-            let lang = attr_0.parse().unwrap_or(lang); //  .is_empty() { lang } else { attr_0 };
+            let lang = if attr_0.is_empty() {
+                lang.as_ref()
+            } else {
+                attr_0
+            };
             Some(wikilink(text, lang, attrs))
         }
         "sw" => Some((
@@ -485,7 +489,8 @@ fn link_data(
     }
 }
 
-fn wikilink(text: &str, lang: MyLang, disambig: &str) -> (String, String) {
+// Note: The language here may be other than the "supported" languages.
+fn wikilink(text: &str, lang: &str, disambig: &str) -> (String, String) {
     let t = if disambig.is_empty() {
         text.to_string()
     } else {
