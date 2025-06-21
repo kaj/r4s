@@ -1,11 +1,14 @@
 use super::error::ViewError;
 use super::Result;
+use crate::models::MyLang;
 use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
 use i18n_embed::LanguageLoader;
 use i18n_embed_fl::fl;
 use rust_embed::RustEmbed;
-use std::fmt::{self, Display};
 use std::str::FromStr;
+use std::sync::LazyLock;
+use std::time::Instant;
+use tracing::info;
 
 #[derive(RustEmbed)]
 #[folder = "i18n/"]
@@ -14,7 +17,8 @@ struct Localizations;
 static MYLANGS: [MyLang; 2] = [MyLang::En, MyLang::Sv];
 
 #[tracing::instrument]
-pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
+fn load(lang: &str) -> Result<FluentLanguageLoader> {
+    let start = Instant::now();
     let lang = lang.parse().map_err(|e| {
         tracing::error!("Bad language: {}", e);
         ViewError::BadRequest("Bad language".into())
@@ -30,58 +34,36 @@ pub fn load(lang: &str) -> Result<FluentLanguageLoader> {
             ViewError::BadRequest("Unknown language".into())
         })?;
     loader.set_use_isolating(false);
+    info!("Loaded lang in {:?}", start.elapsed());
     Ok(loader)
 }
 
-/// Either "sv" or "en".
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub enum MyLang {
-    #[default]
-    En,
-    Sv,
-}
+static SV: LazyLock<FluentLanguageLoader> =
+    LazyLock::new(|| load(MyLang::Sv.as_ref()).unwrap());
+static EN: LazyLock<FluentLanguageLoader> =
+    LazyLock::new(|| load(MyLang::En.as_ref()).unwrap());
 
 impl MyLang {
     #[tracing::instrument]
-    pub fn fluent(&self) -> Result<FluentLanguageLoader> {
-        load(self.as_ref())
+    pub fn fluent(&self) -> &'static FluentLanguageLoader {
+        match self {
+            MyLang::En => &*EN,
+            MyLang::Sv => &*SV,
+        }
     }
     pub fn other(
         &self,
-        fmt: impl Fn(FluentLanguageLoader, &str, &str) -> String,
+        fmt: impl Fn(&FluentLanguageLoader, &str, &str) -> String,
     ) -> Vec<String> {
         MYLANGS
             .iter()
             .filter(|&lang| lang != self)
             .map(|lang| {
-                let fluent = lang.fluent().unwrap();
+                let fluent = lang.fluent();
                 let name = fl!(fluent, "lang-name");
                 fmt(fluent, lang.as_ref(), &name)
             })
             .collect()
-    }
-}
-impl FromStr for MyLang {
-    type Err = ();
-    fn from_str(value: &str) -> Result<Self, ()> {
-        match value {
-            "en" => Ok(MyLang::En),
-            "sv" => Ok(MyLang::Sv),
-            _ => Err(()),
-        }
-    }
-}
-impl AsRef<str> for MyLang {
-    fn as_ref(&self) -> &str {
-        match self {
-            MyLang::En => "en",
-            MyLang::Sv => "sv",
-        }
-    }
-}
-impl Display for MyLang {
-    fn fmt(&self, out: &mut fmt::Formatter) -> fmt::Result {
-        self.as_ref().fmt(out)
     }
 }
 

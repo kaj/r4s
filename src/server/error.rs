@@ -1,5 +1,6 @@
+use super::response;
 use super::templates::{self, RenderError, RenderRucte};
-use super::{language, response};
+use crate::models::MyLang;
 use diesel_async::pooled_connection::deadpool::PoolError;
 use tracing::{event, Level};
 use warp::http::status::StatusCode;
@@ -66,10 +67,10 @@ impl Reply for ViewError {
 }
 
 fn error_response(code: StatusCode, message: &str, detail: &str) -> Response {
-    let fluent = language::load("en").unwrap();
+    let fluent = MyLang::default().fluent();
     response()
         .status(code)
-        .html(|o| templates::error_html(o, &fluent, code, message, detail))
+        .html(|o| templates::error_html(o, fluent, code, message, detail))
         .unwrap()
 }
 

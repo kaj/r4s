@@ -72,7 +72,7 @@ pub(super) fn collect<'a>(
                     fence,
                     loader,
                     url.year,
-                    &url.lang,
+                    url.lang,
                 )?;
                 for event in &mut data {
                     match event {

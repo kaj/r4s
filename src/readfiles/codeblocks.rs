@@ -1,8 +1,10 @@
 use super::Loader;
+use crate::models::MyLang;
 use crate::syntax_hl::ClassedHTMLGenerator;
 use crate::syntax_hl::LinesWithEndings;
 use anyhow::{bail, Result};
 use base64::prelude::*;
+use i18n_embed_fl::fl;
 use pulldown_cmark_escape::escape_html;
 use qr_code::QrCode;
 use serde::Deserialize;
@@ -25,7 +27,7 @@ impl<'a> DynBlock<'a> {
         fence: Option<&'a str>,
         loader: &'a mut Loader,
         year: i16,
-        lang: &'a str,
+        lang: MyLang,
     ) -> Result<DynBlock<'a>> {
         match fence.and_then(|l| {
             l.strip_prefix('!')
@@ -167,7 +169,7 @@ pub struct EmbedHandler<'a> {
     data: String,
     loader: &'a mut Loader,
     year: i16,
-    lang: &'a str,
+    lang: MyLang,
 }
 
 impl<'a> EmbedHandler<'a> {
@@ -175,7 +177,7 @@ impl<'a> EmbedHandler<'a> {
         out: &'a mut String,
         loader: &'a mut Loader,
         year: i16,
-        lang: &'a str,
+        lang: MyLang,
     ) -> Self {
         EmbedHandler {
             out,
@@ -217,13 +219,7 @@ impl BlockHandler for EmbedHandler<'_> {
                 &img.0,
                 &img.1,
             )?;
-            let notice = if self.lang == "sv" {
-                "Om du klickar Play bäddas en youtube\u{AD}video in. \
-                 Det ger youtube möjlighet att spåra dig."
-            } else {
-                "Klicking play embedds a youtube video. \
-                 That makes it possible for youtube to track you."
-            };
+            let notice = fl!(self.lang.fluent(), "consent-youtube");
             writeln!(
                 self.out,
                 "<figure id='{id}' class='wrapiframe' \

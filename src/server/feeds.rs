@@ -1,6 +1,6 @@
 use super::error::{ViewError, ViewResult};
-use super::{fl, response, App, MyLang, Result};
-use crate::models::{Slug, Tag, Teaser};
+use super::{fl, response, App, Result};
+use crate::models::{MyLang, Slug, Tag, Teaser};
 use atom_syndication::*;
 use std::str::FromStr;
 use tracing::instrument;
@@ -27,13 +27,13 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
         None
     };
 
-    let fluent = args.lang.fluent()?;
-    let lang = args.lang.to_string();
+    let fluent = args.lang.fluent();
+    let lang = args.lang.as_ref();
     let tag_id = tag.as_ref().map(|t| t.id);
     let posts = if let Some(tag_id) = tag_id {
-        Teaser::tagged(tag_id, &lang, 10, &mut db).await?
+        Teaser::tagged(tag_id, lang, 10, &mut db).await?
     } else {
-        Teaser::recent(&lang, 10, &mut db).await?
+        Teaser::recent(lang, 10, &mut db).await?
     };
 
     let feed = FeedBuilder::default()

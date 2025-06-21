@@ -61,3 +61,6 @@ read-more-comments = Read whole <q>{ $title }</q> with { $n } comments.
 read-more = Read whole <q>{ $title }</q>.
 read-comments = Read { $n } comments.
 comment-first = Be the first to comment.
+
+consent-youtube = Klicking play embedds a youtube video.
+    That makes it possible for youtube to track you.

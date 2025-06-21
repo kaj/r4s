@@ -163,13 +163,10 @@ impl Teaser {
     }
 
     pub fn publine(&self) -> String {
-        // TODO: Take the fluent as an argument instead?
-        let lang = crate::server::language::load(&self.lang).unwrap();
-        self.post.publine(&lang, &self.tags)
+        self.post.publine(&self.tags)
     }
     pub fn readmore(&self) -> String {
-        // TODO: Take the fluent as an argument instead?
-        let lang = crate::server::language::load(&self.lang).unwrap();
+        let lang = self.lang.fluent();
         match (self.is_more, self.n_comments > 0) {
             (true, true) => fl!(
                 lang,
