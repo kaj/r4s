@@ -1,0 +1,148 @@
+pre code i { font-style: inherit; }
+
+// 0 "attribute",
+// 1 "constant",
+// 2 "function.builtin",
+// 3 "function",
+// 4 "keyword",
+// 5 "operator",
+// 6 "property",
+// 7 "punctuation",
+// 8 "punctuation.bracket",
+// 9 "punctuation.delimiter",
+// 10 "string",
+// 11 "string.special",
+// 12 "tag",
+// 13 "type",
+// 14 "type.builtin",
+// 15 "variable",
+// 16 "variable.builtin",
+// 17 "variable.parameter",
+// 18 "comment",
+.hh18 {
+    font-style: italic;
+}
+// 19 "macro",
+// 20 "label",
+// 21 "diff.addition",
+// 22 "diff.deletion",
+// markdown_inline
+// 23 "number",
+// 24 "text.literal",
+// 25 "text.emphasis",
+// 26 "text.strong",
+// 27 "text.uri",
+// 28 "text.reference",
+// 29 "string.escape",
+// markdown
+// 30 "text.title",
+// 31 "punctuation.special",
+// 32 "text.strikethrough",
+
+
+
+
+i.hh1,
+i.hh23 {
+  color:var(--peach)
+}
+i.hh3 {
+  color:var(--sapphire)
+}
+i.hh4,
+i.hh2 {
+  color:var(--mauve);
+  font-weight:120;
+}
+i.hh5 {
+  color:var(--sky)
+}
+i.hh6 {
+  color:var(--teal)
+}
+i.hh10,
+i.hh11 {
+  color:var(--green)
+}
+i.hh13,
+i.hh14 {
+  color:var(--yellow)
+}
+i.hh15 {
+  color:var(--text)
+}
+i.hh16 {
+  color:var(--red)
+}
+i.hh17 {
+  color:var(--maroon)
+}
+i.hh18,
+i.hh7 {
+  color:var(--subtext1)
+}
+i.hh9,
+i.hh8 {
+  color:var(--lavender)
+}
+i.hh20 {
+  color:var(--flamingo)
+}
+i.hh21 {
+  color:var(--green)
+}
+i.hh22 {
+  color:var(--red)
+}
+i.hh23 {
+  color:var(--peach)
+}
+i.hh24 {
+  color:var(--text)
+}
+i.hh25 {
+  font-style:italic
+}
+i.hh26 {
+  font-weight:700
+}
+i.hh27 {
+  color:var(--rosewater);
+  text-decoration:underline
+}
+i.hh28 {
+  color:var(--lavender)
+}
+i.hh29 {
+  color:var(--pink)
+}
+i.hh30 {
+  color:var(--sky);
+  font-weight:700
+}
+i.hh31 {
+  font-weight:700
+}
+i.hh32 {
+  text-decoration:line-through
+}
+
+:root {
+    --rosewater: light-dark(#dc8a78, #f5e0dc);
+    --flamingo: light-dark(#dd7878, #f2cdcd);
+    --pink: light-dark(#ea76cb, #f5c2e7);
+    --mauve: light-dark(#8839ef, #cba6f7);
+    --red: light-dark(#d20f39, #f38ba8);
+    --maroon: light-dark(#e64553, #eba0ac);
+    --peach: light-dark(#fe640b, #fab387);
+    --yellow: light-dark(#df8e1d, #f9e2af);
+    --green: light-dark(#40a02b, #a6e3a1);
+    --teal: light-dark(#179299, #94e2d5);
+    --sky: light-dark(#04a5e5, #89dceb);
+    --sapphire: light-dark(#209fb5, #74c7ec);
+    --blue: light-dark(#1e66f5, #89b4fa);
+    --lavender: light-dark(#7287fd, #b4befe);
+    --text: light-dark(#4c4f69, #cdd6f4);
+    --subtext1: light-dark(#5c5f77, #bac2de);
+    --surface1: light-dark(#bcc0cc, #45475a);
+}
