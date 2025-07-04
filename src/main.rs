@@ -1,7 +1,5 @@
 //! An example web service using ructe with the warp framework.
 #![forbid(unsafe_code)]
-#[macro_use]
-extern crate diesel;
 
 mod dbopt;
 mod listposts;

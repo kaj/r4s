@@ -1,5 +1,6 @@
 use super::{DateTime, MyLang, Slug, Tag};
 use crate::schema::posts;
+use diesel::{Identifiable, Queryable};
 use i18n_embed_fl::fl;
 
 #[derive(Debug, Queryable, Identifiable)]

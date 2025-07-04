@@ -1,5 +1,5 @@
 use diesel::backend::Backend;
-use diesel::deserialize::FromSql;
+use diesel::deserialize::{FromSql, FromSqlRow};
 use diesel::pg::Pg;
 use diesel::sql_types::Text;
 use std::str::FromStr;

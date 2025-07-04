@@ -1,3 +1,4 @@
+use diesel::define_sql_function;
 use diesel::sql_types::{Smallint, Timestamptz, Varchar};
 
 mod comment;
