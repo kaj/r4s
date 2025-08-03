@@ -23,6 +23,7 @@ fn main() -> Result<()> {
         Err(e) => return Err(e).context("Failed to read .env"),
     }
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
         .with_env_filter(
             std::env::var("RUST_LOG").as_deref().unwrap_or("info"),
         )
