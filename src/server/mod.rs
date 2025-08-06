@@ -20,6 +20,7 @@ use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::PubBaseOpt;
+use anyhow::Context as _;
 use clap::Parser;
 use csrf::{AesGcmCsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
 use diesel::associations::HasTable;
@@ -34,6 +35,7 @@ use std::net::SocketAddr;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
+use tokio::net::TcpListener;
 use tracing::{info, instrument, warn};
 use warp::filters::BoxedFilter;
 use warp::http::header::SET_COOKIE;
@@ -72,10 +74,6 @@ impl Args {
     pub async fn run(self) -> Result<(), anyhow::Error> {
         use warp::path::{end, param, path};
         use warp::query;
-        let quit_sig = async {
-            _ = tokio::signal::ctrl_c().await;
-            warn!("Initiating graceful shutdown");
-        };
         let app = AppData::new(&self)?;
         let s = warp::any().map(move || app.clone()).boxed();
         let s = move || s.clone();
@@ -155,14 +153,32 @@ impl Args {
 
         let server = routes
             .with(warp::reply::with::headers(common_headers()?))
-            .recover(error::for_rejection)
-            .boxed();
-        let (addr, future) = warp::serve(server)
-            .try_bind_with_graceful_shutdown(self.bind, quit_sig)?;
-        info!("Running on http://{addr}/");
-        future.await;
+            .recover(error::for_rejection);
+        let acceptor = TcpListener::bind(self.bind)
+            .await
+            .with_context(|| format!("Failed to bind {}", self.bind))?;
+        if let Ok(addr) = acceptor.local_addr() {
+            info!("Running on http://{addr}/");
+        }
+        warp::serve(server)
+            .incoming(acceptor)
+            .graceful(quit_sig())
+            .run()
+            .await;
         Ok(())
     }
+}
+
+async fn quit_sig() {
+    use tokio::signal::{ctrl_c, unix};
+    let mut sigterm = unix::signal(unix::SignalKind::terminate()).unwrap();
+    let mut sighup = unix::signal(unix::SignalKind::hangup()).unwrap();
+    let signal = tokio::select!(
+        _ = ctrl_c() => "ctrl-c",
+        _ = sighup.recv() => "sighup",
+        _ = sigterm.recv() => "sigterm",
+    );
+    warn!(%signal, "Initiating graceful shutdown");
 }
 
 pub struct AppData {
