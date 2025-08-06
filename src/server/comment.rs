@@ -9,11 +9,10 @@ use diesel_async::RunQueryDsl;
 use ipnetwork::IpNetwork;
 use reqwest::Url;
 use serde::Deserialize;
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr};
 use tracing::instrument;
-use warp::filters::{addr, cookie, header, BoxedFilter};
+use warp::filters::{cookie, header, BoxedFilter};
 use warp::path::end;
-use warp::reject::{reject, Rejection};
 use warp::{self, body, post, Filter, Reply};
 
 pub fn route(
@@ -134,10 +133,11 @@ fn remote_addr_filter(proxied: bool) -> BoxedFilter<(IpAddr,)> {
     if proxied {
         header::header("x-forwarded-for").boxed()
     } else {
-        addr::remote().and_then(sa2ip).boxed()
+        warp::filters::any::any()
+            .map(|| {
+                tracing::warn!("Executed remote_addr_filter without proxy.");
+                IpAddr::from(Ipv4Addr::from([127, 0, 0, 1]))
+            })
+            .boxed()
     }
-}
-
-async fn sa2ip(sockaddr: Option<SocketAddr>) -> Result<IpAddr, Rejection> {
-    sockaddr.map(|s| s.ip()).ok_or_else(reject)
 }

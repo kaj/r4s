@@ -26,17 +26,18 @@ use diesel::associations::HasTable;
 use diesel::dsl::count;
 use diesel::prelude::*;
 use diesel::BelongingToDsl;
-use diesel_async::pooled_connection::deadpool::PoolError;
+use diesel_async::pooled_connection::deadpool::{BuildError, PoolError};
 use diesel_async::RunQueryDsl;
-use reqwest::header::{HeaderMap, CONTENT_SECURITY_POLICY, SERVER};
+use reqwest::header::{HeaderMap, InvalidHeaderName, InvalidHeaderValue};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
+use tokio::net::TcpListener;
 use tracing::{info, instrument, warn};
 use warp::filters::BoxedFilter;
-use warp::http::header::SET_COOKIE;
+use warp::http::header::{CONTENT_SECURITY_POLICY, SERVER, SET_COOKIE};
 use warp::http::response::Builder;
 use warp::http::Uri;
 use warp::reply::Response;
@@ -69,13 +70,9 @@ pub struct Args {
 }
 
 impl Args {
-    pub async fn run(self) -> Result<(), anyhow::Error> {
+    pub async fn run(self) -> anyhow::Result<()> {
         use warp::path::{end, param, path};
         use warp::query;
-        let quit_sig = async {
-            _ = tokio::signal::ctrl_c().await;
-            warn!("Initiating graceful shutdown");
-        };
         let app = AppData::new(&self)?;
         let s = warp::any().map(move || app.clone()).boxed();
         let s = move || s.clone();
@@ -155,14 +152,42 @@ impl Args {
 
         let server = routes
             .with(warp::reply::with::headers(common_headers()?))
-            .recover(error::for_rejection)
-            .boxed();
-        let (addr, future) = warp::serve(server)
-            .try_bind_with_graceful_shutdown(self.bind, quit_sig)?;
-        info!("Running on http://{addr}/");
-        future.await;
+            .recover(error::for_rejection);
+        let acceptor = TcpListener::bind(self.bind)
+            .await
+            .map_err(|e| FatalError::Bind(self.bind, e))?;
+        if let Ok(addr) = acceptor.local_addr() {
+            info!("Running on http://{addr}/");
+        }
+        warp::serve(server)
+            .incoming(acceptor)
+            .graceful(quit_sig())
+            .run()
+            .await;
         Ok(())
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum FatalError {
+    #[error("Failed to setup headers: {0}")]
+    BadHeader(#[from] BadHeader),
+    #[error("Failed to create database pool: {0}")]
+    DataPool(#[from] BuildError),
+    #[error("Failed to bind {0}: {1:?}")]
+    Bind(SocketAddr, std::io::Error),
+}
+
+async fn quit_sig() {
+    use tokio::signal::{ctrl_c, unix};
+    let mut sigterm = unix::signal(unix::SignalKind::terminate()).unwrap();
+    let mut sighup = unix::signal(unix::SignalKind::hangup()).unwrap();
+    let signal = tokio::select!(
+        _ = ctrl_c() => "ctrl-c",
+        _ = sighup.recv() => "sighup",
+        _ = sigterm.recv() => "sigterm",
+    );
+    warn!(%signal, "Initiating graceful shutdown");
 }
 
 pub struct AppData {
@@ -180,7 +205,7 @@ impl std::fmt::Debug for AppData {
 }
 
 impl AppData {
-    fn new(args: &Args) -> Result<App, anyhow::Error> {
+    fn new(args: &Args) -> Result<App, BuildError> {
         Ok(Arc::new(AppData {
             pool: args.db.build_pool()?,
             base: args.base.public_base.clone(),
@@ -227,7 +252,7 @@ fn response() -> Builder {
 }
 
 /// Create a map of common headers for all served responses.
-fn common_headers() -> anyhow::Result<HeaderMap> {
+fn common_headers() -> Result<HeaderMap, BadHeader> {
     // This method is only called once, when initiating the router, so
     // don't bother about performance here.
     Ok(HeaderMap::from_iter([
@@ -244,6 +269,14 @@ fn common_headers() -> anyhow::Result<HeaderMap> {
         ),
         ("x-clacks-overhead".parse()?, "GNU Terry Pratchett".parse()?),
     ]))
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum BadHeader {
+    #[error("Bad hedader name: {0}")]
+    Name(#[from] InvalidHeaderName),
+    #[error("Bad hedader value: {0}")]
+    Value(#[from] InvalidHeaderValue),
 }
 
 #[instrument]
@@ -546,15 +579,20 @@ struct CsrfSecret {
 }
 
 impl FromStr for CsrfSecret {
-    type Err = anyhow::Error;
+    type Err = BadLengthSecret;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(CsrfSecret {
-            secret: s.as_bytes().try_into().map_err(|_| {
-                anyhow::anyhow!("Got {} bytes, expected 32", s.len())
-            })?,
+            secret: s
+                .as_bytes()
+                .try_into()
+                .map_err(|_| BadLengthSecret(s.len()))?,
         })
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("Bad CSRF secret, got {0} bytes, expected 32")]
+struct BadLengthSecret(usize);
 
 fn robots_txt() -> Result<Response> {
     use warp::http::header::CONTENT_TYPE;

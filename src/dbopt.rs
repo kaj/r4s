@@ -1,4 +1,3 @@
-use anyhow::Result;
 use clap::Parser;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -39,9 +38,10 @@ impl DbOpt {
 
     /// Get a database connection pool from the configured url.
     ///
-    /// Since this is mainly for the web server, the pooled connections are async.
-    pub fn build_pool(&self) -> Result<Pool> {
+    /// Since this is mainly for the web server, the pooled connections
+    /// are async.
+    pub fn build_pool(&self) -> Result<Pool, deadpool::BuildError> {
         let config = AsyncDieselConnectionManager::new(&self.db_url);
-        Ok(Pool::builder(config).max_size(20).build()?)
+        Pool::builder(config).max_size(20).build()
     }
 }
