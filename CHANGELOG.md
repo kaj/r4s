@@ -18,6 +18,7 @@ project more or less adheres to
   `String` and loding the fluent data only once for each language (PR #10).
 * Added a `fediverse:creator` meta tag.
 * Logs are written to stdout rather than stderr.
+* Some dependency updates.
 
 
 ## Release 0.4.2
