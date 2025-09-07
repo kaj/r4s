@@ -38,7 +38,7 @@ impl Comment {
     }
     /// Get a thing that implemnts [`ToHtml`] displaying the poster
     /// name of this comment, linked to the url if there is an url.
-    pub fn link_name(&self) -> LinkName {
+    pub fn link_name(&self) -> LinkName<'_> {
         LinkName(self)
     }
     pub fn name(&self) -> &str {

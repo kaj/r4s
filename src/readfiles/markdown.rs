@@ -31,7 +31,7 @@ impl<'a> Ctx<'a> {
         }
     }
 
-    pub fn parser(&self) -> Result<ContentParser> {
+    pub fn parser(&self) -> Result<ContentParser<'_>> {
         let mut items = Parser::new_with_broken_link_callback(
             self.markdown,
             Options::all(),

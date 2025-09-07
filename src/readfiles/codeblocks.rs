@@ -74,7 +74,7 @@ pub struct LeafletHandler<'a> {
 }
 
 impl LeafletHandler<'_> {
-    fn open(out: &mut String) -> LeafletHandler {
+    fn open(out: &mut String) -> LeafletHandler<'_> {
         out.push_str(r#"
 <div id="llmap">
 <p>There should be a map here.</p>

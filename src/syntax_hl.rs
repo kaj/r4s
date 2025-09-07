@@ -14,7 +14,7 @@ static SYNSET: LazyLock<SyntaxSet> =
     LazyLock::new(SyntaxSet::load_defaults_newlines);
 
 #[allow(unused)]
-pub fn for_lang(lang: &str) -> Option<ClassedHTMLGenerator> {
+pub fn for_lang(lang: &str) -> Option<ClassedHTMLGenerator<'_>> {
     let Some(sr) = SYNSET.find_syntax_by_token(lang) else {
         eprintln!("WARNING: Unknown language {lang:?}.  No highlighting for this block.");
         return None;
