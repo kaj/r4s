@@ -59,7 +59,7 @@ impl Queryable<Timestamptz, Pg> for DateTime {
         <chrono::DateTime<chrono::Utc> as Queryable<Timestamptz, Pg>>::Row;
     fn build(
         row: Self::Row,
-    ) -> Result<DateTime, Box<(dyn StdError + Send + Sync + 'static)>> {
+    ) -> Result<DateTime, Box<dyn StdError + Send + Sync + 'static>> {
         Ok(DateTime(chrono::DateTime::<chrono::Utc>::build(row)?))
     }
 }
