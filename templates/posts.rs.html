@@ -25,11 +25,6 @@
       </article>
       }
 
-      @if let Some((first, rest)) = years.split_first() {
-      <p>@fl!(fluent, "from-year")
-        <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
-        <a href="/@year/@fluent.current_language()">@year</a>}.</p>
-      }
     </main>
     @:me_box_html(fluent)
     @if let Some(feed) = feed {
@@ -37,6 +32,14 @@
       <h2>@fl!(fluent, "feed-h")</h2>
       <p>@fl!(fluent, "feed-pre")
       <a href="@feed" rel="alternate" type="application/atom+xml">@fl!(fluent, "feed-link")</a>.</p>
+    </aside>
+    }
+    @if let Some((first, rest)) = years.split_first() {
+    <aside>
+      <h2>@fl!(fluent, "from-year-h")</h2>
+      <p>@fl!(fluent, "from-year")
+        <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
+        <a href="/@year/@fluent.current_language()">@year</a>}.</p>
     </aside>
     }
     @:footer_html(fluent)

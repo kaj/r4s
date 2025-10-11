@@ -26,12 +26,6 @@
         <p class="readmore"><a href="@post.url()" rel="bookmark">@Html(post.readmore())</a></p>
       </article>
       }
-
-      @if let Some((first, rest)) = years.split_first() {
-      <p>@fl!(fluent, "from-year")
-        <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
-        <a href="/@year/@fluent.current_language()">@year</a>}.</p>
-      }
     </main>
     @:me_box_html(fluent)
     @if !comments.is_empty() {
@@ -45,6 +39,14 @@
         @c.text_start()
       </li>
       }</ul>
+    </aside>
+    }
+    @if let Some((first, rest)) = years.split_first() {
+    <aside>
+      <h2>@fl!(fluent, "from-year-h")</h2>
+      <p>@fl!(fluent, "from-year")
+        <a href="/@first/@fluent.current_language()">@first</a>@for year in rest {,
+        <a href="/@year/@fluent.current_language()">@year</a>}.</p>
     </aside>
     }
     @:footer_html(fluent)

@@ -1,5 +1,6 @@
 sitename = Rasmus​.krats​.se
 tagline = Reminiscing this and that, on the web since 1994.
+from-year-h = From other years
 from-year = Posts from year
 
 lang-name = This page in English

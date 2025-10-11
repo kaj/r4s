@@ -1,5 +1,6 @@
 sitename = Rasmus​.krats​.se
 tagline = Skriverier då och då, på webben sedan 1994.
+from-year-h = Från andra år
 from-year = Inlägg från år
 
 lang-name = Denna sida på svenska
