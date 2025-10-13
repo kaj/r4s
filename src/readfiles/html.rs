@@ -130,6 +130,7 @@ pub(super) fn collect<'a>(
                     }
                     Tag::List(None)
                     | Tag::Item
+                    | Tag::BlockQuote(None)
                     | Tag::DefinitionList
                     | Tag::DefinitionListTitle
                     | Tag::DefinitionListDefinition
@@ -137,6 +138,9 @@ pub(super) fn collect<'a>(
                     | Tag::Emphasis
                     | Tag::TableCell
                     | Tag::TableRow => (),
+                    Tag::BlockQuote(Some(t)) => {
+                        result.push_str(&format!(" class=\"{t:?}\"").to_lowercase());
+                    }
                     Tag::Link {
                         link_type: _,
                         dest_url,
@@ -355,7 +359,8 @@ fn remove_end(s: &mut String, tail: &str) -> bool {
 
 fn tag_name(tag: &Tag) -> &'static str {
     match tag {
-        Tag::BlockQuote(..) => "blockquote",
+        Tag::BlockQuote(None) => "blockquote",
+        Tag::BlockQuote(Some(_)) => "div",
         Tag::Emphasis => "em",
         Tag::Item => "li",
         Tag::Link { .. } => "a",
@@ -374,7 +379,8 @@ fn tag_name(tag: &Tag) -> &'static str {
 }
 fn tag_name_e(tag: TagEnd) -> &'static str {
     match tag {
-        TagEnd::BlockQuote(_) => "blockquote",
+        TagEnd::BlockQuote(None) => "blockquote",
+        TagEnd::BlockQuote(Some(_)) => "div",
         TagEnd::Emphasis => "em",
         TagEnd::Item => "li",
         TagEnd::Link => "a",
