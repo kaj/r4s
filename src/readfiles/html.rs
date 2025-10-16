@@ -139,7 +139,9 @@ pub(super) fn collect<'a>(
                     | Tag::TableCell
                     | Tag::TableRow => (),
                     Tag::BlockQuote(Some(t)) => {
-                        result.push_str(&format!(" class=\"{t:?}\"").to_lowercase());
+                        result.push_str(
+                            &format!(" class=\"{t:?}\"").to_lowercase(),
+                        );
                     }
                     Tag::Link {
                         link_type: _,
