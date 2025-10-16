@@ -23,7 +23,7 @@ use crate::PubBaseOpt;
 use clap::Parser;
 use csrf::{AesGcmCsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
 use diesel::associations::HasTable;
-use diesel::dsl::count_distinct;
+use diesel::dsl::count;
 use diesel::prelude::*;
 use diesel::BelongingToDsl;
 use diesel_async::pooled_connection::deadpool::PoolError;
@@ -401,7 +401,10 @@ async fn page(
         .filter(p::lang.eq(lang).or(not(has_lang(p_year, p::slug, lang))))
         .left_join(pt::post_tags.on(p::id.eq(pt::post_id)))
         .filter(pt::tag_id.eq_any(tag_ids))
-        .order((count_distinct(pt::tag_id).desc(), p::posted_at.desc()))
+        .order((
+            count(pt::tag_id).aggregate_distinct().desc(),
+            p::posted_at.desc(),
+        ))
         .limit(8)
         .load(&mut db)
         .await?;
