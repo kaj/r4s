@@ -11,7 +11,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use std::net::{IpAddr, SocketAddr};
 use tracing::instrument;
-use warp::filters::{addr, cookie, header, BoxedFilter};
+use warp::filters::{cookie, header, BoxedFilter};
 use warp::path::end;
 use warp::reject::{reject, Rejection};
 use warp::{self, body, post, Filter, Reply};
@@ -130,14 +130,15 @@ impl CommentForm {
     }
 }
 
-fn remote_addr_filter(proxied: bool) -> BoxedFilter<(IpAddr,)> {
-    if proxied {
-        header::header("x-forwarded-for").boxed()
-    } else {
+fn remote_addr_filter(_proxied: bool) -> BoxedFilter<(IpAddr,)> {
+    // FIXME: if proxied {
+    header::header("x-forwarded-for").boxed()
+    /*} else {
         addr::remote().and_then(sa2ip).boxed()
-    }
+    }*/
 }
 
+#[allow(unused)]
 async fn sa2ip(sockaddr: Option<SocketAddr>) -> Result<IpAddr, Rejection> {
     sockaddr.map(|s| s.ip()).ok_or_else(reject)
 }
