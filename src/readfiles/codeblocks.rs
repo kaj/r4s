@@ -129,7 +129,7 @@ impl BlockHandler for QrHandler<'_> {
         let mut img = png::Encoder::new(&mut imgdata, width as _, width as _);
         img.set_color(png::ColorType::Grayscale);
         img.set_depth(png::BitDepth::One);
-        img.set_compression(png::Compression::Best);
+        img.set_compression(png::Compression::High);
         let mut writer = img.write_header()?;
         writer.write_image_data(
             &qr.to_vec()

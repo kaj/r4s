@@ -34,7 +34,7 @@ intl-memoizer =  "0.5.1"
 ipnetwork = { version = "0.21.1", features = ["serde"] }
 lazy-regex = "3.0.0"
 mime = "0.3.0"
-png = "0.17.2"
+png = "0.18.0"
 pulldown-cmark = "0.13.0"
 pulldown-cmark-escape = "0.11.0"
 qr_code = "2.0.0"
