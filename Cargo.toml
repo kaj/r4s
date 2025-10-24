@@ -25,7 +25,7 @@ clap = { version = "4.5.4", features = ["derive", "env", "wrap_help"] }
 csrf = "0.5.0"
 diesel = { version = "2.3.2", features = ["chrono", "postgres", "network-address"] }
 diesel-async = { version = "0.7.3", features = ["deadpool", "postgres"] }
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 fluent = "0.17.0"
 gravatar = "0.2.0"
 i18n-embed = { version = "0.16.0", features = ["fluent-system"] }

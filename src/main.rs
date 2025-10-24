@@ -13,11 +13,10 @@ mod syntax_hl;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use dotenv::dotenv;
 
 /// Main program: Set up env and run according to arguments.
 fn main() -> Result<()> {
-    match dotenv() {
+    match dotenvy::dotenv() {
         Ok(_) => (),
         Err(ref err) if err.not_found() => (),
         Err(e) => return Err(e).context("Failed to read .env"),
