@@ -9,7 +9,6 @@ mod readcomments;
 mod readfiles;
 mod schema;
 mod server;
-mod syntax_hl;
 
 use anyhow::{Context, Result};
 use clap::Parser;
