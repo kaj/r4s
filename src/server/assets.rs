@@ -1,5 +1,6 @@
 use super::{goh, response, App, Result, ViewError, ViewResult};
 use crate::schema::assets::dsl as a;
+use bytes::Bytes;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use tracing::instrument;
@@ -63,6 +64,7 @@ fn static_file(name: Tail) -> Result<Response> {
     response()
         .header(CONTENT_TYPE, data.mime.as_ref())
         .header(EXPIRES, far_expires.to_rfc2822())
-        .body(data.content.into())
+        // TODO: Remove `bytes` dep when seanmonstar/warp#1144 is released.
+        .body(Bytes::from(data.content).into())
         .or_ise()
 }
