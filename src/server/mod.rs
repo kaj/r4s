@@ -1,5 +1,6 @@
 mod assets;
 mod comment;
+mod csrf;
 mod error;
 mod feeds;
 pub mod language;
@@ -21,7 +22,6 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::PubBaseOpt;
 use clap::Parser;
-use csrf::{AesGcmCsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
 use diesel::associations::HasTable;
 use diesel::dsl::count;
 use diesel::prelude::*;
@@ -59,7 +59,7 @@ pub struct Args {
 
     /// A 32-byte secret key for csrf generation and verification.
     #[clap(long, env = "CSRF_SECRET", hide_env_values = true)]
-    csrf_secret: CsrfSecret,
+    csrf_secret: csrf::Secret,
 
     /// Use this flag if the server runs behind a proxy.
     ///
@@ -193,7 +193,7 @@ async fn quit_sig() {
 pub struct AppData {
     pool: Pool,
     base: String,
-    csrf_secret: [u8; 32],
+    csrf: csrf::Server,
 }
 type App = Arc<AppData>;
 
@@ -209,35 +209,11 @@ impl AppData {
         Ok(Arc::new(AppData {
             pool: args.db.build_pool()?,
             base: args.base.public_base.clone(),
-            csrf_secret: args.csrf_secret.secret,
+            csrf: csrf::Server::from_key(&args.csrf_secret),
         }))
     }
     async fn db(&self) -> Result<Connection, PoolError> {
         self.pool.get().await
-    }
-    fn verify_csrf(&self, token: &str, cookie: &str) -> Result<()> {
-        use base64::prelude::*;
-        fn fail<E: std::fmt::Display>(e: E) -> ViewError {
-            info!("Csrf verification error: {}", e);
-            ViewError::BadRequest("CSRF Verification Failed".into())
-        }
-        let token = BASE64_STANDARD.decode(token).map_err(fail)?;
-        let cookie = BASE64_STANDARD.decode(cookie).map_err(fail)?;
-        let protect = self.csrf_protection();
-        let token = protect.parse_token(&token).map_err(fail)?;
-        let cookie = protect.parse_cookie(&cookie).map_err(fail)?;
-        protect
-            .verify_token_pair(&token, &cookie)
-            .map_err(|e| fail(e.to_string()))
-    }
-    fn generate_csrf_pair(&self) -> Result<(CsrfToken, CsrfCookie)> {
-        let ttl = 4 * 3600;
-        self.csrf_protection()
-            .generate_token_pair(None, ttl)
-            .or_ise()
-    }
-    fn csrf_protection(&self) -> impl CsrfProtection {
-        AesGcmCsrfProtection::from_key(self.csrf_secret)
     }
 }
 
@@ -442,7 +418,7 @@ async fn page(
         .load(&mut db)
         .await?;
 
-    let (token, cookie) = app.generate_csrf_pair()?;
+    let (token, cookie) = app.csrf.generate_pair()?;
 
     Ok(response()
         .header(
@@ -572,27 +548,6 @@ fn found(url: &str) -> impl Reply {
 struct PageQuery {
     c: Option<i32>,
 }
-
-#[derive(Clone)]
-struct CsrfSecret {
-    secret: [u8; 32],
-}
-
-impl FromStr for CsrfSecret {
-    type Err = BadLengthSecret;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(CsrfSecret {
-            secret: s
-                .as_bytes()
-                .try_into()
-                .map_err(|_| BadLengthSecret(s.len()))?,
-        })
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-#[error("Bad CSRF secret, got {0} bytes, expected 32")]
-struct BadLengthSecret(usize);
 
 fn robots_txt() -> Result<Response> {
     use warp::http::header::CONTENT_TYPE;

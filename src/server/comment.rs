@@ -36,7 +36,7 @@ async fn postcomment(
     form: CommentForm,
     app: App,
 ) -> Result<impl Reply> {
-    app.verify_csrf(&form.csrftoken, &csrf_cookie)?;
+    app.csrf.verify(&form.csrftoken, &csrf_cookie)?;
     let mut db = app.db().await?;
 
     let (post, updated) = posts::table
