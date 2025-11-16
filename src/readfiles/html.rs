@@ -19,6 +19,16 @@ pub(super) fn collect<'a>(
     let mut section_level = 1;
     while let Some(event) = data.next() {
         match event {
+            Event::Text(pulldown_cmark::CowStr::Inlined(text)) => {
+                match text.as_ref() {
+                    // Ascii quotes are automatically converted to this,
+                    // which i here convert further to html:
+                    "“" => result.push_str("<q>"),
+                    "”" => result.push_str("</q>"),
+
+                    text => escape_html(&mut result, text)?,
+                }
+            }
             Event::Text(text) => {
                 escape_html(&mut result, &text)?;
             }

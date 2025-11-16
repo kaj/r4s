@@ -6,6 +6,12 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+* Convert quotes from "nice unicode" (which the markdown lib converts ascii
+  quotes to) to html, so the will be correct for non-english content.
+
+
 ## Release 0.5.0
 2025-11-16 19:37 CET
 
