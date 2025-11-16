@@ -10,6 +10,7 @@ project more or less adheres to
 
 * Convert quotes from "nice unicode" (which the markdown lib converts ascii
   quotes to) to html, so the will be correct for non-english content.
+* Lower the limit for when a post is considered "old" slightly.
 
 
 ## Release 0.5.0

@@ -32,7 +32,7 @@ impl DateTime {
     pub fn old_age(&self) -> Option<i64> {
         let age = Utc::now() - self.raw();
         let age = age.num_days() * 1000 / 365_240;
-        if age >= 10 {
+        if age >= 7 {
             Some(age)
         } else {
             None
