@@ -83,7 +83,7 @@ impl Args {
                 "{blue}On {italic}{}{italic:#}{blue:#} {blue}({}){blue:#}",
                 p.title, p.year
             );
-            for line in wrap(&comment.content.trim(), &wrap_opt) {
+            for line in wrap(comment.content.trim(), &wrap_opt) {
                 println!("{line}");
             }
 
