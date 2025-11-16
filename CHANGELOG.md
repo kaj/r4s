@@ -6,22 +6,32 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.5.0
+2025-11-16 19:37 CET
 
 * Use css `light-dark` rather than `@media` for theme selection.
   Also add a high-contrast mode (using `@media` rules).
+* Moved "other years" list from bottom of pages to sidebar.
 * Drafts with the same slug as a post is now cleared only for
   reasonably new posts.
-* Remove the metadata fallback from 0.4.0, now "fenced yaml" is the
-  only supported metadata format.
 * More efficient language handling, using enum `MyLang` rather than a
   `String` and loding the fluent data only once for each language (PR #10).
 * Added a `fediverse:creator` meta tag.
 * Logs are written to stdout rather than stderr.
+* Support terminal colors in the `moderate-comments` cli.
 * Some dependency updates.
+
+### Post format (markdown) changes
+
+* Removed the metadata fallback from 0.4.0, now "fenced yaml" is the
+  only supported metadata format.
+* An empty line before the main header is no longer required.
+* Added support and styling for `blockquote`-like note, tip, important,
+  warning and caution blocks (which are semi-standard in markdown).
 
 
 ## Release 0.4.2
+2025-04-20 16:33 CST
 
 * Fix a frontpage style bug.
 
