@@ -2,13 +2,14 @@ use crate::dbopt::DbOpt;
 use crate::models::{Comment, PostComment, PostLink};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
+use anstyle::{AnsiColor, Color, Style};
 use anyhow::{ensure, Result};
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use std::fmt::{self, Display};
-use std::io::{stdin, stdout, Write};
+use std::io::{stdin, stdout, IsTerminal as _, Write};
 use textwrap::wrap;
 
 #[derive(Parser)]
@@ -61,22 +62,33 @@ impl Args {
             .initial_indent(" > ")
             .subsequent_indent(" > ");
 
+        let (bold, italic, blue) = if std::io::stdout().is_terminal() {
+            (BOLD, ITALIC, BLUE)
+        } else {
+            (NOSTYLE, NOSTYLE, NOSTYLE)
+        };
         for comment in mod_queue(&mut db)? {
             let p = comment.p();
-            println!(
-                "\n{} by {:?} <{}> {:?}\nOn {} ({})",
+            print!(
+                "\n{blue}{bold}{} by {italic}{:?}{italic:#}{bold:#} {blue}<{}>{blue:#}",
                 Ago(comment.posted_at.raw()),
                 comment.name,
                 comment.email,
-                comment.url,
-                p.title,
-                p.year
             );
-            for line in wrap(&comment.content, &wrap_opt) {
+            if let Some(url) = &comment.url {
+                print!(" {blue}{italic}{url}{italic:#}{blue:#}");
+            }
+            println!();
+            println!(
+                "{blue}On {italic}{}{italic:#}{blue:#} {blue}({}){blue:#}",
+                p.title, p.year
+            );
+            for line in wrap(&comment.content.trim(), &wrap_opt) {
                 println!("{line}");
             }
 
             if !self.list {
+                println!();
                 match prompt(
                     "How about this comment?",
                     &["ok", "spam", "quit"],
@@ -146,8 +158,9 @@ fn do_moderate(
 fn prompt<'v>(prompt: &str, alternatives: &[&'v str]) -> Result<&'v str> {
     let input = stdin();
     let mut buf = String::new();
+    let green = if input.is_terminal() { GREEN } else { NOSTYLE };
     loop {
-        print!("{prompt} {alternatives:?} ");
+        print!("{green}{prompt} {alternatives:?}{green:#} ");
         stdout().flush()?;
         buf.clear();
         ensure!(input.read_line(&mut buf)? > 0, "Expected some input");
@@ -161,3 +174,9 @@ fn prompt<'v>(prompt: &str, alternatives: &[&'v str]) -> Result<&'v str> {
         }
     }
 }
+
+const NOSTYLE: Style = Style::new();
+const BOLD: Style = NOSTYLE.bold();
+const ITALIC: Style = NOSTYLE.italic();
+const BLUE: Style = NOSTYLE.fg_color(Some(Color::Ansi(AnsiColor::Blue)));
+const GREEN: Style = NOSTYLE.fg_color(Some(Color::Ansi(AnsiColor::Green)));
