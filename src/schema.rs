@@ -12,6 +12,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    avatars (id) {
+        id -> Int4,
+        updated_at -> Timestamptz,
+        email -> Varchar,
+        slug -> Varchar,
+        mime -> Varchar,
+        content -> Bytea,
+    }
+}
+
+diesel::table! {
     comments (id) {
         id -> Int4,
         post_id -> Int4,
@@ -78,5 +89,5 @@ diesel::joinable!(post_tags -> posts (post_id));
 diesel::joinable!(post_tags -> tags (tag_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    assets, comments, metapages, post_tags, posts, tags,
+    assets, avatars, comments, metapages, post_tags, posts, tags,
 );

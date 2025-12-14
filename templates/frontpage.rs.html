@@ -1,8 +1,8 @@
 @use super::super::prelude::*;
 @use super::{footer_html, head_canon_html, me_box_html};
-@use crate::models::{PostComment, Teaser};
+@use crate::models::{PostComment2, Teaser};
 
-@(fluent: &FluentLanguageLoader, posts: &[Teaser], comments: &[PostComment], years: &[i16], other_langs: &[String])
+@(fluent: &FluentLanguageLoader, posts: &[Teaser], comments: &[PostComment2], years: &[i16], other_langs: &[String])
 
 <!doctype html>
 <html lang="@fluent.current_language()" xmlns:cc="https://creativecommons.org/ns#">
@@ -33,7 +33,9 @@
       <h2>@fl!(fluent, "recent-comments")</h2>
       <ul>@for c in comments {<li>
         <a href="@c.url()">
-          <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
+          @if let Some(slug) = &c.avatar_slug {
+            <img class="gravatar" src="/a/@slug" alt="" height="160" width="160">
+          }
           @fl!(fluent, "byon", by=c.name(), date=c.posted_at())
           @fl!(fluent, "on") @c.post_title()</a>:
         @c.text_start()

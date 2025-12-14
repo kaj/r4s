@@ -14,7 +14,7 @@ use self::templates::RenderRucte;
 use crate::PubBaseOpt;
 use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{
-    Comment, FullPost, MyLang, PostComment, PostTag, Slug, Tag, Teaser,
+    Comment2, FullPost, MyLang, PostComment2, PostTag, Slug, Tag, Teaser,
     year_of_date,
 };
 use crate::schema::comments::dsl as c;
@@ -24,7 +24,7 @@ use crate::schema::posts::dsl as p;
 use clap::Parser;
 use diesel::BelongingToDsl;
 use diesel::associations::HasTable;
-use diesel::dsl::count;
+use diesel::dsl::{count, sql};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel_async::pooled_connection::deadpool::{BuildError, PoolError};
@@ -82,6 +82,7 @@ impl Args {
 
         let routes = warp::any()
             .and(path("s").and(assets::routes(s())))
+            .or(path("a").and(assets::avatar_routes(s())))
             .or(path("comment").and(comment::route(self.is_proxied, s())))
             .or(end()
                 .and(goh())
@@ -260,7 +261,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
     let limit = 5;
     let posts = Teaser::recent(lang.as_ref(), limit, &mut db).await?;
 
-    let comments = PostComment::recent(&mut db).await?;
+    let comments = PostComment2::recent(&mut db).await?;
 
     let year = year_of_date(p::posted_at);
     let years = p::posts
@@ -377,11 +378,23 @@ async fn page(
 
     let url = format!("{}{}", app.base, post.url());
 
-    let comments = Comment::belonging_to(&post.deref())
-        .select(Comment::as_select())
+    //let a_slug = a::avatars.select(a::slug);
+    let a_slug = sql::<diesel::sql_types::Nullable<diesel::sql_types::Text>>(
+        "(select slug from avatars where avatars.email = comments.email)",
+    );
+    /*let comments = Comment::belonging_to(&post.deref())
+    .filter(c::is_public)
+    .select((Comment::as_select(), a_slug))
+    .order_by(c::posted_at.asc())
+    .load::<(Comment, Option<String>)>(&mut db)
+    .await?;*/
+
+    let comments = c::comments
+        .select((c::id, c::posted_at, c::content, c::name, c::url, a_slug))
+        .filter(c::post_id.eq(post.id))
         .filter(c::is_public)
         .order_by(c::posted_at.asc())
-        .load(&mut db)
+        .load::<Comment2>(&mut db)
         .await?;
 
     let bad_comment = match query.c {

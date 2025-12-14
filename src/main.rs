@@ -1,4 +1,5 @@
 //! An example web service using ructe with the warp framework.
+mod check_avatars;
 mod dbopt;
 mod listposts;
 mod modcomments;
@@ -42,6 +43,8 @@ enum R4s {
     ReadComments(readcomments::Args),
     /// Dump comments to json for use with read-comments.
     DumpComments(readcomments::DumpArgs),
+    /// Update avatars for commenters
+    CheckAvatars(check_avatars::Args),
     /// Run the web server
     RunServer(server::Args),
 }
@@ -54,6 +57,7 @@ impl R4s {
             R4s::ReadFiles(args) => args.run(),
             R4s::ReadComments(args) => args.run(),
             R4s::DumpComments(args) => args.run(),
+            R4s::CheckAvatars(args) => run_async(args.run()),
             R4s::RunServer(args) => run_async(args.run()),
         }
     }
