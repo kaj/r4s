@@ -1,14 +1,13 @@
 use super::Loader;
 use crate::models::MyLang;
-use crate::syntax_hl::ClassedHTMLGenerator;
-use crate::syntax_hl::LinesWithEndings;
 use anyhow::{bail, Result};
+use arborium::{Error as ArbError, Highlighter};
 use base64::prelude::*;
 use i18n_embed_fl::fl;
 use pulldown_cmark_escape::escape_html;
 use qr_code::QrCode;
 use serde::Deserialize;
-use std::fmt::Write;
+use std::{fmt::Write, sync::LazyLock};
 
 pub(super) trait BlockHandler {
     fn push(&mut self, content: &str) -> Result<()>;
@@ -262,9 +261,12 @@ struct EmbedData {
 
 pub struct CodeBlock<'a> {
     out: &'a mut String,
-    gen: Option<ClassedHTMLGenerator<'a>>,
-    code: bool,
+    lang: Option<&'a str>,
+    source: String,
 }
+
+static HL: LazyLock<Highlighter> = LazyLock::new(Highlighter::new);
+
 impl<'a> CodeBlock<'a> {
     fn open(
         out: &'a mut String,
@@ -282,28 +284,32 @@ impl<'a> CodeBlock<'a> {
         }
         Ok(CodeBlock {
             out,
-            gen: lang.and_then(crate::syntax_hl::for_lang),
-            code: lang.is_some(),
+            lang,
+            source: String::new(),
         })
     }
 }
 impl BlockHandler for CodeBlock<'_> {
     fn push(&mut self, content: &str) -> Result<()> {
-        if let Some(gen) = &mut self.gen {
-            for line in LinesWithEndings::from(content) {
-                gen.parse_html_for_line_which_includes_newline(line)?;
-            }
+        if self.lang.is_some() {
+            self.source.push_str(content)
         } else {
             escape_html(&mut *self.out, content)?;
         }
         Ok(())
     }
     fn end(self) -> Result<()> {
-        if let Some(gen) = self.gen {
-            self.out.push_str(&gen.finalize());
-        }
-        if self.code {
+        if let Some(lang) = &self.lang {
+            match HL.clone().highlight(lang, &self.source) {
+                Err(ArbError::UnsupportedLanguage { language }) => {
+                    tracing::warn!(%language, "Unsupported language");
+                    escape_html(&mut *self.out, &self.source)?;
+                }
+                html => self.out.push_str(&html?),
+            }
             self.out.push_str("</code>");
+        } else {
+            escape_html(&mut *self.out, &self.source)?;
         }
         self.out.push_str("</pre>\n");
         Ok(())

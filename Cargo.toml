@@ -13,12 +13,26 @@ debug = false
 [build-dependencies]
 anyhow = "1.0.44"
 ructe = { version = "0.18.0", features = ["sass", "warp03"] }
-syntect = { version = "5.2.0", default-features = false, features = ["default-fancy"]}
 
 [dependencies]
 accept-language = "3.0.1"
 anstyle = "1.0.13"
 anyhow = "1.0.44"
+arborium = { version = "2.3.2", features = [
+  "lang-bash",
+  "lang-cpp",
+  "lang-css",
+  "lang-go",
+  "lang-html",
+  "lang-java",
+  "lang-javascript",
+  "lang-json",
+  "lang-markdown",
+  "lang-python",
+  "lang-rust",
+  "lang-scss",
+  "lang-xml"
+] }
 atom_syndication = "0.12.0"
 base64 = "0.22.1"
 bytes = "1.10.1"
@@ -45,7 +59,6 @@ rust-embed = "*"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 slug = "0.1"
-syntect = { version = "5.0.0", default-features = false, features = ["default-fancy"]}
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0.17"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "signal"] }
