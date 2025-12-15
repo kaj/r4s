@@ -6,12 +6,14 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.5.2
+2025-12-15 22:53 CET
 
 * Use `arborium` for syntax highlighting of code snippets (PR #11).
 * Convert quotes from "nice unicode" (which the markdown lib converts ascii
   quotes to) to html, so the will be correct for non-english content.
 * Lower the limit for when a post is considered "old" slightly.
+* Some style fixes.
 
 
 ## Release 0.5.0
