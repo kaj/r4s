@@ -419,7 +419,7 @@ main aside {
         margin: 0 0 1ex 1em;
         max-width: 55%;
     }
-    @media (min-width: 50em) {
+    @media (min-width: 60em) {
         max-width: 40%;
     }
 }
@@ -981,12 +981,12 @@ button.themeswitch {
     text-indent: -$outdent;
     $cb: var(--col-fv);
     $c1: var(--col-flare);
+    padding-left: -#{2*$outdent};
     &::first-letter {
         font-size: 350%;
-        line-height: 1;
+        line-height: 0.9;
         padding: 0;
         margin: 0;
-        font-variant: petite-caps;
         $r1: .1ex / 2.5;
         $r2: .12ex / 2.5;
         text-shadow:
@@ -995,6 +995,7 @@ button.themeswitch {
         ;
     }
     &::first-line {
+        font-variant: petite-caps;
         letter-spacing: .1em;
         text-shadow: -.1ex .1ex $c1, .1ex -.1ex $c1, -.1ex -.1ex $c1, .1ex .1ex $c1;;
     }
