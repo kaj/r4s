@@ -1,0 +1,80 @@
+@use "sass:color";
+
+$paper: #fdfbf9;
+$paper2: color.mix($paper, wheat, 90%);
+$purple: color.mix(rebeccapurple, purple);
+$dark: color.mix($purple, black, 70%);
+$darker: color.mix($purple, black, 33%);
+
+:root {
+    color-scheme: light dark;
+    --col-f: light-dark(#{black}, #{$paper});
+    --col-fl: light-dark(#{color.mix($purple, blue)}, #{color.mix($purple, color.mix(blue, white, 30%), 30%)});
+    --col-fv: light-dark(#{$purple}, #{color.mix($purple, $paper, 30%)});
+    --col-fh: light-dark(#{$dark}, #{wheat});
+    --col-b: light-dark(#{$paper}, #{$darker});
+    --col-b0: light-dark(#{rgba($paper, 0)}, #{rgba($darker, 0)});
+    --col-bt: light-dark(#{rgba($paper2, 0.9)}, #{rgba($darker, 0.8)});  // background, transparent
+    --col-bx: light-dark(#{wheat}, #{$purple});
+    --col-bl: light-dark(#{color.mix($paper, $purple, 65%)}, #{color.mix($purple, blue)});
+    --col-bv: light-dark(#{color.mix($paper, $purple, 80%)}, #{$purple});
+    --col-bext: light-dark(#{color.mix($paper, white)}, #{color.mix($darker, black)});
+    --col-b1: light-dark(#{$paper2}, #{color.mix($darker, black, 75%)});
+    --col-b2: light-dark(#{color.mix($paper, wheat, 70%)}, #{color.mix($darker, black)});
+    --col-flare: light-dark(#{white}, #{rgba(black, 0.5)});
+
+    --col-t-green: light-dark(#290, #5b3);
+}
+
+html.theme-dark {
+    color-scheme: dark;
+}
+html.theme-light {
+    color-scheme: light;
+}
+
+@media (prefers-contrast: more) {
+    :root {
+        --col-f: CanvasText;
+        --col-b: canvas;
+        --col-fh: light-dark(#{$darker}, #{color.mix(wheat, white)});
+        --col-fl: light-dark(#{color.mix($dark, blue)}, #{color.mix($purple, color.mix(blue, white, 20%), 20%)});
+        --col-fv: light-dark(#{$dark}, #{color.mix($purple, white, 20%)});
+        --col-bt: rgba(from canvas r g b/0.9);
+    }
+}
+
+@function myshadow($size: 1px) {
+    @return 0 0 $size var(--col-fh), calc($size / 2) $size calc($size * 2) var(--col-fh);
+}
+
+@media not (prefers-contrast: more) {
+    body {
+        background:
+            linear-gradient(166deg, var(--col-b0) 10em, var(--col-flare) 17em, var(--col-b0) 40em),
+            linear-gradient(90deg, var(--col-b1), var(--col-b) 40%, var(--col-b) 80%, var(--col-b2));
+        background-color: var(--col-b);
+        color: var(--col-f);
+    }
+}
+
+@media print {
+    // Override colors for print both with and without light theme, to
+    // be more specific.
+    html.theme-light,
+    html:not(.theme-light) {
+        --col-f: #{black};
+        --col-fl: #{color.mix($purple, blue)};
+        --col-fv: #{$purple};
+        --col-fh: #{$dark};
+        --col-b: #{white};
+        --col-bt: #{rgba(white, 0.9)};
+        --col-bx: #{wheat};
+        --col-bl: #{color.mix(white, $purple, 65%)};
+        --col-bv: #{color.mix(white, $purple, 80%)};
+        --col-bext: #{white};
+        --col-b1: #{white};
+        --col-b2: #{white};
+        --col-flare: #{white};
+    }
+}
