@@ -23,7 +23,9 @@ $darker: color.mix($purple, black, 33%);
     --col-b2: light-dark(#{color.mix($paper, wheat, 70%)}, #{color.mix($darker, black)});
     --col-flare: light-dark(#{white}, #{rgba(black, 0.5)});
 
+    --col-t-lc: light-dark(#444, #aaa);
     --col-t-green: light-dark(#290, #5b3);
+    --col-t-red: light-dark(#aa3731, #e66);
 }
 
 html.theme-dark {

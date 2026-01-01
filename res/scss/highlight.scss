@@ -1,68 +1,57 @@
-/* Loosely based on the arborium adaption of
- * https://github.com/tonsky/vscode-theme-alabaster
+/* Styling for arborium.
+ * tag names and explanations based on `ThemeSlot::tag` in src/highlights.se
+ * of arborium-theme.
  */
-a-at { color: var(--col-fv); }
-a-co { color: var(--col-fv); }
-a-cb { color: var(--col-fv); }
-a-fb { color: var(--col-fl); }
-a-f { color: var(--col-fl); }
-a-fm { color: var(--col-fl); }
-a-k { color: var(--col-f); }
-a-kc { color: var(--col-f); }
-a-ko { color: var(--col-f); }
-a-kd { color: var(--col-f); }
-a-ke { color: var(--col-f); }
-a-kf { color: var(--col-f); }
-a-ki { color: var(--col-f); }
-a-kp { color: var(--col-f); }
-a-kr { color: var(--col-f); }
-a-kt { color: var(--col-f); }
-a-ky { color: var(--col-f); }
-a-o { color: #777777; }
-a-pr { color: var(--col-f); }
-a-p { color: #777777; }
-a-pb { color: #777777; }
-a-pd { color: #777777; }
-a-ps { color: #777777; }
-a-s { color: var(--col-t-green); }
-a-ss { color: #777777; }
-a-tg { color: var(--col-fl); }
-a-td { color: var(--col-fl); }
-a-te { color: var(--col-fl); }
-a-t { color: var(--col-fl); }
-a-tb { color: var(--col-fl); }
-a-tq { color: var(--col-fl); }
-a-v { color: var(--col-f); }
-a-vb { color: var(--col-fv); }
-a-vp { color: var(--col-f); }
-a-c { color: var(--col-t-green); font-style: italic; }
-a-cd { color: #aa3731; }
-a-m { color: var(--col-fl); }
-a-l { color: var(--col-fl); }
-a-da { color: var(--col-t-green); }
-a-dd { color: #aa3731; }
-a-n { color: var(--col-fv); }
-a-tl { color: var(--col-f); }
-a-em { font-style: italic; }
-a-st { font-weight: bold; }
-a-tu { color: var(--col-fl); text-decoration: underline; }
-a-tr { color: var(--col-fl); }
-a-se { color: #777777; }
-a-tt { color: var(--col-fl); font-weight: bold; }
-a-tx { text-decoration: line-through; }
-a-sp { color: var(--col-f); }
-a-in { color: var(--col-f); }
-a-sc { color: var(--col-f); }
-a-rp { color: var(--col-f); }
-a-cn { color: var(--col-f); }
-a-ex { color: var(--col-f); }
-a-pp { color: var(--col-f); }
-a-ch { color: var(--col-t-green); }
-a-cs { color: var(--col-t-green); }
-a-vm { color: var(--col-f); }
-a-fd { color: var(--col-fl); }
-a-tf { color: var(--col-fl); }
-a-fc { color: var(--col-fl); }
-a-km { color: var(--col-f); }
-a-dr { color: var(--col-f); }
-a-rx { color: var(--col-t-green); }
+a-ns, // namespace
+a-cr, // constructor
+a-eb, // embedded content
+a-er  // errors
+{}
+
+a-at, // attribute
+a-co, // constant
+a-n   // Number
+{ color: var(--col-fv); }
+
+a-f,  // function
+a-l,  // Label
+a-m,  // macro
+a-t,  // type
+a-tg, // tag (html/xml)
+a-tu  // markup link/url
+{ color: var(--col-fl); }
+
+a-k, // keyword
+a-tt // markup title/heading
+{ color: var(--col-fh); }
+
+a-pr, // property
+a-tl, // markup literal/code
+a-v   // Variable
+{ color: var(--col-f); }
+
+a-o, // operator
+a-p  // punctuation
+{ color: var(--col-t-lc); }
+
+a-c,  // comment
+a-da, // diff addtion
+a-s   // string
+{ color: var(--col-t-green); }
+
+a-dd // diff deletion
+{ color: var(--col-t-red); }
+
+a-c, // comment
+a-em // markup emphasis/italic
+{ font-style: italic; }
+a-st, // markup strong/bold
+a-tt  // markup title/heading
+{ font-weight: bold; }
+
+a-tu // markup link/url
+{ text-decoration: underline; }
+
+a-dd, // diff deletion
+a-tx // markup strikethrough
+{ text-decoration: line-through; }
