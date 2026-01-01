@@ -3,7 +3,6 @@
 @use "colors";
 @use "highlight";
 @use "kratsbox";
-@use "shl"; // Fallback for code with old syntax highlight.
 
 $pwidth: 66ch;
 $outdent: 1.2rem;
