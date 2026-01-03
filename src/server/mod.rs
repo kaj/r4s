@@ -28,7 +28,6 @@ use diesel::dsl::count;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel_async::pooled_connection::deadpool::{BuildError, PoolError};
-use reqwest::header::{HeaderMap, InvalidHeaderName, InvalidHeaderValue};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::ops::Deref;
@@ -39,6 +38,7 @@ use tracing::{info, instrument, warn};
 use warp::filters::BoxedFilter;
 use warp::http::Uri;
 use warp::http::header::{CONTENT_SECURITY_POLICY, SERVER, SET_COOKIE};
+use warp::http::header::{HeaderMap, HeaderName, HeaderValue};
 use warp::http::response::Builder;
 use warp::reply::Response;
 use warp::{self, Filter, Reply, header, redirect};
@@ -151,7 +151,7 @@ impl Args {
                 .boxed());
 
         let server = routes
-            .with(warp::reply::with::headers(common_headers()?))
+            .with(warp::reply::with::headers(common_headers()))
             .recover(error::for_rejection);
         let acceptor = TcpListener::bind(self.bind)
             .await
@@ -170,8 +170,6 @@ impl Args {
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum FatalError {
-    #[error("Failed to setup headers: {0}")]
-    BadHeader(#[from] BadHeader),
     #[error("Failed to create database pool: {0}")]
     DataPool(#[from] BuildError),
     #[error("Failed to bind {0}: {1:?}")]
@@ -228,31 +226,32 @@ fn response() -> Builder {
 }
 
 /// Create a map of common headers for all served responses.
-fn common_headers() -> Result<HeaderMap, BadHeader> {
+fn common_headers() -> HeaderMap {
     // This method is only called once, when initiating the router, so
     // don't bother about performance here.
-    Ok(HeaderMap::from_iter([
+    // But do make sure the name / values are constructed statically, to
+    // get any validation errors in compile time.
+    const HEADERS: [(HeaderName, HeaderValue); 3] = [
         (
             SERVER,
-            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))
-                .parse()?,
+            HeaderValue::from_static(concat!(
+                env!("CARGO_PKG_NAME"),
+                "/",
+                env!("CARGO_PKG_VERSION")
+            )),
         ),
         (
             CONTENT_SECURITY_POLICY,
             // Note: should use default-src and img-src, but dev server,
             // image server, and lefalet makes that a bit hard.
-            "frame-ancestors 'none';".parse()?,
+            HeaderValue::from_static("frame-ancestors 'none';"),
         ),
-        ("x-clacks-overhead".parse()?, "GNU Terry Pratchett".parse()?),
-    ]))
-}
-
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum BadHeader {
-    #[error("Bad hedader name: {0}")]
-    Name(#[from] InvalidHeaderName),
-    #[error("Bad hedader value: {0}")]
-    Value(#[from] InvalidHeaderValue),
+        (
+            HeaderName::from_static("x-clacks-overhead"),
+            HeaderValue::from_static("GNU Terry Pratchett"),
+        ),
+    ];
+    HeaderMap::from_iter(HEADERS)
 }
 
 #[instrument]
@@ -538,10 +537,18 @@ async fn metafallback(
     }
 }
 
-fn found(url: &str) -> impl Reply + use<> {
-    use warp::http::StatusCode;
-    use warp::http::header;
-    warp::reply::with_header(StatusCode::FOUND, header::LOCATION, url)
+fn found(url: &str) -> Response {
+    use warp::http::{StatusCode, header};
+    static ROOT_URL: HeaderValue = HeaderValue::from_static("/");
+
+    let mut resp = format!("Please see {url}").into_response();
+    *resp.status_mut() = StatusCode::FOUND;
+    let url = HeaderValue::try_from(url).unwrap_or_else(|err| {
+        tracing::error!(%err, ?url, "Bad url in found");
+        ROOT_URL.clone()
+    });
+    resp.headers_mut().append(header::LOCATION, url);
+    resp
 }
 
 #[derive(Debug, Deserialize)]

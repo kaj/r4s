@@ -13,6 +13,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use tracing::instrument;
 use warp::filters::{BoxedFilter, cookie, header};
 use warp::path::end;
+use warp::reply::Response;
 use warp::{self, Filter, Reply, body, post};
 
 pub fn route(
@@ -35,7 +36,7 @@ async fn postcomment(
     csrf_cookie: String,
     form: CommentForm,
     app: App,
-) -> Result<impl Reply> {
+) -> Result<Response> {
     app.csrf.verify(&form.csrftoken, &csrf_cookie)?;
     let mut db = app.db().await?;
 
@@ -104,11 +105,7 @@ async fn postcomment(
     Ok(my_found(&post, public, id))
 }
 
-pub fn my_found(
-    post: &PostLink,
-    public: bool,
-    comment: i32,
-) -> impl Reply + use<> {
+pub fn my_found(post: &PostLink, public: bool, comment: i32) -> Response {
     let url = post.url();
     super::found(&if public {
         format!("{url}#c{comment:x}")
