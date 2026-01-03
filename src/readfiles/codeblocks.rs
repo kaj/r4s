@@ -1,5 +1,4 @@
-use super::Loader;
-use crate::models::MyLang;
+use super::{Loader, PageRef};
 use anyhow::{bail, Result};
 use arborium::{Error as ArbError, Highlighter};
 use base64::prelude::*;
@@ -9,219 +8,142 @@ use qr_code::QrCode;
 use serde::Deserialize;
 use std::{fmt::Write, sync::LazyLock};
 
-pub(super) trait BlockHandler {
-    fn push(&mut self, content: &str) -> Result<()>;
-    fn end(self) -> Result<()>;
-}
-
-pub(super) enum DynBlock<'a> {
-    Leaflet(LeafletHandler<'a>),
-    Code(CodeBlock<'a>),
-    Qr(QrHandler<'a>),
-    Embed(EmbedHandler<'a>),
-}
-impl<'a> DynBlock<'a> {
-    pub fn for_kind(
-        out: &'a mut String,
-        fence: Option<&'a str>,
-        loader: &'a mut Loader,
-        year: i16,
-        lang: MyLang,
-    ) -> Result<DynBlock<'a>> {
-        match fence.and_then(|l| {
-            l.strip_prefix('!')
-                .map(|l| l.split_once(' ').unwrap_or((l, "")))
-        }) {
-            Some(("leaflet", "")) => {
-                Ok(DynBlock::Leaflet(LeafletHandler::open(out)))
+/// Write html to `out` for some `code` fenced as `lang`.
+///
+/// If `lang` starts with a `"!"`, the code is used rather than highlighted.
+/// The `loader` and self `url` is needed for `!embed` that needs to store a
+/// related file.
+pub fn handle(
+    out: &mut String,
+    code: &str,
+    lang: Option<&str>,
+    loader: &mut Loader,
+    url: &PageRef,
+) -> Result<()> {
+    if let Some(lang) = lang {
+        if let Some(bang) = lang.strip_prefix('!') {
+            match bang.split_once(' ').unwrap_or((bang, "")) {
+                ("leaflet", "") => leaflet(out, code),
+                ("qr", caption) => qr(out, caption, code),
+                ("embed", "") => embed(out, loader, url, code),
+                _ => bail!("Magic for {lang:?} not implemented"),
             }
-            Some(("qr", caption)) => {
-                Ok(DynBlock::Qr(QrHandler::open(out, caption)))
-            }
-            Some(("embed", "")) => Ok(DynBlock::Embed(EmbedHandler::open(
-                out, loader, year, lang,
-            ))),
-            Some((bang, _)) => {
-                bail!("Magic for !{:?} not implemented", bang);
-            }
-            None => Ok(DynBlock::Code(CodeBlock::open(out, fence)?)),
+        } else {
+            highlight(out, lang, code)
         }
-    }
-}
-
-impl BlockHandler for DynBlock<'_> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        match self {
-            DynBlock::Leaflet(x) => x.push(content),
-            DynBlock::Code(x) => x.push(content),
-            DynBlock::Qr(x) => x.push(content),
-            DynBlock::Embed(x) => x.push(content),
-        }
-    }
-    fn end(self) -> Result<()> {
-        match self {
-            DynBlock::Leaflet(x) => x.end(),
-            DynBlock::Code(x) => x.end(),
-            DynBlock::Qr(x) => x.end(),
-            DynBlock::Embed(x) => x.end(),
-        }
-    }
-}
-
-pub struct LeafletHandler<'a> {
-    out: &'a mut String,
-}
-
-impl LeafletHandler<'_> {
-    fn open(out: &mut String) -> LeafletHandler<'_> {
-        out.push_str(r#"
-<div id="llmap">
-<p>There should be a map here.</p>
-</div>
-<script type="text/javascript">
-  function initmap() {
-  var map = L.map('llmap', {scrollWheelZoom: false})
-  .addLayer(L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&#xA9; <a href="http://osm.org/copyright">OpenStreetMaps bidragsgivare</a>',
-  }));
-"#);
-        LeafletHandler { out }
-    }
-}
-impl BlockHandler for LeafletHandler<'_> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        self.out.push_str(content);
-        Ok(())
-    }
-
-    fn end(self) -> Result<()> {
-        self.out.push_str("}\n</script>\n");
+    } else {
+        out.push_str("<pre>");
+        escape_html(&mut *out, code)?;
+        out.push_str("</pre>\n");
         Ok(())
     }
 }
 
-pub struct QrHandler<'a> {
-    out: &'a mut String,
-    caption: &'a str,
-    data: String,
-}
+pub fn highlight(out: &mut String, lang: &str, code: &str) -> Result<()> {
+    out.push_str("<pre data-lang=\"");
+    escape_html(&mut *out, lang)?;
+    out.push_str("\"><code>");
 
-impl<'a> QrHandler<'a> {
-    fn open(out: &'a mut String, caption: &'a str) -> Self {
-        QrHandler {
-            out,
-            caption,
-            data: String::new(),
+    match HL.clone().highlight(lang, code) {
+        Err(ArbError::UnsupportedLanguage { language }) => {
+            tracing::warn!(%language, "Unsupported language");
+            escape_html(&mut *out, code)?;
         }
+        html => out.push_str(&html?),
     }
+    out.push_str("</code></pre>\n");
+    Ok(())
 }
-impl BlockHandler for QrHandler<'_> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        self.data.push_str(content);
-        Ok(())
-    }
 
-    fn end(self) -> Result<()> {
-        let qr = QrCode::new(self.data)?;
-        let width = qr.width();
-        let mut imgdata = Vec::new();
-        let mut img = png::Encoder::new(&mut imgdata, width as _, width as _);
-        img.set_color(png::ColorType::Grayscale);
-        img.set_depth(png::BitDepth::One);
-        img.set_compression(png::Compression::High);
-        let mut writer = img.write_header()?;
-        writer.write_image_data(
-            &qr.to_vec()
-                .chunks(width)
-                .flat_map(|line| {
-                    line.chunks(8).map(|byte| {
-                        byte.iter()
-                            .fold(0, |acc, elem| 2 * acc + u8::from(!elem))
-                            * (1 << (8 - byte.len()))
-                    })
+static HL: LazyLock<Highlighter> = LazyLock::new(Highlighter::new);
+
+fn leaflet(out: &mut String, content: &str) -> Result<()> {
+    out.push_str(
+        "<div id='llmap'>\
+         <p>There should be a map here.</p>\
+         </div>\n\
+         <script type='text/javascript'>\n\
+         function initmap() {\
+         var map = L.map('llmap',{scrollWheelZoom:false})\
+         .addLayer(L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',\
+         {attribution:'© <a href=\"http://osm.org/copyright\">\
+         OpenStreetMaps bidragsgivare</a>'}));\n"
+    );
+    out.push_str(content);
+    out.push_str("}\n</script>\n");
+    Ok(())
+}
+
+fn qr(out: &mut String, caption: &str, content: &str) -> Result<()> {
+    let qr = QrCode::new(content)?;
+    let width = qr.width();
+    let mut imgdata = Vec::new();
+    let mut img = png::Encoder::new(&mut imgdata, width as _, width as _);
+    img.set_color(png::ColorType::Grayscale);
+    img.set_depth(png::BitDepth::One);
+    img.set_compression(png::Compression::High);
+    let mut writer = img.write_header()?;
+    writer.write_image_data(
+        &qr.to_vec()
+            .chunks(width)
+            .flat_map(|line| {
+                line.chunks(8).map(|byte| {
+                    byte.iter().fold(0, |acc, elem| 2 * acc + u8::from(!elem))
+                        * (1 << (8 - byte.len()))
                 })
-                .collect::<Vec<_>>(),
-        )?;
-        writer.finish()?;
+            })
+            .collect::<Vec<_>>(),
+    )?;
+    writer.finish()?;
 
-        let url = format!(
-            "data:image/png;base64,{}",
-            BASE64_STANDARD_NO_PAD.encode(imgdata)
-        );
-        writeln!(
-            self.out,
-            "<figure class='qr-code sidebar'>\
+    let url = format!(
+        "data:image/png;base64,{}",
+        BASE64_STANDARD_NO_PAD.encode(imgdata)
+    );
+    writeln!(
+        out,
+        "<figure class='qr-code sidebar'>\
              <img alt='' src='{url}' width='{width}' height='{width}'/>"
+    )?;
+    if !caption.is_empty() {
+        out.push_str("<figcaption>");
+        escape_html(&mut *out, caption)?;
+        out.push_str("</figcaption>");
+    }
+    out.push_str("</figure>");
+    Ok(())
+}
+
+fn embed(
+    out: &mut String,
+    loader: &mut Loader,
+    url: &PageRef,
+    code: &str,
+) -> Result<()> {
+    let data = code.trim();
+    if let Some(ytid) = data.strip_prefix("https://youtu.be/") {
+        let id = format!("yt-{ytid}");
+        let embed: EmbedData = loader
+            .web
+            .get("https://www.youtube.com/oembed")
+            .query(&[("url", data), ("format", "json")])
+            .send()?
+            .error_for_status()?
+            .json()?;
+        let img = embed.thumbnail_url;
+        let (ctype, img) = loader
+            .fetch_content(&img.replace("hqdefault.jpg", "maxresdefault.jpg"))
+            .or_else(|_| loader.fetch_content(&img))?;
+        let img = loader.store_asset(
+            url.year,
+            &format!("{id}.jpg"),
+            &ctype,
+            &img,
         )?;
-        if !self.caption.is_empty() {
-            self.out.push_str("<figcaption>");
-            escape_html(&mut *self.out, self.caption)?;
-            self.out.push_str("</figcaption>");
-        }
-        self.out.push_str("</figure>");
-        Ok(())
-    }
-}
-
-pub struct EmbedHandler<'a> {
-    out: &'a mut String,
-    data: String,
-    loader: &'a mut Loader,
-    year: i16,
-    lang: MyLang,
-}
-
-impl<'a> EmbedHandler<'a> {
-    fn open(
-        out: &'a mut String,
-        loader: &'a mut Loader,
-        year: i16,
-        lang: MyLang,
-    ) -> Self {
-        EmbedHandler {
+        let notice = fl!(url.lang.fluent(), "consent-youtube");
+        writeln!(
             out,
-            data: String::new(),
-            loader,
-            year,
-            lang,
-        }
-    }
-}
-impl BlockHandler for EmbedHandler<'_> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        self.data.push_str(content);
-        Ok(())
-    }
-
-    fn end(self) -> Result<()> {
-        let data = self.data.trim();
-        if let Some(ytid) = data.strip_prefix("https://youtu.be/") {
-            let id = format!("yt-{ytid}");
-            let embed: EmbedData = self
-                .loader
-                .web
-                .get("https://www.youtube.com/oembed")
-                .query(&[("url", data), ("format", "json")])
-                .send()?
-                .error_for_status()?
-                .json()?;
-            let img = embed.thumbnail_url;
-            let img = self
-                .loader
-                .fetch_content(
-                    &img.replace("hqdefault.jpg", "maxresdefault.jpg"),
-                )
-                .or_else(|_| self.loader.fetch_content(&img))?;
-            let img = self.loader.store_asset(
-                self.year,
-                &format!("{id}.jpg"),
-                &img.0,
-                &img.1,
-            )?;
-            let notice = fl!(self.lang.fluent(), "consent-youtube");
-            writeln!(
-                self.out,
-                "<figure id='{id}' class='wrapiframe' \
+            "<figure id='{id}' class='wrapiframe' \
                  style='padding-bottom: {aspect}%'>\
                  \n  <figcaption>{title}</figcaption>\
                  \n  <img class='ifrprev' src='{img}' \
@@ -231,22 +153,20 @@ impl BlockHandler for EmbedHandler<'_> {
                  .innerHTML=\"{iframe}\"'>⏵ Play</button>\
                  \n  <p>{notice}</p></div>\
                  </figure>",
-                title = embed.title,
-                aspect =
-                    100. * f64::from(embed.height) / f64::from(embed.width),
-                height = embed.height,
-                width = embed.width,
-                iframe = embed
-                    .html
-                    .replace("?feature=oembed", "?autoplay=1")
-                    .replace('\'', "\\\'")
-                    .replace('"', "\\\""),
-            )?;
-        } else {
-            bail!("Unknown embed: {data:?}");
-        }
-        Ok(())
+            title = embed.title,
+            aspect = 100. * f64::from(embed.height) / f64::from(embed.width),
+            height = embed.height,
+            width = embed.width,
+            iframe = embed
+                .html
+                .replace("?feature=oembed", "?autoplay=1")
+                .replace('\'', "\\\'")
+                .replace('"', "\\\""),
+        )?;
+    } else {
+        bail!("Unknown embed: {data:?}");
     }
+    Ok(())
 }
 
 /// The interesting parts of an oembed response.
@@ -257,61 +177,4 @@ struct EmbedData {
     width: u32,
     thumbnail_url: String,
     html: String,
-}
-
-pub struct CodeBlock<'a> {
-    out: &'a mut String,
-    lang: Option<&'a str>,
-    source: String,
-}
-
-static HL: LazyLock<Highlighter> = LazyLock::new(Highlighter::new);
-
-impl<'a> CodeBlock<'a> {
-    fn open(
-        out: &'a mut String,
-        lang: Option<&'a str>,
-    ) -> Result<CodeBlock<'a>> {
-        out.push_str("<pre");
-        if let Some(lang) = lang {
-            out.push_str(" data-lang=\"");
-            escape_html(&mut *out, lang)?;
-            out.push('"');
-        }
-        out.push('>');
-        if lang.is_some() {
-            out.push_str("<code>");
-        }
-        Ok(CodeBlock {
-            out,
-            lang,
-            source: String::new(),
-        })
-    }
-}
-impl BlockHandler for CodeBlock<'_> {
-    fn push(&mut self, content: &str) -> Result<()> {
-        if self.lang.is_some() {
-            self.source.push_str(content)
-        } else {
-            escape_html(&mut *self.out, content)?;
-        }
-        Ok(())
-    }
-    fn end(self) -> Result<()> {
-        if let Some(lang) = &self.lang {
-            match HL.clone().highlight(lang, &self.source) {
-                Err(ArbError::UnsupportedLanguage { language }) => {
-                    tracing::warn!(%language, "Unsupported language");
-                    escape_html(&mut *self.out, &self.source)?;
-                }
-                html => self.out.push_str(&html?),
-            }
-            self.out.push_str("</code>");
-        } else {
-            escape_html(&mut *self.out, &self.source)?;
-        }
-        self.out.push_str("</pre>\n");
-        Ok(())
-    }
 }

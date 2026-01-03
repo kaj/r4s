@@ -1,6 +1,5 @@
 //! How to serialize parsed markdown into my kind of html
-use super::codeblocks::{BlockHandler, DynBlock};
-use super::{FaRef, Loader, PageRef};
+use super::{codeblocks, FaRef, Loader, PageRef};
 use crate::models::safe_md2html;
 use anyhow::{bail, Context, Result};
 use lazy_regex::regex_captures;
@@ -72,26 +71,19 @@ pub(super) fn collect<'a>(
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
                 let fence = match blocktype {
-                    CodeBlockKind::Fenced(ref f) => {
-                        (!f.is_empty()).then(|| f.as_ref())
-                    }
+                    CodeBlockKind::Fenced(ref f) => Some(f.as_ref()),
                     CodeBlockKind::Indented => None,
-                };
-                let mut handler = DynBlock::for_kind(
-                    &mut result,
-                    fence,
-                    loader,
-                    url.year,
-                    url.lang,
-                )?;
+                }
+                .filter(|s| !s.is_empty());
+                let mut buf = String::new();
                 for event in &mut data {
                     match event {
                         Event::End(TagEnd::CodeBlock) => break,
-                        Event::Text(code) => handler.push(&code)?,
+                        Event::Text(code) => buf.push_str(&code),
                         x => bail!("Unexpeted in code: {x:?}"),
                     }
                 }
-                handler.end()?;
+                codeblocks::handle(&mut result, &buf, fence, loader, url)?;
             }
             Event::End(TagEnd::CodeBlock) => {
                 unreachable!();
