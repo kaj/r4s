@@ -104,7 +104,7 @@ async fn postcomment(
     Ok(my_found(&post, public, id))
 }
 
-pub fn my_found(post: &PostLink, public: bool, comment: i32) -> impl Reply {
+pub fn my_found(post: &PostLink, public: bool, comment: i32) -> impl Reply + use<> {
     let url = post.url();
     super::found(&if public {
         format!("{url}#c{comment:x}")

@@ -538,7 +538,7 @@ async fn metafallback(
     }
 }
 
-fn found(url: &str) -> impl Reply {
+fn found(url: &str) -> impl Reply + use<> {
     use warp::http::header;
     use warp::http::StatusCode;
     warp::reply::with_header(StatusCode::FOUND, header::LOCATION, url)

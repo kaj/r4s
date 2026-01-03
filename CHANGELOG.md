@@ -11,6 +11,7 @@ project more or less adheres to
 * Refactored color styling and improved styling for the `arborium` tags.
 * Removed the fall-back styling for my old syntax highlighting.
 * Refactored block handling (syntax highlight and embed etc) code.
+* Updated to rust edition 2024.
 
 
 ## Release 0.5.2
