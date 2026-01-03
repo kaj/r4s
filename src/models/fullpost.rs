@@ -1,4 +1,4 @@
-use super::{year_of_date, Post, Result, Slug};
+use super::{Post, Result, Slug, year_of_date};
 use crate::dbopt::Connection;
 use crate::schema::posts::dsl as p;
 use diesel::prelude::*;

@@ -1,8 +1,8 @@
-use super::error::ViewError;
 use super::Result;
+use super::error::ViewError;
 use crate::models::MyLang;
-use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
 use i18n_embed::LanguageLoader;
+use i18n_embed::fluent::{FluentLanguageLoader, fluent_language_loader};
 use i18n_embed_fl::fl;
 use rust_embed::RustEmbed;
 use std::str::FromStr;

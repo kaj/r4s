@@ -1,7 +1,7 @@
 //! How to serialize parsed markdown into my kind of html
-use super::{codeblocks, FaRef, Loader, PageRef};
+use super::{FaRef, Loader, PageRef, codeblocks};
 use crate::models::safe_md2html;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use lazy_regex::regex_captures;
 use pulldown_cmark::{CodeBlockKind, Event, Tag, TagEnd};
 use pulldown_cmark_escape::{escape_href, escape_html};

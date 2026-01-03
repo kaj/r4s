@@ -1,5 +1,5 @@
 use super::{Loader, PageRef};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use arborium::{Error as ArbError, Highlighter};
 use base64::prelude::*;
 use i18n_embed_fl::fl;

@@ -1,5 +1,5 @@
 use super::error::{ViewError, ViewResult};
-use super::{fl, response, App, Result};
+use super::{App, Result, fl, response};
 use crate::models::{MyLang, Slug, Tag, Teaser};
 use atom_syndication::*;
 use std::str::FromStr;

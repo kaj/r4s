@@ -11,23 +11,23 @@ use self::error::{ViewError, ViewResult};
 use self::language::AcceptLang;
 use self::prelude::*;
 use self::templates::RenderRucte;
+use crate::PubBaseOpt;
 use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{
-    year_of_date, Comment, FullPost, MyLang, PostComment, PostTag, Slug, Tag,
-    Teaser,
+    Comment, FullPost, MyLang, PostComment, PostTag, Slug, Tag, Teaser,
+    year_of_date,
 };
 use crate::schema::comments::dsl as c;
 use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
-use crate::PubBaseOpt;
 use clap::Parser;
+use diesel::BelongingToDsl;
 use diesel::associations::HasTable;
 use diesel::dsl::count;
 use diesel::prelude::*;
-use diesel::BelongingToDsl;
-use diesel_async::pooled_connection::deadpool::{BuildError, PoolError};
 use diesel_async::RunQueryDsl;
+use diesel_async::pooled_connection::deadpool::{BuildError, PoolError};
 use reqwest::header::{HeaderMap, InvalidHeaderName, InvalidHeaderValue};
 use serde::Deserialize;
 use std::net::SocketAddr;
@@ -37,11 +37,11 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tracing::{info, instrument, warn};
 use warp::filters::BoxedFilter;
+use warp::http::Uri;
 use warp::http::header::{CONTENT_SECURITY_POLICY, SERVER, SET_COOKIE};
 use warp::http::response::Builder;
-use warp::http::Uri;
 use warp::reply::Response;
-use warp::{self, header, redirect, Filter, Reply};
+use warp::{self, Filter, Reply, header, redirect};
 
 type Result<T, E = ViewError> = std::result::Result<T, E>;
 
@@ -347,7 +347,7 @@ async fn page(
     query: PageQuery,
     app: App,
 ) -> Result<Response> {
-    use crate::models::{has_lang, PostLink};
+    use crate::models::{PostLink, has_lang};
     use diesel::dsl::not;
     let mut db = app.db().await?;
     let fluent = slug.lang.fluent();
@@ -539,8 +539,8 @@ async fn metafallback(
 }
 
 fn found(url: &str) -> impl Reply + use<> {
-    use warp::http::header;
     use warp::http::StatusCode;
+    use warp::http::header;
     warp::reply::with_header(StatusCode::FOUND, header::LOCATION, url)
 }
 

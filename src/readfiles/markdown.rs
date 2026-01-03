@@ -1,8 +1,8 @@
 //! Handle reading of markdown content.
-use super::{fa_link, html, link_data, summary, PageRef, UpdateInfo};
 use super::{DateTime, Loader};
+use super::{PageRef, UpdateInfo, fa_link, html, link_data, summary};
 use crate::models::MyLang;
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use chrono::{Datelike, Local};
 use i18n_embed_fl::fl;
 use lazy_regex::{regex_captures, regex_replace_all};

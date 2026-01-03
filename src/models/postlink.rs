@@ -1,4 +1,4 @@
-use super::{year_of_date, MyLang, Slug};
+use super::{MyLang, Slug, year_of_date};
 use crate::schema::posts;
 use diesel::helper_types::{AsSelect, Select};
 use diesel::pg::Pg;

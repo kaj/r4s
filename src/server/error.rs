@@ -2,7 +2,7 @@ use super::response;
 use super::templates::{self, RenderError, RenderRucte};
 use crate::models::MyLang;
 use diesel_async::pooled_connection::deadpool::PoolError;
-use tracing::{event, Level};
+use tracing::{Level, event};
 use warp::http::status::StatusCode;
 use warp::reply::Response;
 use warp::{self, Rejection, Reply};

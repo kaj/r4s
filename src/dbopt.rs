@@ -1,10 +1,10 @@
 use clap::Parser;
+use diesel::Connection as _;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::Connection as _;
-use diesel_async::pooled_connection::deadpool;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::pooled_connection::deadpool;
 use std::time::{Duration, Instant};
 use tracing::{debug, warn};
 

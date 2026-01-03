@@ -6,13 +6,13 @@ mod summary;
 
 use self::markdown::{Body, ContentParser, Ctx};
 use crate::dbopt::DbOpt;
-use crate::models::{year_of_date, MyLang};
+use crate::models::{MyLang, year_of_date};
 use crate::schema::assets::dsl as a;
 use crate::schema::metapages::dsl as m;
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use crate::schema::tags::dsl as t;
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use chrono::Utc;
 use diesel::prelude::*;
 use lazy_regex::regex_captures;

@@ -1,5 +1,5 @@
 //! How to serialize parsed markdown into my kind of html
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use lazy_regex::regex_replace_all;
 use pulldown_cmark::{Event, Tag, TagEnd};
 use pulldown_cmark_escape::escape_html;

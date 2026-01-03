@@ -1,11 +1,11 @@
-use super::{goh, response, App, Result, ViewError, ViewResult};
+use super::{App, Result, ViewError, ViewResult, goh, response};
 use crate::schema::assets::dsl as a;
 use bytes::Bytes;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use tracing::instrument;
 use warp::filters::BoxedFilter;
-use warp::path::{end, param, tail, Tail};
+use warp::path::{Tail, end, param, tail};
 use warp::reply::Response;
 use warp::{self, Filter, Reply};
 

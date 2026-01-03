@@ -2,10 +2,10 @@ use chrono::{Datelike, Utc};
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Timestamptz;
-use fluent::types::FluentType;
 use fluent::FluentValue;
-use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
+use fluent::types::FluentType;
 use intl_memoizer::IntlLangMemoizer;
+use intl_memoizer::concurrent::IntlLangMemoizer as CcIntlLangMemoizer;
 use std::borrow::Cow;
 use std::error::Error as StdError;
 use std::fmt::Display;
@@ -32,11 +32,7 @@ impl DateTime {
     pub fn old_age(&self) -> Option<i64> {
         let age = Utc::now() - self.raw();
         let age = age.num_days() * 1000 / 365_240;
-        if age >= 7 {
-            Some(age)
-        } else {
-            None
-        }
+        if age >= 7 { Some(age) } else { None }
     }
 }
 

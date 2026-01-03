@@ -1,6 +1,6 @@
 use super::error::ViewError;
 use super::{App, Result};
-use crate::models::{safe_md2html, DateTime, PostLink};
+use crate::models::{DateTime, PostLink, safe_md2html};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::{self, dsl as p};
 use diesel::dsl::count_star;
@@ -11,9 +11,9 @@ use reqwest::Url;
 use serde::Deserialize;
 use std::net::{IpAddr, Ipv4Addr};
 use tracing::instrument;
-use warp::filters::{cookie, header, BoxedFilter};
+use warp::filters::{BoxedFilter, cookie, header};
 use warp::path::end;
-use warp::{self, body, post, Filter, Reply};
+use warp::{self, Filter, Reply, body, post};
 
 pub fn route(
     proxied: bool,
@@ -104,7 +104,11 @@ async fn postcomment(
     Ok(my_found(&post, public, id))
 }
 
-pub fn my_found(post: &PostLink, public: bool, comment: i32) -> impl Reply + use<> {
+pub fn my_found(
+    post: &PostLink,
+    public: bool,
+    comment: i32,
+) -> impl Reply + use<> {
     let url = post.url();
     super::found(&if public {
         format!("{url}#c{comment:x}")

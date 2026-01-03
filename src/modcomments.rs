@@ -3,13 +3,13 @@ use crate::models::{Comment, PostComment, PostLink};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use anstyle::{AnsiColor, Color, Style};
-use anyhow::{ensure, Result};
+use anyhow::{Result, ensure};
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use std::fmt::{self, Display};
-use std::io::{stdin, stdout, IsTerminal as _, Write};
+use std::io::{IsTerminal as _, Write, stdin, stdout};
 use textwrap::wrap;
 
 #[derive(Parser)]

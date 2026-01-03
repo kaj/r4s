@@ -1,10 +1,10 @@
 //! Read comments from a json dump.  This is kind of a one-time operation.
 use crate::dbopt::DbOpt;
-use crate::models::{safe_md2html, year_of_date, DateTime};
+use crate::models::{DateTime, safe_md2html, year_of_date};
 use crate::schema::comments::dsl as c;
 use crate::schema::posts::dsl as p;
 use crate::schema::{comments, posts};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 use diesel::prelude::*;
 use ipnetwork::IpNetwork;

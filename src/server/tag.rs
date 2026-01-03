@@ -1,5 +1,5 @@
 use super::templates::{self, RenderRucte};
-use super::{goh, response, App, Result, SlugAndLang, ViewError};
+use super::{App, Result, SlugAndLang, ViewError, goh, response};
 use crate::models::{MyLang, Tag, Teaser};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
