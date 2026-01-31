@@ -251,13 +251,13 @@ pub fn write_image<'a>(
 
     let (imgref, classes, attrs, caption) = if !title.is_empty() {
         regex_captures!(
-            r#"^(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*(.*)$"#,
+            r#"^(\{([\s\w]*)((?:\s[\w-]*="[^"]+")*)\})?\s*(.*)$"#s,
             &title,
         )
         .map(|(_all, _, classes, attrs, caption)| {
             (dest_url, classes, attrs, safe_md2html(caption))
         })
-        .with_context(|| format!("Bad image ref: {dest_url:?}"))?
+        .with_context(|| format!("Bad image title: {title:?}"))?
     } else {
         tracing::warn!("Found old-format image.");
         regex_captures!(
@@ -285,7 +285,7 @@ pub fn write_image<'a>(
             result,
             "<figure class='{classes}'>\
              <a href='{url}'><img alt='Omslagsbild {inner}' src='{url}' width='150'/></a>\
-             <figcaption>{inner} {caption} {title}</figcaption></figure>",
+             <figcaption>{inner} {caption}</figcaption></figure>",
         )
             .unwrap();
     } else {

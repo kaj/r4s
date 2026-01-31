@@ -10,6 +10,7 @@ project more or less adheres to
 
 * Refactored color styling and improved styling for the `arborium` tags.
 * Removed the fall-back styling for my old syntax highlighting.
+* Improved image ref parsing.
 * Refactored block handling (syntax highlight and embed etc) code.
 * Updated to rust edition 2024 and `reqwest` to 0.13.1.
 
