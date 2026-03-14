@@ -1,6 +1,4 @@
 //! An example web service using ructe with the warp framework.
-#![forbid(unsafe_code)]
-
 mod dbopt;
 mod listposts;
 mod modcomments;

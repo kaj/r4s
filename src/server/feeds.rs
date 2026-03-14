@@ -1,7 +1,10 @@
 use super::error::{ViewError, ViewResult};
 use super::{App, Result, fl, response};
 use crate::models::{MyLang, Slug, Tag, Teaser};
-use atom_syndication::*;
+use atom_syndication::{
+    CategoryBuilder, EntryBuilder, FeedBuilder, FixedDateTime, LinkBuilder,
+    PersonBuilder, Text,
+};
 use std::str::FromStr;
 use tracing::instrument;
 use warp::filters::BoxedFilter;
