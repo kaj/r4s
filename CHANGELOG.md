@@ -6,7 +6,8 @@ The format is (loosely) based on
 project more or less adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## Release 0.5.4
+2026-03-14 19:40 CET
 
 * Refactored color styling and improved styling for the `arborium` tags.
 * Removed the fall-back styling for my old syntax highlighting.
