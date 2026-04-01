@@ -42,6 +42,6 @@ impl DbOpt {
     /// are async.
     pub fn build_pool(&self) -> Result<Pool, deadpool::BuildError> {
         let config = AsyncDieselConnectionManager::new(&self.db_url);
-        Pool::builder(config).max_size(20).build()
+        Pool::builder(config).max_size(16).build()
     }
 }
