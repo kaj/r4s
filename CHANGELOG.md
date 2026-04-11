@@ -8,7 +8,10 @@ project more or less adheres to
 
 ## Unreleased
 
-* Limit number of database connections in pool to 16.
+* Limited number of database connections in pool to 16.
+* Improved comment form validation.
+* Implemented `Display` for `ViewError`, so I can instrument returning
+  errors with tracing.
 * Updated `diesel-async` to 0.8.0.
 
 

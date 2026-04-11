@@ -35,6 +35,19 @@ where
     }
 }
 
+impl std::fmt::Display for ViewError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ViewError::NotFound => write!(f, "404 Not Found"),
+            ViewError::BadRequest(msg) => write!(f, "400 {msg:?}"),
+            ViewError::ServiceUnavailable => {
+                write!(f, "503 Service Unavailable")
+            }
+            ViewError::Err(msg) => write!(f, "500 {msg:?}"),
+        }
+    }
+}
+
 impl Reply for ViewError {
     fn into_response(self) -> Response {
         match self {
@@ -46,7 +59,7 @@ impl Reply for ViewError {
                  correcly — or maybe you corrected a spelling error of mine?",
             ),
             ViewError::BadRequest(msg) => {
-                error_response(StatusCode::BAD_REQUEST, &msg, "Sorry.")
+                error_response(StatusCode::BAD_REQUEST, "Bad request", &msg)
             }
             ViewError::ServiceUnavailable => error_response(
                 StatusCode::SERVICE_UNAVAILABLE,
