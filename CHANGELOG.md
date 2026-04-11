@@ -9,6 +9,7 @@ project more or less adheres to
 ## Unreleased
 
 * Limit number of database connections in pool to 16.
+* Updated `diesel-async` to 0.8.0.
 
 
 ## Release 0.5.4
