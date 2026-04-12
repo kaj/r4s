@@ -1,5 +1,6 @@
 use super::{DateTime, Post, PostLink, Result};
 use crate::dbopt::Connection;
+use crate::schema::avatars::dsl as a;
 use crate::schema::comments::{self, dsl as c};
 use crate::schema::posts::dsl as p;
 use crate::server::templates::{Html, HtmlBuffer, ToHtml};
@@ -27,19 +28,10 @@ impl Comment {
         self.id
     }
 
-    pub fn gravatar(&self) -> String {
-        use gravatar::{Default, Gravatar, Rating};
-        Gravatar::new(&self.email)
-            .set_size(Some(160))
-            .set_default(Some(Default::Retro))
-            .set_rating(Some(Rating::Pg))
-            .image_url()
-            .to_string()
-    }
     /// Get a thing that implemnts [`ToHtml`] displaying the poster
     /// name of this comment, linked to the url if there is an url.
     pub fn link_name(&self) -> LinkName<'_> {
-        LinkName(self)
+        LinkName(&self.name, self.url.as_deref())
     }
     pub fn name(&self) -> &str {
         &self.name
@@ -49,18 +41,45 @@ impl Comment {
     }
 }
 
-pub struct LinkName<'a>(&'a Comment);
+#[derive(Debug, Queryable)]
+pub struct Comment2 {
+    pub id: i32,
+    pub posted_at: DateTime,
+    pub content: String,
+    pub name: String,
+    pub url: Option<String>,
+    pub avatar_slug: Option<String>,
+}
+
+impl Comment2 {
+    pub fn html_id(&self) -> String {
+        format!("c{:x}", self.id)
+    }
+    /// Get a thing that implemnts [`ToHtml`] displaying the poster
+    /// name of this comment, linked to the url if there is an url.
+    pub fn link_name(&self) -> LinkName<'_> {
+        LinkName(&self.name, self.url.as_deref())
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn posted_at(&self) -> &DateTime {
+        &self.posted_at
+    }
+}
+
+pub struct LinkName<'a>(&'a str, Option<&'a str>);
 
 impl ToHtml for LinkName<'_> {
     fn to_html(&self, out: &mut dyn std::io::Write) -> std::io::Result<()> {
-        if let Some(url) = &self.0.url {
+        if let Some(url) = &self.1 {
             write!(out, "<a href='")?;
             url.to_html(out)?;
             write!(out, "' rel='author noopener nofollow'>")?;
-            self.0.name.to_html(out)?;
+            self.0.to_html(out)?;
             write!(out, "</a>")
         } else {
-            self.0.name.to_html(out)
+            self.0.to_html(out)
         }
     }
 }
@@ -72,10 +91,40 @@ pub struct PostComment {
 }
 
 impl PostComment {
-    pub async fn recent(db: &mut Connection) -> Result<Vec<PostComment>> {
+    pub fn p(&self) -> &PostLink {
+        &self.post
+    }
+}
+impl std::ops::Deref for PostComment {
+    type Target = Comment;
+    fn deref(&self) -> &Self::Target {
+        &self.comment
+    }
+}
+
+#[derive(Debug, Queryable)]
+pub struct PostComment2 {
+    comment: Comment2,
+    post: PostLink,
+}
+
+impl PostComment2 {
+    pub async fn recent(db: &mut Connection) -> Result<Vec<Self>> {
         c::comments
             .inner_join(p::posts.on(p::id.eq(c::post_id)))
-            .select((Comment::as_select(), PostLink::as_select()))
+            .left_join(a::avatars.on(a::email.eq(c::email)))
+            .select((
+                (
+                    c::id,
+                    c::posted_at,
+                    c::content,
+                    c::name,
+                    c::url,
+                    a::slug.nullable(),
+                ),
+                //Comment2::as_select(),
+                PostLink::as_select(),
+            ))
             .filter(c::is_public.eq(true))
             .filter(sql::<Bool>("now() - comments.posted_at < '10 weeks'"))
             .order_by(c::posted_at.desc())
@@ -84,9 +133,6 @@ impl PostComment {
             .await
     }
 
-    pub fn p(&self) -> &PostLink {
-        &self.post
-    }
     pub fn url(&self) -> String {
         format!("{}#{}", self.post.url(), self.comment.html_id())
     }
@@ -110,9 +156,9 @@ impl PostComment {
         }
     }
 }
-impl std::ops::Deref for PostComment {
-    type Target = Comment;
-    fn deref(&self) -> &Comment {
+impl std::ops::Deref for PostComment2 {
+    type Target = Comment2;
+    fn deref(&self) -> &Self::Target {
         &self.comment
     }
 }

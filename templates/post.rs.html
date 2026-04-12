@@ -1,8 +1,8 @@
 @use super::super::prelude::*;
 @use super::{footer_html, head_canon_html, header_html, me_box_html};
-@use crate::models::{Comment, FullPost, PostLink, Tag};
+@use crate::models::{Comment2, FullPost, PostLink, Tag};
 
-@(fluent: &FluentLanguageLoader, canonical_url: &str, post: &FullPost, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
+@(fluent: &FluentLanguageLoader, canonical_url: &str, post: &FullPost, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment2], other_langs: &[String], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang" xmlns:cc="https://creativecommons.org/ns#">
@@ -46,7 +46,8 @@
         @for c in comments {
         <section id="@c.html_id()" aria-label='@fl!(fluent, "c-by", name=c.name.as_str())'>
           <hr/>
-          <img class="gravatar" src="@c.gravatar()" alt="" height="160" width="160">
+          @if let Some(a) = &c.avatar_slug
+          {<img class="gravatar" src="/a/@a" alt="" height="160" width="160">}
           @Html(&c.content)
           <p class="signed">@fl!(fluent, "signed") @c.link_name()<br>
             @fl!(fluent, "date", date = (&c.posted_at))</p>

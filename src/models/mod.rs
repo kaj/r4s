@@ -12,7 +12,7 @@ mod slug;
 mod tag;
 mod teaser;
 
-pub use self::comment::{Comment, PostComment};
+pub use self::comment::{Comment, Comment2, PostComment, PostComment2};
 pub use self::datetime::DateTime;
 pub use self::fullpost::FullPost;
 pub use self::markdown::safe_md2html;

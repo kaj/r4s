@@ -16,6 +16,7 @@ ructe = { version = "0.18.0", features = ["sass", "warp03"] }
 
 [dependencies]
 accept-language = "3.0.1"
+animatar = "1.0.1"
 anstyle = "1.0.13"
 anyhow = "1.0.44"
 arborium = { version = "2.3.2", features = [
@@ -54,10 +55,12 @@ png = "0.18.0"
 pulldown-cmark = "0.13.0"
 pulldown-cmark-escape = "0.11.0"
 qr_code = "2.0.0"
+rand = "0.9.2"
 reqwest = { version = "0.13.1", features = ["blocking", "json", "query"] }
 rust-embed = "*"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10.9"
 slug = "0.1"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0.17"

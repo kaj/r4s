@@ -1,5 +1,6 @@
 use super::{App, Result, ViewError, ViewResult, goh, response};
 use crate::schema::assets::dsl as a;
+use crate::schema::avatars::dsl as av;
 use bytes::Bytes;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -51,6 +52,16 @@ async fn asset_file(year: i16, name: String, app: App) -> Result<Response> {
         .or_ise()
 }
 
+pub fn avatar_routes(s: BoxedFilter<(App,)>) -> BoxedFilter<(impl Reply,)> {
+    warp::any()
+        .and(param())
+        .and(end())
+        .and(goh())
+        .and(s)
+        .then(avatar_file)
+        .boxed()
+}
+
 /// Handler for static files.
 /// Create a response from the file data with a correct content type
 /// and a far expires header (or a 404 if the file does not exist).
@@ -66,5 +77,27 @@ fn static_file(name: Tail) -> Result<Response> {
         .header(EXPIRES, far_expires.to_rfc2822())
         // TODO: Remove `bytes` dep when seanmonstar/warp#1144 is released.
         .body(Bytes::from(data.content).into())
+        .or_ise()
+}
+
+#[instrument(err)]
+async fn avatar_file(slug: String, app: App) -> Result<Response> {
+    use chrono::{Duration, Utc};
+    use warp::http::header::{CONTENT_TYPE, EXPIRES};
+    let mut db = app.db().await?;
+    let far_expires = Utc::now() + Duration::days(180);
+
+    let (mime, content) = av::avatars
+        .select((av::mime, av::content))
+        .filter(av::slug.eq(slug))
+        .first::<(String, Vec<u8>)>(&mut db)
+        .await
+        .optional()?
+        .ok_or(ViewError::NotFound)?;
+
+    response()
+        .header(CONTENT_TYPE, mime)
+        .header(EXPIRES, far_expires.to_rfc2822())
+        .body(content.into())
         .or_ise()
 }
