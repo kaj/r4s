@@ -1,6 +1,6 @@
 use super::templates::{self, RenderRucte};
 use super::{App, Result, SlugAndLang, ViewError, goh, response};
-use crate::models::{MyLang, Tag, Teaser};
+use crate::models::{LangLink, MyLang, Tag, Teaser};
 use crate::schema::post_tags::dsl as pt;
 use crate::schema::tags::dsl as t;
 use diesel::dsl::count_star;
@@ -50,10 +50,7 @@ async fn tagcloud(lang: MyLang, app: App) -> Result<Response> {
         .collect::<Vec<_>>();
 
     let fluent = lang.fluent();
-    let other_langs = lang.other(|_, lang, name| {
-        format!(
-            "<a href='/tag/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-        )});
+    let other_langs = lang.other(LangLink::tags);
 
     Ok(response()
         .html(|o| templates::tags_html(o, fluent, &tags, &other_langs))?)
@@ -71,11 +68,8 @@ async fn tagpage(tag: SlugAndLang, app: App) -> Result<Response> {
 
     let fluent = lang.fluent();
     let h1 = fl!(fluent, "posts-tagged", tag = tag.name);
-    let other_langs = lang.other(|_, lang, name| {
-        format!(
-            "<a href='/tag/{tag}.{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-            tag=tag.slug,
-        )});
+    let other_langs =
+        lang.other(|lang| LangLink::tag(tag.slug.as_ref(), lang));
 
     let feed = format!("{}/atom-{}-{}.xml", app.base, lang, tag.slug);
     Ok(response().html(|o| {

@@ -2,7 +2,7 @@
 @use super::{footer_html, head_canon_html, header_html, me_box_html};
 @use crate::models::Teaser;
 
-@(fluent: &FluentLanguageLoader, h1: &str, feed: Option<&str>, posts: &[Teaser], years: &[i16], other_langs: &[String])
+@(fluent: &FluentLanguageLoader, h1: &str, feed: Option<&str>, posts: &[Teaser], years: &[i16], other_langs: &[LangLink])
 
 <!doctype html>
 <html lang="@fluent.current_language()" xmlns:cc="https://creativecommons.org/ns#">

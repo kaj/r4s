@@ -1,8 +1,8 @@
 @use super::super::prelude::*;
 @use super::{footer_html, head_canon_html, header_html, me_box_html};
-@use crate::models::{Comment, FullPost, PostLink, Tag};
+@use crate::models::{Comment, FullPost, PostLink};
 
-@(fluent: &FluentLanguageLoader, canonical_url: &str, post: &FullPost, tags: &[Tag], bad_comment: bool, csrf: &str, comments: &[Comment], other_langs: &[String], similar: &[PostLink])
+@(fluent: &FluentLanguageLoader, canonical_url: &str, post: &FullPost, bad_comment: bool, csrf: &str, comments: &[Comment], similar: &[PostLink])
 
 <!doctype html>
 <html lang="@post.lang" xmlns:cc="https://creativecommons.org/ns#">
@@ -19,10 +19,10 @@
     <meta property="og:description" name="description" content="@post.description"/>
   </head>
   <body>
-    @:header_html(fluent, other_langs)
+    @:header_html(fluent, &post.other_langs)
     <main>
       <h1>@Html(&post.title)</h1>
-      <p class="publine">@Html(post.publine(tags))</p>
+      <p class="publine">@Html(post.publine())</p>
       @if let Some(age) = post.updated_at.old_age() {
         <div class="publine oldpost">@fl!(fluent, "old-post-pub", age=age)</div>
       }

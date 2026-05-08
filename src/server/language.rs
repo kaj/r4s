@@ -1,9 +1,8 @@
 use super::Result;
 use super::error::ViewError;
-use crate::models::MyLang;
+use crate::models::{LangLink, MyLang};
 use i18n_embed::LanguageLoader;
 use i18n_embed::fluent::{FluentLanguageLoader, fluent_language_loader};
-use i18n_embed_fl::fl;
 use rust_embed::RustEmbed;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -51,18 +50,11 @@ impl MyLang {
             MyLang::Sv => &*SV,
         }
     }
-    pub fn other(
-        &self,
-        fmt: impl Fn(&FluentLanguageLoader, &str, &str) -> String,
-    ) -> Vec<String> {
+    pub fn other(&self, fmt: impl Fn(MyLang) -> LangLink) -> Vec<LangLink> {
         MYLANGS
             .iter()
             .filter(|&lang| lang != self)
-            .map(|lang| {
-                let fluent = lang.fluent();
-                let name = fl!(fluent, "lang-name");
-                fmt(fluent, lang.as_ref(), &name)
-            })
+            .map(|lang| fmt(*lang))
             .collect()
     }
 }

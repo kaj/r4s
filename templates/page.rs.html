@@ -1,7 +1,7 @@
 @use super::super::prelude::*;
 @use super::{footer_html, head_canon_html, header_html, me_box_html};
 
-@(fluent: &FluentLanguageLoader, title: &str, content: &str, other_langs: &[String])
+@(fluent: &FluentLanguageLoader, title: &str, content: &str, other_langs: &[LangLink])
 
 <!doctype html>
 <html lang="@fluent.current_language()" xmlns:cc="https://creativecommons.org/ns#">

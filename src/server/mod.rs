@@ -14,7 +14,7 @@ use self::templates::RenderRucte;
 use crate::PubBaseOpt;
 use crate::dbopt::{Connection, DbOpt, Pool};
 use crate::models::{
-    Comment, FullPost, MyLang, PostComment, PostTag, Slug, Tag, Teaser,
+    Comment, FullPost, LangLink, MyLang, PostComment, Slug, Teaser,
     year_of_date,
 };
 use crate::schema::comments::dsl as c;
@@ -23,7 +23,6 @@ use crate::schema::post_tags::dsl as pt;
 use crate::schema::posts::dsl as p;
 use clap::Parser;
 use diesel::BelongingToDsl;
-use diesel::associations::HasTable;
 use diesel::dsl::count;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -270,10 +269,7 @@ async fn frontpage(lang: MyLang, app: App) -> Result<Response> {
         .load(&mut db)
         .await?;
 
-    let other_langs = lang.other(|_, lang, name| {
-        format!(
-            "<a href='/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-        )});
+    let other_langs = lang.other(LangLink::front);
 
     Ok(response().html(|o| {
         templates::frontpage_html(
@@ -321,10 +317,7 @@ async fn yearpage(year: i16, lang: MyLang, app: App) -> Result<impl Reply> {
 
     let fluent = lang.fluent();
     let h1 = fl!(fluent, "posts-year", year = year);
-    let other_langs = lang.other(|_, lang, name| {
-        format!(
-            "<a href='/{year}/{lang}' hreflang='{lang}' lang='{lang}' rel='alternate'>{name}</a>",
-        )});
+    let other_langs = lang.other(|lang| LangLink::year(year, lang));
 
     Ok(response().html(|o| {
         templates::posts_html(
@@ -350,26 +343,6 @@ async fn page(
     use diesel::dsl::not;
     let mut db = app.db().await?;
     let fluent = slug.lang.fluent();
-    let s1 = slug.clone();
-    let other_langs = p::posts
-        .select((p::lang, p::title))
-        .filter(year_of_date(p::posted_at).eq(&year))
-        .filter(p::slug.eq(s1.slug.as_ref()))
-        .filter(p::lang.ne(s1.lang.as_ref()))
-        .load::<(MyLang, String)>(&mut db)
-        .await?
-        .into_iter()
-        .map(|(lang, title)| {
-            let fluent = lang.fluent();
-            let name = fl!(fluent, "lang-name");
-            let title = fl!(fluent, "in-lang", title=title);
-
-            format!(
-                "<a href='/{}/{}.{lang}' hreflang='{lang}' lang='{lang}' title='{title}' rel='alternate'>{name}</a>",
-                year, slug.slug, lang=lang, title=title, name=name,
-            )
-        })
-        .collect::<Vec<_>>();
 
     let post = FullPost::load(year, &slug.slug, slug.lang.as_ref(), &mut db)
         .await?
@@ -393,13 +366,7 @@ async fn page(
         None => false,
     };
 
-    let tags = PostTag::belonging_to(post.deref())
-        .inner_join(Tag::table())
-        .select(Tag::as_select())
-        .load(&mut db)
-        .await?;
-
-    let tag_ids = tags.iter().map(|t| t.id).collect::<Vec<_>>();
+    let tag_ids = post.tags.iter().map(|t| t.id).collect::<Vec<_>>();
 
     let lang = post.lang.as_ref();
     let p_year = year_of_date(p::posted_at);
@@ -433,11 +400,9 @@ async fn page(
                 fluent,
                 &url,
                 &post,
-                &tags,
                 bad_comment,
                 &token.b64_string(),
                 &comments,
-                &other_langs,
                 &related,
             )
         })?)
@@ -481,16 +446,7 @@ async fn metapage(slug: SlugAndLang, app: App) -> Result<Response> {
         .load::<(MyLang, String)>(&mut db)
         .await?
         .into_iter()
-        .map(|(lang, title)| {
-            let fluent = lang.fluent();
-            let name = fl!(fluent, "lang-name");
-            let title = fl!(fluent, "in-lang", title=title);
-
-            format!(
-                "<a href='/{}.{lang}' hreflang='{lang}' lang='{lang}' title='{title}' rel='alternate'>{name}</a>",
-                slug.slug, lang=lang, title=title, name=name,
-            )
-        })
+        .map(|(lang, title)| LangLink::page(lang, slug.slug.as_ref(), &title))
         .collect::<Vec<_>>();
 
     let (title, content) = m::metapages
