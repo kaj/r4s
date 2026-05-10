@@ -99,14 +99,14 @@ impl PostComment {
         // should probably be pre-baked, like the teaser for a post.
         let text = &self.comment.content;
         if text.len() < 200 {
-            Html(text).to_buffer().unwrap()
+            Html(text).to_buffer().expect("Write to buffer")
         } else {
             let mut end = 120;
             while !text.is_char_boundary(end) {
                 end -= 1;
             }
             let end = text[..end].rfind(' ').unwrap_or(end);
-            format!("{} …", &text[..end]).to_buffer().unwrap()
+            format!("{} …", &text[..end]).to_buffer().expect("Write to buffer")
         }
     }
 }

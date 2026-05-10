@@ -15,7 +15,7 @@ use clap::Parser;
 fn main() -> Result<()> {
     match dotenvy::dotenv() {
         Ok(_) => (),
-        Err(ref err) if err.not_found() => (),
+        Err(err) if err.not_found() => (),
         Err(e) => return Err(e).context("Failed to read .env"),
     }
     tracing_subscriber::fmt()

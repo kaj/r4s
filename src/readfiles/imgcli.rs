@@ -59,7 +59,7 @@ impl ImgClient {
         password: &str,
     ) -> Result<ImgClient> {
         Self::do_login(web, base, user, password).map_err(|e| {
-            anyhow!("Failed to login to {:?} as {:?}: {}", base, user, e)
+            anyhow!("Failed to login to {base:?} as {user:?}: {e}")
         })
     }
     fn do_login(
@@ -68,16 +68,16 @@ impl ImgClient {
         user: &str,
         password: &str,
     ) -> Result<ImgClient> {
+        #[derive(Deserialize)]
+        struct R {
+            token: String,
+        }
         let base = String::from(base);
         tracing::info!("Logging in to {:?}.", base);
         let response = web
             .post(format!("{base}/api/login"))
             .json(&BTreeMap::from([("user", user), ("password", password)]))
             .send()?;
-        #[derive(Deserialize)]
-        struct R {
-            token: String,
-        }
         let key = check(response)?.json::<R>()?.token;
         Ok(ImgClient { web, base, key })
     }

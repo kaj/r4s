@@ -129,7 +129,7 @@ impl CommentForm {
             return Err(BadForm::Email);
         }
 
-        if self.name.is_empty() || self.name.chars().any(|c| c.is_control()) {
+        if self.name.is_empty() || self.name.chars().any(char::is_control) {
             return Err(BadForm::Name);
         }
 
@@ -139,7 +139,7 @@ impl CommentForm {
             .map(|u| {
                 let u = Url::parse(&u).map_err(|e| e.to_string())?;
 
-                let scheme = dbg!(&u).scheme();
+                let scheme = u.scheme();
                 if scheme != "http" && scheme != "https" {
                     return Err("Must be https or http.".into());
                 }

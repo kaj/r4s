@@ -146,7 +146,7 @@ impl ContentParser<'_> {
         PageRef {
             year: self.year,
             slug: self.ctx.slug.to_owned(),
-            lang: self.ctx.lang.to_owned(),
+            lang: self.ctx.lang,
         }
     }
 }

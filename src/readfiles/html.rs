@@ -35,7 +35,7 @@ pub(super) fn collect<'a>(
                 level,
                 id,
                 classes,
-                attrs: _,
+                attrs,
             }) => {
                 {
                     let level = level as u32;
@@ -62,16 +62,19 @@ pub(super) fn collect<'a>(
                 }
                 result.push('>');
                 section_level += 1;
-                result.push_str(&format!("<{level}>"));
+                write!(result, "<{level}>")?;
+                if !attrs.is_empty() {
+                    warn!(?attrs, "Ignoring {level} attrs.");
+                }
             }
             Event::End(TagEnd::Heading(level)) => {
                 if !remove_end(&mut result, &format!("<{level}>")) {
-                    result.push_str(&format!("</{level}>\n"));
+                    writeln!(result, "</{level}>")?;
                 }
             }
             Event::Start(Tag::CodeBlock(blocktype)) => {
-                let fence = match blocktype {
-                    CodeBlockKind::Fenced(ref f) => Some(f.as_ref()),
+                let fence = match &blocktype {
+                    CodeBlockKind::Fenced(f) => Some(f.as_ref()),
                     CodeBlockKind::Indented => None,
                 }
                 .filter(|s| !s.is_empty());
@@ -128,7 +131,7 @@ pub(super) fn collect<'a>(
                 result.push_str(tag_name(&tag));
                 match tag {
                     Tag::List(Some(start)) => {
-                        result.push_str(&format!(" start='{start}'"));
+                        write!(result, " start='{start}'")?;
                     }
                     Tag::List(None)
                     | Tag::Item
@@ -171,7 +174,7 @@ pub(super) fn collect<'a>(
                             result.push('"');
                         }
                     }
-                    t => result.push_str(&format!("><!-- {t:?} --")),
+                    t => write!(result, "><!-- {t:?} --")?,
                 }
                 result.push('>');
             }
@@ -214,7 +217,7 @@ pub(super) fn collect<'a>(
                 warn!("Found raw html: {code:?}.");
                 result.push_str(&code);
             }
-            e => bail!("Unhandled: {:?}", e),
+            e => bail!("Unhandled: {e:?}"),
         }
     }
     for _ in 2..=section_level {

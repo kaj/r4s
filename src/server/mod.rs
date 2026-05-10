@@ -29,7 +29,6 @@ use diesel_async::RunQueryDsl;
 use diesel_async::pooled_connection::deadpool::{BuildError, PoolError};
 use serde::Deserialize;
 use std::net::SocketAddr;
-use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -76,7 +75,9 @@ impl Args {
         let s = warp::any().map(move || app.clone()).boxed();
         let s = move || s.clone();
         let lang_filt = header::optional("accept-language").map(
-            |l: Option<AcceptLang>| l.map(|l| l.lang()).unwrap_or_default(),
+            |l: Option<AcceptLang>| {
+                l.map(AcceptLang::lang).unwrap_or_default()
+            },
         );
 
         let routes = warp::any()
@@ -350,7 +351,7 @@ async fn page(
 
     let url = format!("{}{}", app.base, post.url());
 
-    let comments = Comment::belonging_to(&post.deref())
+    let comments = Comment::belonging_to(&*post)
         .select(Comment::as_select())
         .filter(c::is_public)
         .order_by(c::posted_at.asc())

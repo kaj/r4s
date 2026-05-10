@@ -24,7 +24,7 @@ pub fn collect<'a>(
                     match event {
                         Event::End(TagEnd::CodeBlock) => break,
                         Event::Text(code) => escape_html(&mut result, &code)?,
-                        x => bail!("Unexpeted in code: {:?}", x),
+                        x => bail!("Unexpeted in code: {x:?}"),
                     }
                 }
             }
@@ -73,7 +73,7 @@ pub fn collect<'a>(
             Event::InlineHtml(code) => {
                 info!("Ignoring raw html: {code:?}.");
             }
-            e => bail!("Unhandled: {:?}", e),
+            e => bail!("Unhandled: {e:?}"),
         }
     }
     Ok(regex_replace_all!(r"\s+", result.trim(), |_| " ").to_string())

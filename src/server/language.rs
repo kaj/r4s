@@ -1,3 +1,4 @@
+#![expect(clippy::same_name_method, reason="RustEmbed")]
 use super::Result;
 use super::error::ViewError;
 use crate::models::{LangLink, MyLang};
@@ -44,16 +45,16 @@ static EN: LazyLock<FluentLanguageLoader> =
 
 impl MyLang {
     #[tracing::instrument]
-    pub fn fluent(&self) -> &'static FluentLanguageLoader {
+    pub fn fluent(self) -> &'static FluentLanguageLoader {
         match self {
             MyLang::En => &*EN,
             MyLang::Sv => &*SV,
         }
     }
-    pub fn other(&self, fmt: impl Fn(MyLang) -> LangLink) -> Vec<LangLink> {
+    pub fn other(self, fmt: impl Fn(MyLang) -> LangLink) -> Vec<LangLink> {
         MYLANGS
             .iter()
-            .filter(|&lang| lang != self)
+            .filter(|&lang| *lang != self)
             .map(|lang| fmt(*lang))
             .collect()
     }

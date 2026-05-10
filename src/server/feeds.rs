@@ -40,13 +40,13 @@ async fn do_feed(args: FeedArgs, app: App) -> Result<impl Reply> {
     };
 
     let feed = FeedBuilder::default()
-        .title(Text::plain(if let Some(ref tag) = tag {
+        .title(Text::plain(if let Some(tag) = &tag {
             fl!(fluent, "taggedhead", tag = tag.name.as_str())
         } else {
             fl!(fluent, "sitename")
         }))
         .subtitle(Text::plain(fl!(fluent, "tagline")))
-        .id(if let Some(ref tag) = tag {
+        .id(if let Some(tag) = &tag {
             format!("{}/tag/{}.{}", app.base, tag.slug, args.lang)
         } else {
             format!("{}/", app.base)

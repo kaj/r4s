@@ -555,12 +555,11 @@ impl ImgClient {
         let cli = self.client.as_ref().unwrap();
         if self.options.make_images_public {
             cli.make_image_public(imgref).map_err(|e| {
-                anyhow!("Failed to make image {:?} public: {}", imgref, e)
+                anyhow!("Failed to make image {imgref:?} public: {e}")
             })
         } else {
-            cli.fetch_image(imgref).map_err(|e| {
-                anyhow!("Failed to fetch image {:?}: {}", imgref, e)
-            })
+            cli.fetch_image(imgref)
+                .map_err(|e| anyhow!("Failed to fetch image {imgref:?}: {e}"))
         }
     }
 }

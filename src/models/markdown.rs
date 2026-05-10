@@ -5,8 +5,7 @@ pub fn safe_md2html(raw: &str) -> String {
     let below_level = lh(HeadingLevel::H3);
     let mut hdiff = 0;
     let markdown = Parser::new(raw).map(|e| match e {
-        Event::Html(s) => Event::Text(s),
-        Event::InlineHtml(s) => Event::Text(s),
+        Event::Html(s) | Event::InlineHtml(s) => Event::Text(s),
         Event::Start(Tag::Heading {
             level,
             id,

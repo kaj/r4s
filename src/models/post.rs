@@ -22,6 +22,15 @@ impl Post {
         self.posted_at.year()
     }
     pub fn publine(&self, tags: &[Tag]) -> String {
+        fn push_taglink(to: &mut String, tag: &Tag, lang: MyLang) {
+            to.push_str(" <a href='/tag/");
+            to.push_str(&tag.slug);
+            to.push('.');
+            to.push_str(lang.as_ref());
+            to.push_str("' rel='tag'>");
+            to.push_str(&tag.name);
+            to.push_str("</a>");
+        }
         let lang = self.lang.fluent();
         let mut line = fl!(lang, "posted-at", date = (&self.posted_at));
 
@@ -32,15 +41,6 @@ impl Post {
                 "updated-at",
                 date = (&self.updated_at)
             ));
-        }
-        fn push_taglink(to: &mut String, tag: &Tag, lang: MyLang) {
-            to.push_str(" <a href='/tag/");
-            to.push_str(&tag.slug);
-            to.push('.');
-            to.push_str(lang.as_ref());
-            to.push_str("' rel='tag'>");
-            to.push_str(&tag.name);
-            to.push_str("</a>");
         }
         if let Some((first, rest)) = tags.split_first() {
             line.push(' ');
